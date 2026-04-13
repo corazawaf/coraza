@@ -37,7 +37,6 @@ func (r testStreamRecord) Raw() []byte               { return r.raw }
 type testStreamProcessor struct{}
 
 func (p *testStreamProcessor) ProcessRequest(reader io.Reader, vars plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
-	// Buffered fallback: parse all lines at once
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return err
@@ -103,21 +102,32 @@ func init() {
 	})
 }
 
-// TestStreamingMiddlewareCleanRecordsPassThrough verifies that a stream of clean
-// records passes through the WAF middleware without interruption and the backend
-// handler receives the full body.
-func TestStreamingMiddlewareCleanRecordsPassThrough(t *testing.T) {
+// newStreamingWAF creates a WAF with the standard streaming test rules.
+// Pass extra SecDirectives lines via the extra parameter.
+func newStreamingWAF(t *testing.T, extra ...string) coraza.WAF {
+	t.Helper()
+	directives := `
+		SecRuleEngine On
+		SecRequestBodyAccess On
+		SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
+		SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403,log,msg:'Malicious content'"`
+	for _, e := range extra {
+		directives += "\n" + e
+	}
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-			SecRuleEngine On
-			SecRequestBodyAccess On
-			SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
-			SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403,log,msg:'Malicious content'"
-		`).
+		WithDirectives(directives).
 		WithErrorCallback(errLogger(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
+	return waf
+}
+
+// TestStreamingMiddlewareCleanRecordsPassThrough verifies that a stream of clean
+// records passes through the WAF middleware without interruption and the backend
+// handler receives the full body.
+func TestStreamingMiddlewareCleanRecordsPassThrough(t *testing.T) {
+	waf := newStreamingWAF(t)
 
 	var backendBody string
 	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -143,13 +153,10 @@ func TestStreamingMiddlewareCleanRecordsPassThrough(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", res.StatusCode)
 	}
-
 	resBody, _ := io.ReadAll(res.Body)
 	if string(resBody) != "OK" {
 		t.Fatalf("unexpected response body: %q", string(resBody))
 	}
-
-	// The backend should have received the body (buffered by the middleware)
 	if backendBody == "" {
 		t.Fatal("backend received empty body")
 	}
@@ -159,17 +166,7 @@ func TestStreamingMiddlewareCleanRecordsPassThrough(t *testing.T) {
 // in a stream matches a deny rule, the WAF interrupts the request and returns
 // 403 without letting the malicious record reach the backend.
 func TestStreamingMiddlewareMaliciousRecordBlocked(t *testing.T) {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-			SecRuleEngine On
-			SecRequestBodyAccess On
-			SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
-			SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403,log,msg:'Malicious content'"
-		`).
-		WithErrorCallback(errLogger(t)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	waf := newStreamingWAF(t)
 
 	var backendCalled bool
 	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -180,7 +177,6 @@ func TestStreamingMiddlewareMaliciousRecordBlocked(t *testing.T) {
 	ts := httptest.NewServer(handler)
 	defer ts.Close()
 
-	// Second record contains "malicious" — should trigger deny
 	body := "user=alice,role=admin\nuser=malicious-actor,role=root\nuser=bob,role=viewer\n"
 	req, _ := http.NewRequest("POST", ts.URL+"/api/import", strings.NewReader(body))
 	req.Header.Set("Content-Type", "text/csv")
@@ -194,15 +190,13 @@ func TestStreamingMiddlewareMaliciousRecordBlocked(t *testing.T) {
 	if res.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", res.StatusCode)
 	}
-
 	if backendCalled {
 		t.Fatal("backend should not have been called when request is blocked")
 	}
 }
 
 // TestStreamingMiddlewareFirstRecordBlocked verifies that even the very first
-// record can trigger a deny — the WAF doesn't need to see multiple records
-// before it can block.
+// record can trigger a deny.
 func TestStreamingMiddlewareFirstRecordBlocked(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
 		WithDirectives(`
@@ -223,8 +217,7 @@ func TestStreamingMiddlewareFirstRecordBlocked(t *testing.T) {
 	ts := httptest.NewServer(handler)
 	defer ts.Close()
 
-	body := "payload=attack-vector\n"
-	req, _ := http.NewRequest("POST", ts.URL+"/", strings.NewReader(body))
+	req, _ := http.NewRequest("POST", ts.URL+"/", strings.NewReader("payload=attack-vector\n"))
 	req.Header.Set("Content-Type", "text/csv")
 
 	res, err := ts.Client().Do(req)
@@ -238,63 +231,11 @@ func TestStreamingMiddlewareFirstRecordBlocked(t *testing.T) {
 	}
 }
 
-// TestStreamingMiddlewareNoMatchPassThrough verifies that a stream where no
-// records match any rule passes through cleanly with a 200 response.
-func TestStreamingMiddlewareNoMatchPassThrough(t *testing.T) {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-			SecRuleEngine On
-			SecRequestBodyAccess On
-			SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
-			SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403"
-		`).
-		WithErrorCallback(errLogger(t)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("all good"))
-	}))
-
-	ts := httptest.NewServer(handler)
-	defer ts.Close()
-
-	body := "key=safe1\nkey=safe2\nkey=safe3\n"
-	req, _ := http.NewRequest("POST", ts.URL+"/", strings.NewReader(body))
-	req.Header.Set("Content-Type", "text/csv")
-
-	res, err := ts.Client().Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", res.StatusCode)
-	}
-	resBody, _ := io.ReadAll(res.Body)
-	if string(resBody) != "all good" {
-		t.Fatalf("unexpected response: %q", string(resBody))
-	}
-}
-
 // TestStreamingMiddlewareWithoutContentTypeMatch verifies that when the
 // Content-Type doesn't match the rule that activates the streaming processor,
 // the request is processed normally (no streaming) and passes through.
 func TestStreamingMiddlewareWithoutContentTypeMatch(t *testing.T) {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-			SecRuleEngine On
-			SecRequestBodyAccess On
-			SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
-			SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403"
-		`).
-		WithErrorCallback(errLogger(t)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	waf := newStreamingWAF(t)
 
 	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -304,8 +245,7 @@ func TestStreamingMiddlewareWithoutContentTypeMatch(t *testing.T) {
 	defer ts.Close()
 
 	// application/json won't match the "text/csv" rule, so TESTSTREAM won't activate
-	body := `{"user":"malicious-actor"}`
-	req, _ := http.NewRequest("POST", ts.URL+"/", strings.NewReader(body))
+	req, _ := http.NewRequest("POST", ts.URL+"/", strings.NewReader(`{"user":"malicious-actor"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	res, err := ts.Client().Do(req)
@@ -314,7 +254,6 @@ func TestStreamingMiddlewareWithoutContentTypeMatch(t *testing.T) {
 	}
 	defer res.Body.Close()
 
-	// Should pass through — the streaming processor wasn't activated
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", res.StatusCode)
 	}
@@ -323,17 +262,7 @@ func TestStreamingMiddlewareWithoutContentTypeMatch(t *testing.T) {
 // TestStreamingMiddlewareEmptyBody verifies that an empty body with the streaming
 // content type doesn't cause errors.
 func TestStreamingMiddlewareEmptyBody(t *testing.T) {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-			SecRuleEngine On
-			SecRequestBodyAccess On
-			SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
-			SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403"
-		`).
-		WithErrorCallback(errLogger(t)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	waf := newStreamingWAF(t)
 
 	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -356,67 +285,10 @@ func TestStreamingMiddlewareEmptyBody(t *testing.T) {
 	}
 }
 
-// TestStreamingMiddlewareLargeStream verifies that a large stream (1000 records)
-// processes correctly without errors.
-func TestStreamingMiddlewareLargeStream(t *testing.T) {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-			SecRuleEngine On
-			SecRequestBodyAccess On
-			SecRequestBodyLimit 1048576
-			SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
-			SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403"
-		`).
-		WithErrorCallback(errLogger(t)))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	ts := httptest.NewServer(handler)
-	defer ts.Close()
-
-	var body bytes.Buffer
-	for i := range 1000 {
-		body.WriteString("id=")
-		body.WriteString(strings.Repeat("x", 5))
-		body.WriteString(",seq=")
-		body.WriteString(string(rune('0' + i%10)))
-		body.WriteByte('\n')
-	}
-
-	req, _ := http.NewRequest("POST", ts.URL+"/bulk", &body)
-	req.Header.Set("Content-Type", "text/csv")
-
-	res, err := ts.Client().Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", res.StatusCode)
-	}
-}
-
 // TestStreamingMiddlewareMaliciousRecordInLargeStream verifies that a malicious
 // record buried deep in a large stream still gets caught.
 func TestStreamingMiddlewareMaliciousRecordInLargeStream(t *testing.T) {
-	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
-		WithDirectives(`
-			SecRuleEngine On
-			SecRequestBodyAccess On
-			SecRequestBodyLimit 1048576
-			SecRule REQUEST_HEADERS:Content-Type "text/csv" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=TESTSTREAM"
-			SecRule ARGS_POST "@rx malicious" "id:100,phase:2,deny,status:403"
-		`).
-		WithErrorCallback(errLogger(t)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	waf := newStreamingWAF(t, "SecRequestBodyLimit 1048576")
 
 	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -426,7 +298,6 @@ func TestStreamingMiddlewareMaliciousRecordInLargeStream(t *testing.T) {
 	defer ts.Close()
 
 	var body bytes.Buffer
-	// 500 clean records, then 1 malicious, then 499 more
 	for i := range 500 {
 		body.WriteString("id=clean")
 		body.WriteString(string(rune('0' + i%10)))

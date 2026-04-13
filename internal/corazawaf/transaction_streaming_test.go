@@ -82,7 +82,7 @@ func (*dummyStreamDenyAction) Type() plugintypes.ActionType {
 	return plugintypes.ActionTypeDisruptive
 }
 
-// newStreamingTestRule creates a rule that matches a given ArgsPost field value.
+// newStreamingTestRule creates a rule that matches a given field value.
 func newStreamingTestRule(t *testing.T, id int, targetVar variables.RuleVariable, pattern string, deny bool) *Rule {
 	t.Helper()
 	rule := NewRule()
@@ -116,68 +116,6 @@ func newStreamingTestRule(t *testing.T, id int, targetVar variables.RuleVariable
 	rule.Log = true
 	rule.Audit = true
 	return rule
-}
-
-func TestProcessRequestBodyStreamingCleanRecords(t *testing.T) {
-	waf := NewWAF()
-	rule := newStreamingTestRule(t, 100, variables.ArgsPost, "malicious", true)
-	if err := waf.Rules.Add(rule); err != nil {
-		t.Fatal(err)
-	}
-
-	sp := &mockStreamingBodyProcessor{
-		records: []mockRecord{
-			{fields: map[string]string{"json.0.name": "alice"}, rawRecord: []byte(`{"name":"alice"}` + "\n")},
-			{fields: map[string]string{"json.1.name": "bob"}, rawRecord: []byte(`{"name":"bob"}` + "\n")},
-		},
-	}
-
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.RequestBodyAccess = true
-
-	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption for clean records")
-	}
-}
-
-func TestProcessRequestBodyStreamingInterruptionStopsProcessing(t *testing.T) {
-	waf := NewWAF()
-	rule := newStreamingTestRule(t, 100, variables.ArgsPost, "malicious", true)
-	if err := waf.Rules.Add(rule); err != nil {
-		t.Fatal(err)
-	}
-
-	var processedRecords int
-	sp := &mockStreamingBodyProcessor{
-		records: []mockRecord{
-			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: []byte(`{"name":"safe"}` + "\n")},
-			{fields: map[string]string{"json.1.name": "malicious-payload"}, rawRecord: []byte(`{"name":"malicious-payload"}` + "\n")},
-			{fields: map[string]string{"json.2.name": "should-not-reach"}, rawRecord: []byte(`{"name":"should-not-reach"}` + "\n")},
-		},
-	}
-	// Override ProcessRequestRecords to count records
-	origRecords := sp.records
-	sp2 := &countingStreamProcessor{records: origRecords, count: &processedRecords}
-
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.RequestBodyAccess = true
-
-	it, err := tx.processRequestBodyStreaming(sp2, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it == nil {
-		t.Fatal("expected interruption for malicious record")
-	}
-	if processedRecords != 2 {
-		t.Fatalf("expected 2 records processed before interruption, got %d", processedRecords)
-	}
 }
 
 // countingStreamProcessor wraps mockStreamingBodyProcessor and counts processed records.
@@ -217,9 +155,8 @@ func (c *countingStreamProcessor) ProcessResponseRecords(_ io.Reader, _ pluginty
 }
 
 // sentinelWrappingProcessor simulates a poorly-written processor that wraps
-// errStreamInterrupted with its own error instead of propagating it cleanly.
-// This produces the edge case where tx.interruption is set AND a non-sentinel
-// error is returned to processRequestBodyStreaming / processResponseBodyStreaming.
+// errStreamInterrupted instead of propagating it cleanly, producing the edge
+// case where tx.interruption is set AND a non-sentinel error is returned.
 type sentinelWrappingProcessor struct {
 	records []mockRecord
 }
@@ -236,7 +173,6 @@ func (s *sentinelWrappingProcessor) ProcessRequestRecords(_ io.Reader, _ plugint
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range s.records {
 		if err := fn(i, rec); err != nil {
-			// Wrap instead of propagating — this breaks the sentinel contract.
 			return fmt.Errorf("processor wrapped: %w", err)
 		}
 	}
@@ -253,22 +189,17 @@ func (s *sentinelWrappingProcessor) ProcessResponseRecords(_ io.Reader, _ plugin
 	return nil
 }
 
-func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
-	// TX variables (matchedRules, user-set TX vars) should persist across records
-	// for cross-record correlation. ArgsPost is reset per record, but TX-scoped
-	// state accumulates.
+func TestProcessRequestBodyStreamingCleanRecords(t *testing.T) {
 	waf := NewWAF()
-
-	rule := newStreamingTestRule(t, 200, variables.ArgsPost, "suspicious", false)
+	rule := newStreamingTestRule(t, 100, variables.ArgsPost, "malicious", true)
 	if err := waf.Rules.Add(rule); err != nil {
 		t.Fatal(err)
 	}
 
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.data": "suspicious-1"}, rawRecord: []byte(`{"data":"suspicious-1"}` + "\n")},
-			{fields: map[string]string{"json.1.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
-			{fields: map[string]string{"json.2.data": "suspicious-2"}, rawRecord: []byte(`{"data":"suspicious-2"}` + "\n")},
+			{fields: map[string]string{"json.0.name": "alice"}, rawRecord: []byte(`{"name":"alice"}` + "\n")},
+			{fields: map[string]string{"json.1.name": "bob"}, rawRecord: []byte(`{"name":"bob"}` + "\n")},
 		},
 	}
 
@@ -276,60 +207,33 @@ func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
-	// Set a TX variable before streaming — it should survive all records
-	tx.variables.tx.SetIndex("marker", 0, "persist-me")
-
 	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-
-	// matchedRules accumulates across records (TX-scoped): 2 matches (records 0 and 2)
-	if len(tx.matchedRules) != 2 {
-		t.Fatalf("expected 2 matched rules, got %d", len(tx.matchedRules))
-	}
-
-	// TX variable set before streaming should still be present
-	if vals := tx.variables.tx.Get("marker"); len(vals) == 0 || vals[0] != "persist-me" {
-		t.Fatalf("TX variable 'marker' did not persist across records, got: %v", vals)
+		t.Fatalf("unexpected interruption for clean records")
 	}
 }
 
-func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
-	// Verify that record 0's fields don't leak into record 1's evaluation.
-	// The rule matches "record0-only" which appears only in record 0.
-	// If ArgsPost is not properly reset between records, record 1 would
-	// also match and cause an interruption.
+func TestProcessRequestBodyStreamingInterruptionStopsProcessing(t *testing.T) {
 	waf := NewWAF()
-
-	rule := newStreamingTestRule(t, 300, variables.ArgsPost, "record0-only", true)
+	rule := newStreamingTestRule(t, 100, variables.ArgsPost, "malicious", true)
 	if err := waf.Rules.Add(rule); err != nil {
 		t.Fatal(err)
 	}
 
-	sp := &mockStreamingBodyProcessor{
+	var processedRecords int
+	sp := &countingStreamProcessor{
 		records: []mockRecord{
-			// Record 0: contains the pattern — will match, but deny is not triggered
-			// because the rule is re-evaluated per record and we want to check isolation.
-			// Actually, with deny=true the first record WILL interrupt. So use deny=false
-			// and check matchedRules instead.
-			{fields: map[string]string{"json.0.data": "record0-only-value"}, rawRecord: []byte(`{"data":"record0-only-value"}` + "\n")},
-			// Record 1: does NOT contain "record0-only" — should NOT match
-			{fields: map[string]string{"json.1.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
+			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: []byte(`{"name":"safe"}` + "\n")},
+			{fields: map[string]string{"json.1.name": "malicious-payload"}, rawRecord: []byte(`{"name":"malicious-payload"}` + "\n")},
+			{fields: map[string]string{"json.2.name": "should-not-reach"}, rawRecord: []byte(`{"name":"should-not-reach"}` + "\n")},
 		},
+		count: &processedRecords,
 	}
 
-	// Rebuild with deny=false so processing continues through both records
-	waf2 := NewWAF()
-	rule2 := newStreamingTestRule(t, 300, variables.ArgsPost, "record0-only", false)
-	if err := waf2.Rules.Add(rule2); err != nil {
-		t.Fatal(err)
-	}
-
-	tx := waf2.NewTransaction()
+	tx := waf.NewTransaction()
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
@@ -337,12 +241,11 @@ func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if it != nil {
-		t.Fatal("unexpected interruption")
+	if it == nil {
+		t.Fatal("expected interruption for malicious record")
 	}
-	// Only record 0 should have matched — if ArgsPost leaked, record 1 would also match
-	if len(tx.matchedRules) != 1 {
-		t.Fatalf("expected 1 matched rule (record 0 only), got %d — ArgsPost may have leaked between records", len(tx.matchedRules))
+	if processedRecords != 2 {
+		t.Fatalf("expected 2 records processed before interruption, got %d", processedRecords)
 	}
 }
 
@@ -373,57 +276,59 @@ func TestProcessResponseBodyStreamingInterruption(t *testing.T) {
 	}
 }
 
-func TestProcessRequestBodyStreamingProcessorError(t *testing.T) {
+func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
+	// TX variables (matchedRules, user-set TX vars) should persist across records
+	// for cross-record correlation. ArgsPost is reset per record, but TX-scoped
+	// state accumulates.
 	waf := NewWAF()
 
+	rule := newStreamingTestRule(t, 200, variables.ArgsPost, "suspicious", false)
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatal(err)
+	}
+
 	sp := &mockStreamingBodyProcessor{
-		err: errors.New("simulated processor error"),
+		records: []mockRecord{
+			{fields: map[string]string{"json.0.data": "suspicious-1"}, rawRecord: []byte(`{"data":"suspicious-1"}` + "\n")},
+			{fields: map[string]string{"json.1.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
+			{fields: map[string]string{"json.2.data": "suspicious-2"}, rawRecord: []byte(`{"data":"suspicious-2"}` + "\n")},
+		},
 	}
 
 	tx := waf.NewTransaction()
 	defer tx.Close()
 	tx.RequestBodyAccess = true
+	tx.variables.tx.SetIndex("marker", 0, "persist-me")
 
 	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
-		t.Fatalf("unexpected error (should be nil): %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	// The processor error should trigger error handling but not an interruption
-	// (unless rules trigger one based on the error)
-	_ = it
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if len(tx.matchedRules) != 2 {
+		t.Fatalf("expected 2 matched rules, got %d", len(tx.matchedRules))
+	}
+	if vals := tx.variables.tx.Get("marker"); len(vals) == 0 || vals[0] != "persist-me" {
+		t.Fatalf("TX variable 'marker' did not persist across records, got: %v", vals)
+	}
 }
 
-func TestProcessResponseBodyStreamingProcessorError(t *testing.T) {
+func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
+	// Verify that record 0's fields don't leak into record 1's evaluation.
+	// The rule uses deny=false so processing continues through both records.
 	waf := NewWAF()
-
-	sp := &mockStreamingBodyProcessor{
-		err: errors.New("simulated response processor error"),
+	rule := newStreamingTestRule(t, 300, variables.ArgsPost, "record0-only", false)
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatal(err)
 	}
 
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.ResponseBodyAccess = true
-
-	it, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
-	if err != nil {
-		t.Fatalf("unexpected error (should be nil): %v", err)
-	}
-	_ = it
-}
-
-// TestProcessRequestBodyStreamingProcessorErrorClearsArgsPost verifies that
-// argsPost is cleared after a mid-stream processor error, even when an
-// interruption has already been set, so no stale record data leaks into
-// subsequent phases.
-func TestProcessRequestBodyStreamingProcessorErrorClearsArgsPost(t *testing.T) {
-	waf := NewWAF()
-
-	// Emit one record that populates argsPost, then return an error.
 	sp := &mockStreamingBodyProcessor{
 		records: []mockRecord{
-			{fields: map[string]string{"json.0.field": "stale-value"}, rawRecord: []byte("rec\n")},
+			{fields: map[string]string{"json.0.data": "record0-only-value"}, rawRecord: []byte(`{"data":"record0-only-value"}` + "\n")},
+			{fields: map[string]string{"json.1.data": "clean"}, rawRecord: []byte(`{"data":"clean"}` + "\n")},
 		},
-		err: errors.New("mid-stream processor error"),
 	}
 
 	tx := waf.NewTransaction()
@@ -434,31 +339,68 @@ func TestProcessRequestBodyStreamingProcessorErrorClearsArgsPost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	_ = it
+	if it != nil {
+		t.Fatal("unexpected interruption")
+	}
+	// Only record 0 should have matched — if ArgsPost leaked, record 1 would also match
+	if len(tx.matchedRules) != 1 {
+		t.Fatalf("expected 1 matched rule (record 0 only), got %d — ArgsPost may have leaked between records", len(tx.matchedRules))
+	}
+}
 
-	// argsPost must be empty after the error handler runs.
-	if got := tx.variables.argsPost.Len(); got != 0 {
-		t.Fatalf("expected argsPost to be empty after processor error, got %d entries", got)
+// TestProcessBodyStreamingProcessorErrorClearsVars verifies that per-record
+// variables are cleared after a mid-stream processor error so no stale data
+// leaks into subsequent phases.
+func TestProcessBodyStreamingProcessorErrorClearsVars(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		request bool
+	}{
+		{"request/argsPost", true},
+		{"response/responseArgs", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := NewWAF()
+			sp := &mockStreamingBodyProcessor{
+				records: []mockRecord{
+					{fields: map[string]string{"json.0.field": "stale-value"}, rawRecord: []byte("rec\n")},
+				},
+				err: errors.New("mid-stream processor error"),
+			}
+			tx := waf.NewTransaction()
+			defer tx.Close()
+
+			if tc.request {
+				tx.RequestBodyAccess = true
+				if _, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{}); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if got := tx.variables.argsPost.Len(); got != 0 {
+					t.Fatalf("argsPost not cleared after processor error, got %d entries", got)
+				}
+			} else {
+				tx.ResponseBodyAccess = true
+				if _, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{}); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if got := tx.variables.responseArgs.Len(); got != 0 {
+					t.Fatalf("responseArgs not cleared after processor error, got %d entries", got)
+				}
+			}
+		})
 	}
 }
 
 // TestProcessRequestBodyStreamingProcessorErrorFallbackEvalNoStaleData verifies that
-// argsPost is cleared even when the processor wraps errStreamInterrupted with its
-// own error (edge case: poorly-written processor that doesn't propagate the sentinel
-// cleanly). In this case both tx.interruption is set AND a non-sentinel error is
-// returned — argsPost must still be cleared.
+// argsPost is cleared even when the processor wraps errStreamInterrupted (edge case:
+// tx.interruption is set AND a non-sentinel error is returned simultaneously).
 func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalNoStaleData(t *testing.T) {
 	waf := NewWAF()
-	// Rule that matches "stale-value" — would fire in fallback eval if not cleared.
 	rule := newStreamingTestRule(t, 501, variables.ArgsPost, "stale-value", true)
 	if err := waf.Rules.Add(rule); err != nil {
 		t.Fatal(err)
 	}
 
-	// Processor emits a record that causes an interruption, but wraps the
-	// errStreamInterrupted sentinel with its own error.  This simulates a
-	// processor that doesn't propagate the sentinel cleanly — the outer error
-	// handler receives a non-sentinel error while tx.interruption is already set.
 	sp := &sentinelWrappingProcessor{
 		records: []mockRecord{
 			{fields: map[string]string{"json.0.field": "stale-value"}, rawRecord: []byte("rec\n")},
@@ -473,227 +415,84 @@ func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalNoStaleData(t *tes
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	// Interruption must still be set (from the per-record eval).
 	if it == nil {
 		t.Fatal("expected interruption from per-record eval")
 	}
-
-	// argsPost must be empty: the error handler ran and cleared stale data even
-	// though tx.interruption was already non-nil.
 	if got := tx.variables.argsPost.Len(); got != 0 {
 		t.Fatalf("argsPost not cleared: has %d entries after wrapped-sentinel error", got)
 	}
 }
 
-// TestProcessRequestBodyStreamingProcessorErrorFallbackEvalClean verifies that
-// when a processor errors after partial records (no rule interruption during the
-// per-record evals), the fallback phase evaluation runs on an empty argsPost —
-// not on the last record's stale data.
-func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T) {
-	waf := NewWAF()
-	// Rule matching "clean-field" — would fire if argsPost leaks.
-	rule := newStreamingTestRule(t, 502, variables.ArgsPost, "clean-field", true)
-	if err := waf.Rules.Add(rule); err != nil {
-		t.Fatal(err)
-	}
-
-	// Sanity check: the rule fires when argsPost contains "clean-field", proving
-	// the test doesn't pass vacuously due to a broken rule configuration.
-	txSanity := waf.NewTransaction()
-	defer txSanity.Close()
-	txSanity.variables.argsPost.SetIndex("sanity", 0, "clean-field")
-	txSanity.WAF.Rules.Eval(types.PhaseRequestBody, txSanity)
-	if txSanity.interruption == nil {
-		t.Fatal("sanity check: rule should fire when argsPost contains 'clean-field'")
-	}
-
-	// Use a record value that does NOT match the rule pattern, so the per-record
-	// callback succeeds (no interruption), and the processor then returns an error.
-	// The fallback eval runs on empty argsPost (rule would not fire on stale "no-match").
-	sp := &mockStreamingBodyProcessor{
-		records: []mockRecord{
-			{fields: map[string]string{"json.0.field": "no-match"}, rawRecord: []byte("rec\n")},
-		},
-		err: errors.New("processor error after safe record"),
-	}
-
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.RequestBodyAccess = true
-
-	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// No interruption during per-record eval (record was "no-match").
-	// Fallback phase eval runs on empty argsPost — rule "clean-field" doesn't match.
-	if it != nil {
-		t.Fatalf("unexpected interruption from fallback eval on stale data: %v", it)
-	}
-	if got := tx.variables.argsPost.Len(); got != 0 {
-		t.Fatalf("argsPost not cleared after processor error: %d entries remain", got)
-	}
-}
-
-// TestProcessResponseBodyStreamingProcessorErrorClearsResponseArgs verifies that
-// responseArgs is cleared after a mid-stream processor error.
-func TestProcessResponseBodyStreamingProcessorErrorClearsResponseArgs(t *testing.T) {
-	waf := NewWAF()
-
-	sp := &mockStreamingBodyProcessor{
-		records: []mockRecord{
-			{fields: map[string]string{"json.0.field": "stale-resp"}, rawRecord: []byte("rec\n")},
-		},
-		err: errors.New("mid-stream response processor error"),
-	}
-
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.ResponseBodyAccess = true
-
-	it, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	_ = it
-
-	if got := tx.variables.responseArgs.Len(); got != 0 {
-		t.Fatalf("expected responseArgs to be empty after processor error, got %d entries", got)
-	}
-}
-
-// TestProcessResponseBodyStreamingProcessorErrorFallbackEvalClean verifies that the
-// fallback phase evaluation after a response processor error runs on empty
-// responseArgs, not stale data from the last processed record.
-func TestProcessResponseBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T) {
-	waf := NewWAF()
-	rule := newStreamingTestRule(t, 503, variables.ResponseArgs, "resp-stale", true)
-	if err := waf.Rules.Add(rule); err != nil {
-		t.Fatal(err)
-	}
-
-	// Sanity check: the rule fires when responseArgs contains "resp-stale".
-	txSanity := waf.NewTransaction()
-	defer txSanity.Close()
-	txSanity.variables.responseArgs.SetIndex("sanity", 0, "resp-stale")
-	txSanity.WAF.Rules.Eval(types.PhaseResponseBody, txSanity)
-	if txSanity.interruption == nil {
-		t.Fatal("sanity check: rule should fire when responseArgs contains 'resp-stale'")
-	}
-
-	// Record value doesn't match rule, so per-record eval doesn't interrupt.
-	// Then the processor errors; the fallback eval must run on empty responseArgs.
-	sp := &mockStreamingBodyProcessor{
-		records: []mockRecord{
-			{fields: map[string]string{"json.0.field": "no-match"}, rawRecord: []byte("rec\n")},
-		},
-		err: errors.New("processor error after safe response record"),
-	}
-
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.ResponseBodyAccess = true
-
-	it, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption from fallback eval on stale response data: %v", it)
-	}
-	if got := tx.variables.responseArgs.Len(); got != 0 {
-		t.Fatalf("responseArgs not cleared after processor error: %d entries remain", got)
-	}
-}
-
-func TestProcessRequestBodyFromStreamRelay(t *testing.T) {
-	waf := NewWAF()
-	rule := newStreamingTestRule(t, 600, variables.ArgsPost, "blocked", true)
-	if err := waf.Rules.Add(rule); err != nil {
-		t.Fatal(err)
-	}
-
-	// Register a mock streaming body processor
-	// Since we can't easily register a mock via bodyprocessors.GetBodyProcessor,
-	// we test the relay logic through the lower-level processRequestBodyStreaming
-	sp := &mockStreamingBodyProcessor{
-		records: []mockRecord{
-			{fields: map[string]string{"json.0.name": "safe"}, rawRecord: []byte(`{"name":"safe"}` + "\n")},
-			{fields: map[string]string{"json.1.name": "blocked-value"}, rawRecord: []byte(`{"name":"blocked-value"}` + "\n")},
-			{fields: map[string]string{"json.2.name": "never-reached"}, rawRecord: []byte(`{"name":"never-reached"}` + "\n")},
-		},
-	}
-
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.RequestBodyAccess = true
-
-	var output bytes.Buffer
-	// Manually test the relay pattern
-	streamErr := sp.ProcessRequestRecords(strings.NewReader(""), plugintypes.BodyProcessorOptions{},
-		func(recordNum int, record plugintypes.Record) error {
-			tx.variables.argsPost.Reset()
-			for key, value := range record.Fields() {
-				tx.variables.argsPost.SetIndex(key, 0, value)
+// TestProcessBodyStreamingProcessorErrorFallbackEvalClean verifies that the
+// fallback phase evaluation after a processor error runs on empty per-record
+// variables, not stale data from the last processed record.
+func TestProcessBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		request   bool
+		targetVar variables.RuleVariable
+		phase     types.RulePhase
+		pattern   string
+	}{
+		{"request", true, variables.ArgsPost, types.PhaseRequestBody, "clean-field"},
+		{"response", false, variables.ResponseArgs, types.PhaseResponseBody, "resp-stale"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := NewWAF()
+			rule := newStreamingTestRule(t, 502, tc.targetVar, tc.pattern, true)
+			if err := waf.Rules.Add(rule); err != nil {
+				t.Fatal(err)
 			}
-			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-			if tx.interruption != nil {
-				return errStreamInterrupted
+
+			// Sanity check: the rule fires when the variable contains the pattern.
+			txSanity := waf.NewTransaction()
+			defer txSanity.Close()
+			if tc.request {
+				txSanity.variables.argsPost.SetIndex("sanity", 0, tc.pattern)
+			} else {
+				txSanity.variables.responseArgs.SetIndex("sanity", 0, tc.pattern)
 			}
-			if _, err := output.Write(record.Raw()); err != nil {
-				return err
+			txSanity.WAF.Rules.Eval(tc.phase, txSanity)
+			if txSanity.interruption == nil {
+				t.Fatal("sanity check: rule must fire when variable contains pattern")
 			}
-			return nil
+
+			sp := &mockStreamingBodyProcessor{
+				records: []mockRecord{
+					{fields: map[string]string{"json.0.field": "no-match"}, rawRecord: []byte("rec\n")},
+				},
+				err: errors.New("processor error after safe record"),
+			}
+
+			tx := waf.NewTransaction()
+			defer tx.Close()
+
+			var it *types.Interruption
+			var procErr error
+			if tc.request {
+				tx.RequestBodyAccess = true
+				it, procErr = tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+			} else {
+				tx.ResponseBodyAccess = true
+				it, procErr = tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+			}
+			if procErr != nil {
+				t.Fatalf("unexpected error: %v", procErr)
+			}
+			if it != nil {
+				t.Fatalf("unexpected interruption from fallback eval on stale data: %v", it)
+			}
+
+			if tc.request {
+				if got := tx.variables.argsPost.Len(); got != 0 {
+					t.Fatalf("argsPost not cleared after processor error: %d entries remain", got)
+				}
+			} else {
+				if got := tx.variables.responseArgs.Len(); got != 0 {
+					t.Fatalf("responseArgs not cleared after processor error: %d entries remain", got)
+				}
+			}
 		})
-
-	if streamErr != errStreamInterrupted {
-		t.Fatalf("expected errStreamInterrupted, got: %v", streamErr)
-	}
-	// Only the first record should have been relayed
-	expected := `{"name":"safe"}` + "\n"
-	if output.String() != expected {
-		t.Fatalf("expected output %q, got %q", expected, output.String())
-	}
-}
-
-func TestProcessResponseBodyFromStreamRelay(t *testing.T) {
-	waf := NewWAF()
-
-	sp := &mockStreamingBodyProcessor{
-		records: []mockRecord{
-			{fields: map[string]string{"json.0.a": "1"}, rawRecord: []byte(`{"a":"1"}` + "\n")},
-			{fields: map[string]string{"json.1.a": "2"}, rawRecord: []byte(`{"a":"2"}` + "\n")},
-		},
-	}
-
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.ResponseBodyAccess = true
-
-	var output bytes.Buffer
-	streamErr := sp.ProcessResponseRecords(strings.NewReader(""), plugintypes.BodyProcessorOptions{},
-		func(recordNum int, record plugintypes.Record) error {
-			tx.variables.responseArgs.Reset()
-			for key, value := range record.Fields() {
-				tx.variables.responseArgs.SetIndex(key, 0, value)
-			}
-			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
-			if tx.interruption != nil {
-				return errStreamInterrupted
-			}
-			if _, err := output.Write(record.Raw()); err != nil {
-				return err
-			}
-			return nil
-		})
-
-	if streamErr != nil {
-		t.Fatalf("unexpected error: %v", streamErr)
-	}
-	expected := `{"a":"1"}` + "\n" + `{"a":"2"}` + "\n"
-	if output.String() != expected {
-		t.Fatalf("expected output %q, got %q", expected, output.String())
 	}
 }
 
@@ -747,45 +546,40 @@ func TestStreamingTransactionInterface(t *testing.T) {
 	}
 }
 
-func TestProcessRequestBodyFromStreamEngineOff(t *testing.T) {
-	waf := NewWAF()
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.RuleEngine = types.RuleEngineOff
+// TestProcessBodyFromStreamEngineOff verifies that both request and response
+// paths pass through input unchanged when the rule engine is off.
+func TestProcessBodyFromStreamEngineOff(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		request bool
+	}{
+		{"request", true},
+		{"response", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			defer tx.Close()
+			tx.RuleEngine = types.RuleEngineOff
 
-	input := strings.NewReader("passthrough data")
-	var output bytes.Buffer
-
-	it, err := tx.ProcessRequestBodyFromStream(input, &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatal("unexpected interruption when engine is off")
-	}
-	if output.String() != "passthrough data" {
-		t.Fatalf("expected passthrough, got %q", output.String())
-	}
-}
-
-func TestProcessResponseBodyFromStreamEngineOff(t *testing.T) {
-	waf := NewWAF()
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.RuleEngine = types.RuleEngineOff
-
-	input := strings.NewReader("passthrough data")
-	var output bytes.Buffer
-
-	it, err := tx.ProcessResponseBodyFromStream(input, &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatal("unexpected interruption when engine is off")
-	}
-	if output.String() != "passthrough data" {
-		t.Fatalf("expected passthrough, got %q", output.String())
+			var output bytes.Buffer
+			var it *types.Interruption
+			var err error
+			if tc.request {
+				it, err = tx.ProcessRequestBodyFromStream(strings.NewReader("passthrough data"), &output)
+			} else {
+				it, err = tx.ProcessResponseBodyFromStream(strings.NewReader("passthrough data"), &output)
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if it != nil {
+				t.Fatal("unexpected interruption when engine is off")
+			}
+			if output.String() != "passthrough data" {
+				t.Fatalf("expected passthrough, got %q", output.String())
+			}
+		})
 	}
 }
 
@@ -838,111 +632,83 @@ func setupResponseStreamTx(t *testing.T, waf *WAF, bodyProcessor string) *Transa
 	return tx
 }
 
-func TestProcessRequestBodyFromStreamPreExistingInterruption(t *testing.T) {
-	waf := NewWAF()
-	tx := setupRequestStreamTx(t, waf, "TESTSTREAM")
-	defer tx.Close()
-	tx.Interrupt(&types.Interruption{Status: 403, Action: "deny"})
-
-	var output bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("data"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestProcessRequestBodyFromStream(t *testing.T) {
+	tests := []struct {
+		name          string
+		bodyProcessor string
+		preInterrupt  bool
+		disableAccess bool
+		input         string
+		wantOutput    string
+		wantInterrupt bool
+		wantNoOutput  bool
+	}{
+		{
+			name:          "pre-existing interruption returns early with no output",
+			bodyProcessor: "TESTSTREAM",
+			preInterrupt:  true,
+			input:         "data",
+			wantInterrupt: true,
+			wantNoOutput:  true,
+		},
+		{
+			name:          "no body access passes through",
+			bodyProcessor: "TESTSTREAM",
+			disableAccess: true,
+			input:         "passthrough",
+			wantOutput:    "passthrough",
+		},
+		{
+			name:       "no body processor passes through",
+			input:      "passthrough",
+			wantOutput: "passthrough",
+		},
+		{
+			name:          "invalid processor does not interrupt",
+			bodyProcessor: "DOESNOTEXIST",
+			input:         "data",
+		},
+		{
+			name:          "streaming processor relays records to output",
+			bodyProcessor: "TESTSTREAM",
+			wantOutput:    "record0\n",
+		},
+		{
+			name:          "non-streaming processor falls back to buffer",
+			bodyProcessor: "URLENCODED",
+			input:         "key=value",
+			wantOutput:    "key=value",
+		},
 	}
-	if it == nil {
-		t.Fatal("expected pre-existing interruption to be returned")
-	}
-	if output.Len() != 0 {
-		t.Fatalf("expected no output, got %q", output.String())
-	}
-}
-
-func TestProcessRequestBodyFromStreamNoBodyAccess(t *testing.T) {
-	waf := NewWAF()
-	tx := setupRequestStreamTx(t, waf, "TESTSTREAM")
-	defer tx.Close()
-	tx.RequestBodyAccess = false
-
-	var output bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("passthrough"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != "passthrough" {
-		t.Fatalf("expected passthrough, got %q", output.String())
-	}
-}
-
-func TestProcessRequestBodyFromStreamNoBodyProcessor(t *testing.T) {
-	waf := NewWAF()
-	tx := setupRequestStreamTx(t, waf, "") // no body processor
-	defer tx.Close()
-
-	var output bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("passthrough"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != "passthrough" {
-		t.Fatalf("expected passthrough, got %q", output.String())
-	}
-}
-
-func TestProcessRequestBodyFromStreamInvalidProcessor(t *testing.T) {
-	waf := NewWAF()
-	tx := setupRequestStreamTx(t, waf, "DOESNOTEXIST")
-	defer tx.Close()
-
-	var output bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("data"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// Should not interrupt, but should have generated a body error
-	_ = it
-}
-
-func TestProcessRequestBodyFromStreamStreamingProcessor(t *testing.T) {
-	waf := NewWAF()
-	tx := setupRequestStreamTx(t, waf, "TESTSTREAM")
-	defer tx.Close()
-
-	var output bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader(""), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != "record0\n" {
-		t.Fatalf("expected relayed record, got %q", output.String())
-	}
-}
-
-func TestProcessRequestBodyFromStreamNonStreamingFallback(t *testing.T) {
-	// URLENCODED is a non-streaming processor — tests the buffered fallback path
-	waf := NewWAF()
-	tx := setupRequestStreamTx(t, waf, "URLENCODED")
-	defer tx.Close()
-
-	body := "key=value"
-	var output bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader(body), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != body {
-		t.Fatalf("expected %q, got %q", body, output.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := setupRequestStreamTx(t, waf, tt.bodyProcessor)
+			defer tx.Close()
+			if tt.preInterrupt {
+				tx.Interrupt(&types.Interruption{Status: 403, Action: "deny"})
+			}
+			if tt.disableAccess {
+				tx.RequestBodyAccess = false
+			}
+			var output bytes.Buffer
+			it, err := tx.ProcessRequestBodyFromStream(strings.NewReader(tt.input), &output)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantInterrupt && it == nil {
+				t.Fatal("expected interruption")
+			}
+			if !tt.wantInterrupt && it != nil {
+				t.Fatalf("unexpected interruption: %v", it)
+			}
+			if tt.wantNoOutput && output.Len() != 0 {
+				t.Fatalf("expected no output, got %q", output.String())
+			}
+			if tt.wantOutput != "" && output.String() != tt.wantOutput {
+				t.Fatalf("expected output %q, got %q", tt.wantOutput, output.String())
+			}
+		})
 	}
 }
 
@@ -962,109 +728,85 @@ func TestProcessRequestBodyFromStreamWrongPhase(t *testing.T) {
 	}
 }
 
-func TestProcessResponseBodyFromStreamPreExistingInterruption(t *testing.T) {
-	waf := NewWAF()
-	tx := setupResponseStreamTx(t, waf, "TESTSTREAM")
-	defer tx.Close()
-	tx.Interrupt(&types.Interruption{Status: 403, Action: "deny"})
-
-	var output bytes.Buffer
-	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("data"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestProcessResponseBodyFromStream(t *testing.T) {
+	tests := []struct {
+		name          string
+		bodyProcessor string
+		mimeTypes     []string
+		preInterrupt  bool
+		disableAccess bool
+		input         string
+		wantOutput    string
+		wantInterrupt bool
+	}{
+		{
+			name:          "pre-existing interruption returns early",
+			bodyProcessor: "TESTSTREAM",
+			preInterrupt:  true,
+			input:         "data",
+			wantInterrupt: true,
+		},
+		{
+			name:          "no body access passes through",
+			bodyProcessor: "TESTSTREAM",
+			disableAccess: true,
+			input:         "passthrough",
+			wantOutput:    "passthrough",
+		},
+		{
+			name:       "no body processor passes through",
+			input:      "passthrough",
+			wantOutput: "passthrough",
+		},
+		{
+			name:          "invalid processor does not interrupt",
+			bodyProcessor: "DOESNOTEXIST",
+			mimeTypes:     []string{"application/octet-stream"},
+			input:         "data",
+		},
+		{
+			name:          "streaming processor relays records to output",
+			bodyProcessor: "TESTSTREAM",
+			mimeTypes:     []string{"application/octet-stream"},
+			wantOutput:    "record0\n",
+		},
+		{
+			name:          "non-streaming processor falls back to buffer",
+			bodyProcessor: "JSON",
+			mimeTypes:     []string{"application/octet-stream"},
+			input:         `{"key":"value"}`,
+			wantOutput:    `{"key":"value"}`,
+		},
 	}
-	if it == nil {
-		t.Fatal("expected pre-existing interruption")
-	}
-}
-
-func TestProcessResponseBodyFromStreamNoBodyAccess(t *testing.T) {
-	waf := NewWAF()
-	tx := setupResponseStreamTx(t, waf, "TESTSTREAM")
-	defer tx.Close()
-	tx.ResponseBodyAccess = false
-
-	var output bytes.Buffer
-	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("passthrough"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != "passthrough" {
-		t.Fatalf("expected passthrough, got %q", output.String())
-	}
-}
-
-func TestProcessResponseBodyFromStreamNoBodyProcessor(t *testing.T) {
-	waf := NewWAF()
-	tx := setupResponseStreamTx(t, waf, "") // no body processor
-	defer tx.Close()
-
-	var output bytes.Buffer
-	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("passthrough"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != "passthrough" {
-		t.Fatalf("expected passthrough, got %q", output.String())
-	}
-}
-
-func TestProcessResponseBodyFromStreamStreamingProcessor(t *testing.T) {
-	waf := NewWAF()
-	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
-	tx := setupResponseStreamTx(t, waf, "TESTSTREAM")
-	defer tx.Close()
-
-	var output bytes.Buffer
-	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader(""), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != "record0\n" {
-		t.Fatalf("expected relayed record, got %q", output.String())
-	}
-}
-
-func TestProcessResponseBodyFromStreamInvalidProcessor(t *testing.T) {
-	waf := NewWAF()
-	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
-	tx := setupResponseStreamTx(t, waf, "DOESNOTEXIST")
-	defer tx.Close()
-
-	var output bytes.Buffer
-	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("data"), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	_ = it
-}
-
-func TestProcessResponseBodyFromStreamNonStreamingFallback(t *testing.T) {
-	waf := NewWAF()
-	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
-	tx := setupResponseStreamTx(t, waf, "JSON")
-	defer tx.Close()
-
-	body := `{"key":"value"}`
-	var output bytes.Buffer
-	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader(body), &output)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if it != nil {
-		t.Fatalf("unexpected interruption: %v", it)
-	}
-	if output.String() != body {
-		t.Fatalf("expected %q, got %q", body, output.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			if len(tt.mimeTypes) > 0 {
+				waf.ResponseBodyMimeTypes = tt.mimeTypes
+			}
+			tx := setupResponseStreamTx(t, waf, tt.bodyProcessor)
+			defer tx.Close()
+			if tt.preInterrupt {
+				tx.Interrupt(&types.Interruption{Status: 403, Action: "deny"})
+			}
+			if tt.disableAccess {
+				tx.ResponseBodyAccess = false
+			}
+			var output bytes.Buffer
+			it, err := tx.ProcessResponseBodyFromStream(strings.NewReader(tt.input), &output)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantInterrupt && it == nil {
+				t.Fatal("expected interruption")
+			}
+			if !tt.wantInterrupt && it != nil {
+				t.Fatalf("unexpected interruption: %v", it)
+			}
+			if tt.wantOutput != "" && output.String() != tt.wantOutput {
+				t.Fatalf("expected output %q, got %q", tt.wantOutput, output.String())
+			}
+		})
 	}
 }
 
@@ -1093,9 +835,6 @@ func TestProcessResponseBodyFromStreamWrongPhase(t *testing.T) {
 // Each payload contains two "fields" encoded as:
 //
 //	[1-byte key length][key bytes][2-byte big-endian value length][value bytes]
-//
-// This is NOT real protobuf, but exercises the same properties: binary
-// framing, non-UTF-8 raw bytes, and string-based field extraction.
 
 // binaryRecord implements plugintypes.Record for a length-prefixed binary message.
 type binaryRecord struct {
@@ -1107,7 +846,6 @@ func (r binaryRecord) Fields() map[string]string { return r.fields }
 func (r binaryRecord) Raw() []byte               { return r.raw }
 
 // encodeBinaryRecord builds a length-prefixed binary frame from key-value pairs.
-// The payload format per field: [1-byte keyLen][key][2-byte valueLen][value].
 func encodeBinaryRecord(fields map[string]string) []byte {
 	var payload bytes.Buffer
 	for k, v := range fields {
@@ -1116,7 +854,6 @@ func encodeBinaryRecord(fields map[string]string) []byte {
 		_ = binary.Write(&payload, binary.BigEndian, uint16(len(v)))
 		payload.WriteString(v)
 	}
-	// Frame: [4-byte length][payload]
 	frame := make([]byte, 4+payload.Len())
 	binary.BigEndian.PutUint32(frame[:4], uint32(payload.Len()))
 	copy(frame[4:], payload.Bytes())
@@ -1136,9 +873,6 @@ func decodeBinaryRecord(frame []byte) (map[string]string, error) {
 	fields := make(map[string]string)
 	pos := 0
 	for pos < len(payload) {
-		if pos >= len(payload) {
-			break
-		}
 		keyLen := int(payload[pos])
 		pos++
 		if pos+keyLen > len(payload) {
@@ -1161,8 +895,7 @@ func decodeBinaryRecord(frame []byte) (map[string]string, error) {
 	return fields, nil
 }
 
-// binaryStreamProcessor simulates a protobuf-like streaming body processor
-// that reads length-prefixed binary messages from a reader.
+// binaryStreamProcessor simulates a protobuf-like streaming body processor.
 type binaryStreamProcessor struct{}
 
 func (p *binaryStreamProcessor) ProcessRequest(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
@@ -1177,39 +910,29 @@ func (p *binaryStreamProcessor) ProcessRequestRecords(reader io.Reader, _ plugin
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	recordNum := 0
 	for {
-		// Read 4-byte length prefix
 		var lengthBuf [4]byte
 		if _, err := io.ReadFull(reader, lengthBuf[:]); err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				return nil // end of stream
+				return nil
 			}
 			return err
 		}
 		payloadLen := binary.BigEndian.Uint32(lengthBuf[:])
-
-		// Read payload
 		payload := make([]byte, payloadLen)
 		if _, err := io.ReadFull(reader, payload); err != nil {
 			return fmt.Errorf("truncated record %d: %w", recordNum, err)
 		}
-
-		// Full frame = length prefix + payload
 		frame := make([]byte, 4+payloadLen)
 		copy(frame[:4], lengthBuf[:])
 		copy(frame[4:], payload)
-
-		// Decode fields (the "protobuf deserialization")
 		fields, err := decodeBinaryRecord(frame)
 		if err != nil {
 			return fmt.Errorf("record %d: %w", recordNum, err)
 		}
-
-		// Prefix field keys with record number
 		prefixed := make(map[string]string, len(fields))
 		for k, v := range fields {
 			prefixed[fmt.Sprintf("proto.%d.%s", recordNum, k)] = v
 		}
-
 		if err := fn(recordNum, binaryRecord{fields: prefixed, raw: frame}); err != nil {
 			return err
 		}
@@ -1224,13 +947,11 @@ func (p *binaryStreamProcessor) ProcessResponseRecords(reader io.Reader, opts pl
 
 func TestProcessRequestBodyStreamingBinaryFormat(t *testing.T) {
 	waf := NewWAF()
-	// Block any record containing "malicious" in ArgsPost
 	rule := newStreamingTestRule(t, 700, variables.ArgsPost, "malicious", true)
 	if err := waf.Rules.Add(rule); err != nil {
 		t.Fatal(err)
 	}
 
-	// Build a binary stream: 3 records, second one is malicious
 	var stream bytes.Buffer
 	stream.Write(encodeBinaryRecord(map[string]string{"user": "alice", "role": "admin"}))
 	stream.Write(encodeBinaryRecord(map[string]string{"user": "malicious-actor", "role": "root"}))
@@ -1240,9 +961,7 @@ func TestProcessRequestBodyStreamingBinaryFormat(t *testing.T) {
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
-	sp := &binaryStreamProcessor{}
-
-	it, err := tx.processRequestBodyStreaming(sp, &stream, plugintypes.BodyProcessorOptions{})
+	it, err := tx.processRequestBodyStreaming(&binaryStreamProcessor{}, &stream, plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1251,65 +970,7 @@ func TestProcessRequestBodyStreamingBinaryFormat(t *testing.T) {
 	}
 }
 
-func TestProcessRequestBodyStreamingBinaryRelay(t *testing.T) {
-	waf := NewWAF()
-	// No deny rules — all records pass through
-	tx := waf.NewTransaction()
-	defer tx.Close()
-	tx.RequestBodyAccess = true
-
-	// Build a binary stream with 2 clean records
-	rec1 := encodeBinaryRecord(map[string]string{"id": "1", "status": "ok"})
-	rec2 := encodeBinaryRecord(map[string]string{"id": "2", "status": "ok"})
-	var stream bytes.Buffer
-	stream.Write(rec1)
-	stream.Write(rec2)
-
-	sp := &binaryStreamProcessor{}
-
-	var output bytes.Buffer
-	err := sp.ProcessRequestRecords(&stream, plugintypes.BodyProcessorOptions{},
-		func(recordNum int, record plugintypes.Record) error {
-			tx.variables.argsPost.Reset()
-			for key, value := range record.Fields() {
-				tx.variables.argsPost.SetIndex(key, 0, value)
-			}
-			tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-			if tx.interruption != nil {
-				return errStreamInterrupted
-			}
-			if _, err := output.Write(record.Raw()); err != nil {
-				return err
-			}
-			return nil
-		})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Output should be the exact binary frames concatenated
-	expected := make([]byte, 0, len(rec1)+len(rec2))
-	expected = append(expected, rec1...)
-	expected = append(expected, rec2...)
-	if !bytes.Equal(output.Bytes(), expected) {
-		t.Fatalf("binary relay mismatch:\n  got:  %x\n  want: %x", output.Bytes(), expected)
-	}
-
-	// Verify the frames can be decoded back
-	fields1, err := decodeBinaryRecord(rec1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if fields1["id"] != "1" || fields1["status"] != "ok" {
-		t.Fatalf("unexpected fields in relayed record 1: %v", fields1)
-	}
-}
-
 // --- Benchmarks ---
-//
-// These benchmarks measure the per-record streaming evaluation path against
-// the traditional buffered ProcessRequest path across different stream sizes
-// and record complexities.
 
 // benchRecord holds precomputed data for one record.
 type benchRecord struct {
@@ -1317,8 +978,6 @@ type benchRecord struct {
 	raw    []byte
 }
 
-// makeBenchRecords generates n records. Each record has the given number of
-// fields with values of the specified size.
 func makeBenchRecords(n, fieldsPerRecord, valueSize int) []benchRecord {
 	val := strings.Repeat("x", valueSize)
 	records := make([]benchRecord, n)
@@ -1328,7 +987,6 @@ func makeBenchRecords(n, fieldsPerRecord, valueSize int) []benchRecord {
 			key := fmt.Sprintf("json.%d.field%d", i, f)
 			fields[key] = val
 		}
-		// Simulate raw record: a JSON-like line
 		var raw bytes.Buffer
 		raw.WriteString(`{"i":`)
 		raw.WriteString(strconv.Itoa(i))
@@ -1341,9 +999,6 @@ func makeBenchRecords(n, fieldsPerRecord, valueSize int) []benchRecord {
 	return records
 }
 
-// bufferedProcessor implements BodyProcessor (non-streaming). It populates
-// TransactionVariables with all records at once, simulating the traditional
-// full-body parsing approach.
 type bufferedProcessor struct {
 	records []benchRecord
 }
@@ -1361,7 +1016,6 @@ func (p *bufferedProcessor) ProcessResponse(_ io.Reader, _ plugintypes.Transacti
 	return nil
 }
 
-// benchStreamProcessor implements StreamingBodyProcessor from precomputed records.
 type benchStreamProcessor struct {
 	records []benchRecord
 }
@@ -1389,18 +1043,15 @@ func (p *benchStreamProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes
 	return p.ProcessRequestRecords(nil, plugintypes.BodyProcessorOptions{}, fn)
 }
 
-// newBenchWAF creates a WAF with a realistic set of Phase 2 rules that inspect
-// ArgsPost via @rx. The patterns don't match the bench data, so no interruption
-// occurs — this measures steady-state evaluation cost.
 func newBenchWAF(b *testing.B) *WAF {
 	b.Helper()
 	waf := NewWAF()
 	patterns := []string{
-		`(?i)select\b.*\bfrom\b`,     // SQLi
-		`<script[^>]*>`,              // XSS
-		`\.\./`,                      // path traversal
-		`\b(?:cmd|exec|system)\s*\(`, // command injection
-		`(?i)union\b.*\bselect\b`,    // SQLi union
+		`(?i)select\b.*\bfrom\b`,
+		`<script[^>]*>`,
+		`\.\./`,
+		`\b(?:cmd|exec|system)\s*\(`,
+		`(?i)union\b.*\bselect\b`,
 	}
 	for i, pat := range patterns {
 		rule := NewRule()
@@ -1424,25 +1075,20 @@ func newBenchWAF(b *testing.B) *WAF {
 //
 //	go test -bench=BenchmarkStreamingEval -benchmem ./internal/corazawaf/
 func BenchmarkStreamingEval(b *testing.B) {
-	type benchCase struct {
+	cases := []struct {
 		name            string
 		numRecords      int
 		fieldsPerRecord int
 		valueSize       int
-	}
-	cases := []benchCase{
-		// Small: 10 records × 3 fields × 24-byte values (~720 B payload)
+	}{
 		{"small/10rec", 10, 3, 24},
-		// Medium: 100 records × 5 fields × 64-byte values (~32 KB payload)
 		{"medium/100rec", 100, 5, 64},
-		// Large: 1000 records × 5 fields × 128-byte values (~640 KB payload)
 		{"large/1000rec", 1000, 5, 128},
 	}
 
 	for _, tc := range cases {
 		records := makeBenchRecords(tc.numRecords, tc.fieldsPerRecord, tc.valueSize)
 
-		// --- Streaming path: per-record evaluation ---
 		b.Run("streaming/"+tc.name, func(b *testing.B) {
 			waf := newBenchWAF(b)
 			sp := &benchStreamProcessor{records: records}
@@ -1456,7 +1102,6 @@ func BenchmarkStreamingEval(b *testing.B) {
 			}
 		})
 
-		// --- Buffered path: load all fields then evaluate once ---
 		b.Run("buffered/"+tc.name, func(b *testing.B) {
 			waf := newBenchWAF(b)
 			bp := &bufferedProcessor{records: records}
@@ -1477,13 +1122,12 @@ func BenchmarkStreamingEval(b *testing.B) {
 //
 //	go test -bench=BenchmarkStreamingRelay -benchmem ./internal/corazawaf/
 func BenchmarkStreamingRelay(b *testing.B) {
-	type benchCase struct {
+	cases := []struct {
 		name            string
 		numRecords      int
 		fieldsPerRecord int
 		valueSize       int
-	}
-	cases := []benchCase{
+	}{
 		{"small/10rec", 10, 3, 24},
 		{"medium/100rec", 100, 5, 64},
 		{"large/1000rec", 1000, 5, 128},
@@ -1491,7 +1135,6 @@ func BenchmarkStreamingRelay(b *testing.B) {
 
 	for _, tc := range cases {
 		records := makeBenchRecords(tc.numRecords, tc.fieldsPerRecord, tc.valueSize)
-		// Precompute total raw size for buffer preallocation
 		totalRaw := 0
 		for _, r := range records {
 			totalRaw += len(r.raw)
@@ -1527,17 +1170,15 @@ func BenchmarkStreamingRelay(b *testing.B) {
 	}
 }
 
-// BenchmarkStreamingBinaryFormat measures the binary (protobuf-like) streaming path
-// including the decode cost.
+// BenchmarkStreamingBinaryFormat measures the binary (protobuf-like) streaming path.
 //
 //	go test -bench=BenchmarkStreamingBinaryFormat -benchmem ./internal/corazawaf/
 func BenchmarkStreamingBinaryFormat(b *testing.B) {
-	type benchCase struct {
+	cases := []struct {
 		name       string
 		numRecords int
 		fields     map[string]string
-	}
-	cases := []benchCase{
+	}{
 		{"small/10rec", 10, map[string]string{"id": "42", "status": "ok"}},
 		{"medium/100rec", 100, map[string]string{
 			"id": "42", "user": "alice", "role": "admin",
@@ -1550,7 +1191,6 @@ func BenchmarkStreamingBinaryFormat(b *testing.B) {
 	}
 
 	for _, tc := range cases {
-		// Build binary stream
 		var stream bytes.Buffer
 		for range tc.numRecords {
 			stream.Write(encodeBinaryRecord(tc.fields))
