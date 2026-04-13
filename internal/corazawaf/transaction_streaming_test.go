@@ -598,6 +598,15 @@ func init() {
 			},
 		}
 	})
+	// Register a streaming mock that always returns an error after one record.
+	bodyprocessors.RegisterBodyProcessor("teststreamerror", func() plugintypes.BodyProcessor {
+		return &mockStreamingBodyProcessor{
+			records: []mockRecord{
+				{fields: map[string]string{"json.0.field": "stale-value"}, rawRecord: []byte("rec\n")},
+			},
+			err: errors.New("mid-stream processor error"),
+		}
+	})
 }
 
 // setupRequestStreamTx creates a transaction ready for ProcessRequestBodyFromStream.
@@ -825,6 +834,41 @@ func TestProcessResponseBodyFromStreamWrongPhase(t *testing.T) {
 	}
 }
 
+// TestProcessRequestBodyFromStreamErrorClearsArgsPost verifies that the exported
+// relay path clears ArgsPost before running fallback Eval after a mid-stream error.
+func TestProcessRequestBodyFromStreamErrorClearsArgsPost(t *testing.T) {
+	waf := NewWAF()
+	tx := setupRequestStreamTx(t, waf, "TESTSTREAMERROR")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	_, err := tx.ProcessRequestBodyFromStream(strings.NewReader(""), &output)
+	if err == nil {
+		t.Fatal("expected error from failing stream processor")
+	}
+	if got := tx.variables.argsPost.Len(); got != 0 {
+		t.Fatalf("argsPost not cleared after relay path error: %d entries remain", got)
+	}
+}
+
+// TestProcessResponseBodyFromStreamErrorClearsResponseArgs verifies that the exported
+// relay path clears ResponseArgs before running fallback Eval after a mid-stream error.
+func TestProcessResponseBodyFromStreamErrorClearsResponseArgs(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
+	tx := setupResponseStreamTx(t, waf, "TESTSTREAMERROR")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	_, err := tx.ProcessResponseBodyFromStream(strings.NewReader(""), &output)
+	if err == nil {
+		t.Fatal("expected error from failing stream processor")
+	}
+	if got := tx.variables.responseArgs.Len(); got != 0 {
+		t.Fatalf("responseArgs not cleared after relay path error: %d entries remain", got)
+	}
+}
+
 // --- Binary (protobuf-like) streaming test ---
 //
 // Demonstrates that the Record interface works for binary formats.
@@ -912,7 +956,7 @@ func (p *binaryStreamProcessor) ProcessRequestRecords(reader io.Reader, _ plugin
 	for {
 		var lengthBuf [4]byte
 		if _, err := io.ReadFull(reader, lengthBuf[:]); err != nil {
-			if err == io.EOF || err == io.ErrUnexpectedEOF {
+			if err == io.EOF {
 				return nil
 			}
 			return err
@@ -967,6 +1011,25 @@ func TestProcessRequestBodyStreamingBinaryFormat(t *testing.T) {
 	}
 	if it == nil {
 		t.Fatal("expected interruption for malicious binary record")
+	}
+}
+
+func TestBinaryStreamProcessorUnexpectedEOFIsError(t *testing.T) {
+	// A truncated frame header (fewer than 4 bytes) must be reported as an error,
+	// not silently treated as a clean end-of-stream.
+	truncatedHeader := []byte{0x00, 0x00} // only 2 of 4 header bytes
+	sp := &binaryStreamProcessor{}
+	var called bool
+	err := sp.ProcessRequestRecords(bytes.NewReader(truncatedHeader), plugintypes.BodyProcessorOptions{},
+		func(_ int, _ plugintypes.Record) error {
+			called = true
+			return nil
+		})
+	if err == nil {
+		t.Fatal("expected error for truncated frame header, got nil")
+	}
+	if called {
+		t.Fatal("callback should not have been called for truncated header")
 	}
 }
 

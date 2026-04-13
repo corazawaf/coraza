@@ -157,8 +157,8 @@ func TestStreamingMiddlewareCleanRecordsPassThrough(t *testing.T) {
 	if string(resBody) != "OK" {
 		t.Fatalf("unexpected response body: %q", string(resBody))
 	}
-	if backendBody == "" {
-		t.Fatal("backend received empty body")
+	if backendBody != body {
+		t.Fatalf("backend received altered body:\n got: %q\nwant: %q", backendBody, body)
 	}
 }
 

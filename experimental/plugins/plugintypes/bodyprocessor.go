@@ -41,6 +41,18 @@ type BodyProcessor interface {
 //
 // Implementations are provided by each [StreamingBodyProcessor] and are
 // format-specific.
+//
+// # Ownership and lifetime
+//
+// Callers must treat the map returned by [Record.Fields] and the byte slice
+// returned by [Record.Raw] as read-only borrows that are only valid until
+// the next call to the record callback (the fn passed to ProcessRequestRecords
+// or ProcessResponseRecords). Implementations may reuse underlying storage
+// across records for efficiency. Callers that need to retain or mutate the
+// data must make their own copies.
+//
+// Record methods may be called from a single goroutine only; implementations
+// are not required to be safe for concurrent use.
 type Record interface {
 	// Fields returns the record's data flattened into string key-value pairs
 	// suitable for populating WAF variables (ArgsPost, ResponseArgs).
@@ -50,12 +62,18 @@ type Record interface {
 	// representation of each field — the body processor is responsible for
 	// serializing its native types (numbers, booleans, nested structures,
 	// binary blobs) into strings.
+	//
+	// The returned map is borrowed; see the Record type documentation for
+	// ownership rules.
 	Fields() map[string]string
 
 	// Raw returns the original record bytes including any format-specific
 	// framing (e.g., trailing newline for NDJSON, RS prefix for RFC 7464,
 	// length-prefixed envelope for protobuf streams). The returned slice
 	// is used by the relay path to forward records verbatim to the backend.
+	//
+	// The returned slice is borrowed; see the Record type documentation for
+	// ownership rules.
 	Raw() []byte
 }
 
