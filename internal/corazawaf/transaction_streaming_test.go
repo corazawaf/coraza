@@ -589,6 +589,22 @@ func TestProcessBodyFromStreamEngineOff(t *testing.T) {
 // the full exported code paths including access checks, processor lookup,
 // streaming vs non-streaming dispatch, and error propagation.
 
+// capturingStreamProcessor captures BodyProcessorOptions for test assertions.
+type capturingStreamProcessor struct {
+	mockStreamingBodyProcessor
+	capturedOpts plugintypes.BodyProcessorOptions
+}
+
+func (c *capturingStreamProcessor) ProcessRequestRecords(r io.Reader, opts plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, record plugintypes.Record) error) error {
+	c.capturedOpts = opts
+	return c.mockStreamingBodyProcessor.ProcessRequestRecords(r, opts, fn)
+}
+
+// lastCapturingProcessor holds the most recently created capturingStreamProcessor
+// so tests can inspect the options after ProcessRequestBodyFromStream returns.
+var lastCapturingProcessor *capturingStreamProcessor
+
 func init() {
 	// Register a streaming mock body processor for testing.
 	bodyprocessors.RegisterBodyProcessor("teststream", func() plugintypes.BodyProcessor {
@@ -606,6 +622,18 @@ func init() {
 			},
 			err: errors.New("mid-stream processor error"),
 		}
+	})
+	// Register a capturing mock to verify options propagation.
+	bodyprocessors.RegisterBodyProcessor("testcapture", func() plugintypes.BodyProcessor {
+		p := &capturingStreamProcessor{
+			mockStreamingBodyProcessor: mockStreamingBodyProcessor{
+				records: []mockRecord{
+					{fields: map[string]string{"test.0.key": "value"}, rawRecord: []byte("record0\n")},
+				},
+			},
+		}
+		lastCapturingProcessor = p
+		return p
 	})
 }
 
@@ -718,6 +746,25 @@ func TestProcessRequestBodyFromStream(t *testing.T) {
 				t.Fatalf("expected output %q, got %q", tt.wantOutput, output.String())
 			}
 		})
+	}
+}
+
+func TestProcessRequestBodyFromStreamPassesRecursionLimit(t *testing.T) {
+	waf := NewWAF()
+	waf.RequestBodyJsonDepthLimit = 42
+	tx := setupRequestStreamTx(t, waf, "TESTCAPTURE")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	_, err := tx.ProcessRequestBodyFromStream(strings.NewReader(""), &output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if lastCapturingProcessor == nil {
+		t.Fatal("capturing processor was not instantiated")
+	}
+	if got := lastCapturingProcessor.capturedOpts.RequestBodyRecursionLimit; got != 42 {
+		t.Fatalf("expected RequestBodyRecursionLimit 42, got %d", got)
 	}
 }
 
