@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<messages>
+  <message id="1" priority="high">
+    <from>alice@example.com</from>
+    <body><![CDATA[Hello <b>world</b> & "friends"!]]></body>
+  </message>
+  <message id="2" priority="low">
+    <from>bob@example.com</from>
+    <body>Plain text message</body>
+  </message>
+</messages>

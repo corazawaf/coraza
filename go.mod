@@ -17,6 +17,7 @@ go 1.25.0
 // - ocsf-schema-golang
 
 require (
+	github.com/antchfx/xmlquery v1.5.1
 	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
 	github.com/corazawaf/libinjection-go v0.3.2
@@ -34,9 +35,11 @@ require (
 )
 
 require (
+	github.com/antchfx/xpath v1.3.6 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/gotnospirit/makeplural v0.0.0-20180622080156-a5f48d94d976 // indirect
 	github.com/gotnospirit/messageformat v0.0.0-20221001023931-dfe49f1eb092 // indirect
 	github.com/kaptinlin/go-i18n v0.1.4 // indirect

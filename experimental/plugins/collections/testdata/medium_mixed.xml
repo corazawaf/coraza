@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?app-config version="2.0" mode="production"?>
+<!-- Medium-sized document with mixed content types -->
+<catalog xmlns="http://example.com/catalog"
+         xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         version="3.1">
+  <book id="BK0001" category="science" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 1</dc:title>
+    <dc:creator role="author">Author 2</dc:creator>
+    <isbn>978-0-0001001-1</isbn>
+    <price currency="USD">11.99</price>
+  </book>
+  <book id="BK0002" category="history" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 2</dc:title>
+    <dc:creator role="author">Author 3</dc:creator>
+    <isbn>978-0-0002002-2</isbn>
+    <price currency="USD">12.99</price>
+  </book>
+  <book id="BK0003" category="tech" format="audiobook" in-stock="false">
+    <dc:title lang="en">Book Title Number 3</dc:title>
+    <dc:creator role="author">Author 4</dc:creator>
+    <isbn>978-0-0003003-3</isbn>
+    <price currency="USD">13.99</price>
+    <description>A fascinating exploration of tech topics in volume 3.</description>
+  </book>
+  <book id="BK0004" category="art" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 4</dc:title>
+    <dc:creator role="author">Author 5</dc:creator>
+    <isbn>978-0-0004004-4</isbn>
+    <price currency="USD">14.99</price>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User41</reviewer>
+        <comment>Review comment 1 for book 4</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User42</reviewer>
+        <comment>Review comment 2 for book 4</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User43</reviewer>
+        <comment>Review comment 3 for book 4</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0005" category="fiction" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 5</dc:title>
+    <dc:creator role="author">Author 6</dc:creator>
+    <isbn>978-0-0005005-5</isbn>
+    <price currency="USD">15.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+  </book>
+  <book id="BK0006" category="science" format="ebook" in-stock="false">
+    <dc:title lang="en">Book Title Number 6</dc:title>
+    <dc:creator role="author">Author 7</dc:creator>
+    <isbn>978-0-0006006-6</isbn>
+    <price currency="USD">16.99</price>
+    <description>A fascinating exploration of science topics in volume 6.</description>
+  </book>
+  <book id="BK0007" category="history" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 7</dc:title>
+    <dc:creator role="author">Author 8</dc:creator>
+    <isbn>978-0-0007007-7</isbn>
+    <price currency="USD">17.99</price>
+    <!-- This book has special metadata -->
+    <metadata key="edition" value="3"/>
+    <metadata key="pages" value="121"/>
+  </book>
+  <book id="BK0008" category="tech" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 8</dc:title>
+    <dc:creator role="author">Author 9</dc:creator>
+    <isbn>978-0-0008008-8</isbn>
+    <price currency="USD">18.99</price>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User81</reviewer>
+        <comment>Review comment 1 for book 8</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User82</reviewer>
+        <comment>Review comment 2 for book 8</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User83</reviewer>
+        <comment>Review comment 3 for book 8</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0009" category="art" format="paperback" in-stock="false">
+    <dc:title lang="en">Book Title Number 9</dc:title>
+    <dc:creator role="author">Author 10</dc:creator>
+    <isbn>978-0-0009009-9</isbn>
+    <price currency="USD">19.99</price>
+    <description>A fascinating exploration of art topics in volume 9.</description>
+  </book>
+  <book id="BK0010" category="fiction" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 10</dc:title>
+    <dc:creator role="author">Author 11</dc:creator>
+    <isbn>978-0-0010010-0</isbn>
+    <price currency="USD">20.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+  </book>
+  <book id="BK0011" category="science" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 11</dc:title>
+    <dc:creator role="author">Author 12</dc:creator>
+    <isbn>978-0-0011011-1</isbn>
+    <price currency="USD">21.99</price>
+  </book>
+  <book id="BK0012" category="history" format="hardcover" in-stock="false">
+    <dc:title lang="en">Book Title Number 12</dc:title>
+    <dc:creator role="author">Author 13</dc:creator>
+    <isbn>978-0-0012012-2</isbn>
+    <price currency="USD">22.99</price>
+    <description>A fascinating exploration of history topics in volume 12.</description>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User121</reviewer>
+        <comment>Review comment 1 for book 12</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User122</reviewer>
+        <comment>Review comment 2 for book 12</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User123</reviewer>
+        <comment>Review comment 3 for book 12</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0013" category="tech" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 13</dc:title>
+    <dc:creator role="author">Author 14</dc:creator>
+    <isbn>978-0-0013013-3</isbn>
+    <price currency="USD">23.99</price>
+  </book>
+  <book id="BK0014" category="art" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 14</dc:title>
+    <dc:creator role="author">Author 15</dc:creator>
+    <isbn>978-0-0014014-4</isbn>
+    <price currency="USD">24.99</price>
+    <!-- This book has special metadata -->
+    <metadata key="edition" value="5"/>
+    <metadata key="pages" value="142"/>
+  </book>
+  <book id="BK0015" category="fiction" format="audiobook" in-stock="false">
+    <dc:title lang="en">Book Title Number 15</dc:title>
+    <dc:creator role="author">Author 16</dc:creator>
+    <isbn>978-0-0015015-5</isbn>
+    <price currency="USD">25.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+  </book>
+  <book id="BK0016" category="science" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 16</dc:title>
+    <dc:creator role="author">Author 17</dc:creator>
+    <isbn>978-0-0016016-6</isbn>
+    <price currency="USD">26.99</price>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User161</reviewer>
+        <comment>Review comment 1 for book 16</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User162</reviewer>
+        <comment>Review comment 2 for book 16</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User163</reviewer>
+        <comment>Review comment 3 for book 16</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0017" category="history" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 17</dc:title>
+    <dc:creator role="author">Author 18</dc:creator>
+    <isbn>978-0-0017017-7</isbn>
+    <price currency="USD">27.99</price>
+  </book>
+  <book id="BK0018" category="tech" format="ebook" in-stock="false">
+    <dc:title lang="en">Book Title Number 18</dc:title>
+    <dc:creator role="author">Author 19</dc:creator>
+    <isbn>978-0-0018018-8</isbn>
+    <price currency="USD">28.99</price>
+    <description>A fascinating exploration of tech topics in volume 18.</description>
+  </book>
+  <book id="BK0019" category="art" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 19</dc:title>
+    <dc:creator role="author">Author 20</dc:creator>
+    <isbn>978-0-0019019-9</isbn>
+    <price currency="USD">29.99</price>
+  </book>
+  <book id="BK0020" category="fiction" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 20</dc:title>
+    <dc:creator role="author">Author 1</dc:creator>
+    <isbn>978-0-0020020-0</isbn>
+    <price currency="USD">30.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User201</reviewer>
+        <comment>Review comment 1 for book 20</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User202</reviewer>
+        <comment>Review comment 2 for book 20</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User203</reviewer>
+        <comment>Review comment 3 for book 20</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0021" category="science" format="paperback" in-stock="false">
+    <dc:title lang="en">Book Title Number 21</dc:title>
+    <dc:creator role="author">Author 2</dc:creator>
+    <isbn>978-0-0021021-1</isbn>
+    <price currency="USD">31.99</price>
+    <description>A fascinating exploration of science topics in volume 21.</description>
+    <!-- This book has special metadata -->
+    <metadata key="edition" value="2"/>
+    <metadata key="pages" value="163"/>
+  </book>
+  <book id="BK0022" category="history" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 22</dc:title>
+    <dc:creator role="author">Author 3</dc:creator>
+    <isbn>978-0-0022022-2</isbn>
+    <price currency="USD">32.99</price>
+  </book>
+  <book id="BK0023" category="tech" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 23</dc:title>
+    <dc:creator role="author">Author 4</dc:creator>
+    <isbn>978-0-0023023-3</isbn>
+    <price currency="USD">33.99</price>
+  </book>
+  <book id="BK0024" category="art" format="hardcover" in-stock="false">
+    <dc:title lang="en">Book Title Number 24</dc:title>
+    <dc:creator role="author">Author 5</dc:creator>
+    <isbn>978-0-0024024-4</isbn>
+    <price currency="USD">34.99</price>
+    <description>A fascinating exploration of art topics in volume 24.</description>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User241</reviewer>
+        <comment>Review comment 1 for book 24</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User242</reviewer>
+        <comment>Review comment 2 for book 24</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User243</reviewer>
+        <comment>Review comment 3 for book 24</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0025" category="fiction" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 25</dc:title>
+    <dc:creator role="author">Author 6</dc:creator>
+    <isbn>978-0-0025025-5</isbn>
+    <price currency="USD">35.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+  </book>
+  <book id="BK0026" category="science" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 26</dc:title>
+    <dc:creator role="author">Author 7</dc:creator>
+    <isbn>978-0-0026026-6</isbn>
+    <price currency="USD">36.99</price>
+  </book>
+  <book id="BK0027" category="history" format="audiobook" in-stock="false">
+    <dc:title lang="en">Book Title Number 27</dc:title>
+    <dc:creator role="author">Author 8</dc:creator>
+    <isbn>978-0-0027027-7</isbn>
+    <price currency="USD">37.99</price>
+    <description>A fascinating exploration of history topics in volume 27.</description>
+  </book>
+  <book id="BK0028" category="tech" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 28</dc:title>
+    <dc:creator role="author">Author 9</dc:creator>
+    <isbn>978-0-0028028-8</isbn>
+    <price currency="USD">38.99</price>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User281</reviewer>
+        <comment>Review comment 1 for book 28</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User282</reviewer>
+        <comment>Review comment 2 for book 28</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User283</reviewer>
+        <comment>Review comment 3 for book 28</comment>
+      </review>
+    </reviews>
+    <!-- This book has special metadata -->
+    <metadata key="edition" value="4"/>
+    <metadata key="pages" value="184"/>
+  </book>
+  <book id="BK0029" category="art" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 29</dc:title>
+    <dc:creator role="author">Author 10</dc:creator>
+    <isbn>978-0-0029029-9</isbn>
+    <price currency="USD">39.99</price>
+  </book>
+  <book id="BK0030" category="fiction" format="ebook" in-stock="false">
+    <dc:title lang="en">Book Title Number 30</dc:title>
+    <dc:creator role="author">Author 11</dc:creator>
+    <isbn>978-0-0030030-0</isbn>
+    <price currency="USD">40.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+  </book>
+  <book id="BK0031" category="science" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 31</dc:title>
+    <dc:creator role="author">Author 12</dc:creator>
+    <isbn>978-0-0031031-1</isbn>
+    <price currency="USD">41.99</price>
+  </book>
+  <book id="BK0032" category="history" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 32</dc:title>
+    <dc:creator role="author">Author 13</dc:creator>
+    <isbn>978-0-0032032-2</isbn>
+    <price currency="USD">42.99</price>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User321</reviewer>
+        <comment>Review comment 1 for book 32</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User322</reviewer>
+        <comment>Review comment 2 for book 32</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User323</reviewer>
+        <comment>Review comment 3 for book 32</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0033" category="tech" format="paperback" in-stock="false">
+    <dc:title lang="en">Book Title Number 33</dc:title>
+    <dc:creator role="author">Author 14</dc:creator>
+    <isbn>978-0-0033033-3</isbn>
+    <price currency="USD">43.99</price>
+    <description>A fascinating exploration of tech topics in volume 33.</description>
+  </book>
+  <book id="BK0034" category="art" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 34</dc:title>
+    <dc:creator role="author">Author 15</dc:creator>
+    <isbn>978-0-0034034-4</isbn>
+    <price currency="USD">44.99</price>
+  </book>
+  <book id="BK0035" category="fiction" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 35</dc:title>
+    <dc:creator role="author">Author 16</dc:creator>
+    <isbn>978-0-0035035-5</isbn>
+    <price currency="USD">45.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+    <!-- This book has special metadata -->
+    <metadata key="edition" value="1"/>
+    <metadata key="pages" value="205"/>
+  </book>
+  <book id="BK0036" category="science" format="hardcover" in-stock="false">
+    <dc:title lang="en">Book Title Number 36</dc:title>
+    <dc:creator role="author">Author 17</dc:creator>
+    <isbn>978-0-0036036-6</isbn>
+    <price currency="USD">46.99</price>
+    <description>A fascinating exploration of science topics in volume 36.</description>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User361</reviewer>
+        <comment>Review comment 1 for book 36</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User362</reviewer>
+        <comment>Review comment 2 for book 36</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User363</reviewer>
+        <comment>Review comment 3 for book 36</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0037" category="history" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 37</dc:title>
+    <dc:creator role="author">Author 18</dc:creator>
+    <isbn>978-0-0037037-7</isbn>
+    <price currency="USD">47.99</price>
+  </book>
+  <book id="BK0038" category="tech" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 38</dc:title>
+    <dc:creator role="author">Author 19</dc:creator>
+    <isbn>978-0-0038038-8</isbn>
+    <price currency="USD">48.99</price>
+  </book>
+  <book id="BK0039" category="art" format="audiobook" in-stock="false">
+    <dc:title lang="en">Book Title Number 39</dc:title>
+    <dc:creator role="author">Author 20</dc:creator>
+    <isbn>978-0-0039039-9</isbn>
+    <price currency="USD">49.99</price>
+    <description>A fascinating exploration of art topics in volume 39.</description>
+  </book>
+  <book id="BK0040" category="fiction" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 40</dc:title>
+    <dc:creator role="author">Author 1</dc:creator>
+    <isbn>978-0-0040040-0</isbn>
+    <price currency="USD">50.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User401</reviewer>
+        <comment>Review comment 1 for book 40</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User402</reviewer>
+        <comment>Review comment 2 for book 40</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User403</reviewer>
+        <comment>Review comment 3 for book 40</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0041" category="science" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 41</dc:title>
+    <dc:creator role="author">Author 2</dc:creator>
+    <isbn>978-0-0041041-1</isbn>
+    <price currency="USD">51.99</price>
+  </book>
+  <book id="BK0042" category="history" format="ebook" in-stock="false">
+    <dc:title lang="en">Book Title Number 42</dc:title>
+    <dc:creator role="author">Author 3</dc:creator>
+    <isbn>978-0-0042042-2</isbn>
+    <price currency="USD">52.99</price>
+    <description>A fascinating exploration of history topics in volume 42.</description>
+    <!-- This book has special metadata -->
+    <metadata key="edition" value="3"/>
+    <metadata key="pages" value="226"/>
+  </book>
+  <book id="BK0043" category="tech" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 43</dc:title>
+    <dc:creator role="author">Author 4</dc:creator>
+    <isbn>978-0-0043043-3</isbn>
+    <price currency="USD">53.99</price>
+  </book>
+  <book id="BK0044" category="art" format="hardcover" in-stock="true">
+    <dc:title lang="en">Book Title Number 44</dc:title>
+    <dc:creator role="author">Author 5</dc:creator>
+    <isbn>978-0-0044044-4</isbn>
+    <price currency="USD">54.99</price>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User441</reviewer>
+        <comment>Review comment 1 for book 44</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User442</reviewer>
+        <comment>Review comment 2 for book 44</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User443</reviewer>
+        <comment>Review comment 3 for book 44</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0045" category="fiction" format="paperback" in-stock="false">
+    <dc:title lang="en">Book Title Number 45</dc:title>
+    <dc:creator role="author">Author 6</dc:creator>
+    <isbn>978-0-0045045-5</isbn>
+    <price currency="USD">55.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+  </book>
+  <book id="BK0046" category="science" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 46</dc:title>
+    <dc:creator role="author">Author 7</dc:creator>
+    <isbn>978-0-0046046-6</isbn>
+    <price currency="USD">56.99</price>
+  </book>
+  <book id="BK0047" category="history" format="audiobook" in-stock="true">
+    <dc:title lang="en">Book Title Number 47</dc:title>
+    <dc:creator role="author">Author 8</dc:creator>
+    <isbn>978-0-0047047-7</isbn>
+    <price currency="USD">57.99</price>
+  </book>
+  <book id="BK0048" category="tech" format="hardcover" in-stock="false">
+    <dc:title lang="en">Book Title Number 48</dc:title>
+    <dc:creator role="author">Author 9</dc:creator>
+    <isbn>978-0-0048048-8</isbn>
+    <price currency="USD">58.99</price>
+    <description>A fascinating exploration of tech topics in volume 48.</description>
+    <reviews>
+      <review rating="3" verified="false">
+        <reviewer>User481</reviewer>
+        <comment>Review comment 1 for book 48</comment>
+      </review>
+      <review rating="4" verified="true">
+        <reviewer>User482</reviewer>
+        <comment>Review comment 2 for book 48</comment>
+      </review>
+      <review rating="5" verified="false">
+        <reviewer>User483</reviewer>
+        <comment>Review comment 3 for book 48</comment>
+      </review>
+    </reviews>
+  </book>
+  <book id="BK0049" category="art" format="paperback" in-stock="true">
+    <dc:title lang="en">Book Title Number 49</dc:title>
+    <dc:creator role="author">Author 10</dc:creator>
+    <isbn>978-0-0049049-9</isbn>
+    <price currency="USD">59.99</price>
+    <!-- This book has special metadata -->
+    <metadata key="edition" value="5"/>
+    <metadata key="pages" value="247"/>
+  </book>
+  <book id="BK0050" category="fiction" format="ebook" in-stock="true">
+    <dc:title lang="en">Book Title Number 50</dc:title>
+    <dc:creator role="author">Author 11</dc:creator>
+    <isbn>978-0-0050050-0</isbn>
+    <price currency="USD">60.99</price>
+    <description><![CDATA[This book contains <special> characters & "quotes" that need CDATA.]]></description>
+  </book>
+</catalog>

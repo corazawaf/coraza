@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <soap:Header>
+    <auth:Token xmlns:auth="http://example.com/auth">secret-token-123</auth:Token>
+  </soap:Header>
+  <soap:Body>
+    <m:GetPrice xmlns:m="https://www.example.org/stock">
+      <m:StockName>GOOG</m:StockName>
+    </m:GetPrice>
+  </soap:Body>
+</soap:Envelope>

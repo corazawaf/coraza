@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<methodCall>
+  <methodName>wp.getUsersBlogs</methodName>
+  <params>
+    <param><value><string>admin</string></value></param>
+    <param><value><string>password123</string></value></param>
+    <param><value><i4>42</i4></value></param>
+    <param><value><boolean>1</boolean></value></param>
+  </params>
+</methodCall>

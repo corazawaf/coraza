@@ -1820,7 +1820,7 @@ type TransactionVariables struct {
 	requestProtocol          *collections.Single
 	requestURI               *collections.Single
 	requestURIRaw            *collections.Single
-	requestXML               *collections.Map
+	requestXML               collection.Map
 	responseBody             *collections.Single
 	responseContentLength    *collections.Single
 	responseContentType      *collections.Single
@@ -1828,7 +1828,7 @@ type TransactionVariables struct {
 	responseHeadersNames     collection.Keyed
 	responseProtocol         *collections.Single
 	responseStatus           *collections.Single
-	responseXML              *collections.Map
+	responseXML              collection.Map
 	responseArgs             *collections.Map
 	resBodyProcessor         *collections.Single
 	rule                     *collections.Map
@@ -1839,7 +1839,7 @@ type TransactionVariables struct {
 	tx                       *collections.Map
 	uniqueID                 *collections.Single
 	urlencodedError          *collections.Single
-	xml                      *collections.Map
+	xml                      collection.Map
 	resBodyError             *collections.Single
 	resBodyErrorMsg          *collections.Single
 	resBodyProcessorError    *collections.Single
@@ -2233,6 +2233,20 @@ func (v *TransactionVariables) RequestXML() collection.Map {
 
 func (v *TransactionVariables) ResponseXML() collection.Map {
 	return v.responseXML
+}
+
+// SetRequestXML replaces the RequestXML collection with the given implementation.
+// This allows body processors to install custom collection types (e.g., lazy
+// XPath evaluation) without the transaction needing to know about the specifics.
+// It also updates the XML alias to point to the new collection.
+func (v *TransactionVariables) SetRequestXML(m collection.Map) {
+	v.requestXML = m
+	v.xml = m
+}
+
+// SetResponseXML replaces the ResponseXML collection with the given implementation.
+func (v *TransactionVariables) SetResponseXML(m collection.Map) {
+	v.responseXML = m
 }
 
 func (v *TransactionVariables) ResponseBodyProcessor() collection.Single {

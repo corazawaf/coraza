@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Deeply nested structure to test XPath performance on deep trees -->
+<tree xmlns="http://example.com/tree" xmlns:meta="http://example.com/meta">
+  <level depth="1" id="L1">
+    <meta:label>Level 1 Node</meta:label>
+    <data type="nested">Value at depth 1</data>
+    <level depth="2" id="L2">
+      <meta:label>Level 2 Node</meta:label>
+      <data type="nested">Value at depth 2</data>
+      <level depth="3" id="L3">
+        <meta:label>Level 3 Node</meta:label>
+        <data type="nested">Value at depth 3</data>
+        <level depth="4" id="L4">
+          <meta:label>Level 4 Node</meta:label>
+          <data type="nested">Value at depth 4</data>
+          <level depth="5" id="L5">
+            <meta:label>Level 5 Node</meta:label>
+            <data type="nested">Value at depth 5</data>
+            <sibling order="1">Sibling A at depth 5</sibling>
+            <sibling order="2">Sibling B at depth 5</sibling>
+            <level depth="6" id="L6">
+              <meta:label>Level 6 Node</meta:label>
+              <data type="nested">Value at depth 6</data>
+              <level depth="7" id="L7">
+                <meta:label>Level 7 Node</meta:label>
+                <data type="nested">Value at depth 7</data>
+                <level depth="8" id="L8">
+                  <meta:label>Level 8 Node</meta:label>
+                  <data type="nested">Value at depth 8</data>
+                  <level depth="9" id="L9">
+                    <meta:label>Level 9 Node</meta:label>
+                    <data type="nested">Value at depth 9</data>
+                    <level depth="10" id="L10">
+                      <meta:label>Level 10 Node</meta:label>
+                      <data type="nested">Value at depth 10</data>
+                      <sibling order="1">Sibling A at depth 10</sibling>
+                      <sibling order="2">Sibling B at depth 10</sibling>
+                      <level depth="11" id="L11">
+                        <meta:label>Level 11 Node</meta:label>
+                        <data type="nested">Value at depth 11</data>
+                        <level depth="12" id="L12">
+                          <meta:label>Level 12 Node</meta:label>
+                          <data type="nested">Value at depth 12</data>
+                          <level depth="13" id="L13">
+                            <meta:label>Level 13 Node</meta:label>
+                            <data type="nested">Value at depth 13</data>
+                            <level depth="14" id="L14">
+                              <meta:label>Level 14 Node</meta:label>
+                              <data type="nested">Value at depth 14</data>
+                              <level depth="15" id="L15">
+                                <meta:label>Level 15 Node</meta:label>
+                                <data type="nested">Value at depth 15</data>
+                                <sibling order="1">Sibling A at depth 15</sibling>
+                                <sibling order="2">Sibling B at depth 15</sibling>
+                                <level depth="16" id="L16">
+                                  <meta:label>Level 16 Node</meta:label>
+                                  <data type="nested">Value at depth 16</data>
+                                  <level depth="17" id="L17">
+                                    <meta:label>Level 17 Node</meta:label>
+                                    <data type="nested">Value at depth 17</data>
+                                    <level depth="18" id="L18">
+                                      <meta:label>Level 18 Node</meta:label>
+                                      <data type="nested">Value at depth 18</data>
+                                      <level depth="19" id="L19">
+                                        <meta:label>Level 19 Node</meta:label>
+                                        <data type="nested">Value at depth 19</data>
+                                        <level depth="20" id="L20">
+                                          <meta:label>Level 20 Node</meta:label>
+                                          <data type="nested">Value at depth 20</data>
+                                          <sibling order="1">Sibling A at depth 20</sibling>
+                                          <sibling order="2">Sibling B at depth 20</sibling>
+                                          <level depth="21" id="L21">
+                                            <meta:label>Level 21 Node</meta:label>
+                                            <data type="nested">Value at depth 21</data>
+                                            <level depth="22" id="L22">
+                                              <meta:label>Level 22 Node</meta:label>
+                                              <data type="nested">Value at depth 22</data>
+                                              <level depth="23" id="L23">
+                                                <meta:label>Level 23 Node</meta:label>
+                                                <data type="nested">Value at depth 23</data>
+                                                <level depth="24" id="L24">
+                                                  <meta:label>Level 24 Node</meta:label>
+                                                  <data type="nested">Value at depth 24</data>
+                                                  <level depth="25" id="L25">
+                                                    <meta:label>Level 25 Node</meta:label>
+                                                    <data type="nested">Value at depth 25</data>
+                                                    <sibling order="1">Sibling A at depth 25</sibling>
+                                                    <sibling order="2">Sibling B at depth 25</sibling>
+                                                    <level depth="26" id="L26">
+                                                      <meta:label>Level 26 Node</meta:label>
+                                                      <data type="nested">Value at depth 26</data>
+                                                      <level depth="27" id="L27">
+                                                        <meta:label>Level 27 Node</meta:label>
+                                                        <data type="nested">Value at depth 27</data>
+                                                        <level depth="28" id="L28">
+                                                          <meta:label>Level 28 Node</meta:label>
+                                                          <data type="nested">Value at depth 28</data>
+                                                          <level depth="29" id="L29">
+                                                            <meta:label>Level 29 Node</meta:label>
+                                                            <data type="nested">Value at depth 29</data>
+                                                            <level depth="30" id="L30">
+                                                              <meta:label>Level 30 Node</meta:label>
+                                                              <data type="nested">Value at depth 30</data>
+                                                              <sibling order="1">Sibling A at depth 30</sibling>
+                                                              <sibling order="2">Sibling B at depth 30</sibling>
+                                                            </level>
+                                                          </level>
+                                                        </level>
+                                                      </level>
+                                                    </level>
+                                                  </level>
+                                                </level>
+                                              </level>
+                                            </level>
+                                          </level>
+                                        </level>
+                                      </level>
+                                    </level>
+                                  </level>
+                                </level>
+                              </level>
+                            </level>
+                          </level>
+                        </level>
+                      </level>
+                    </level>
+                  </level>
+                </level>
+              </level>
+            </level>
+          </level>
+        </level>
+      </level>
+    </level>
+  </level>
+</tree>
