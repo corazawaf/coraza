@@ -95,6 +95,8 @@ type wafRule struct {
 // We still basically assume 64-bit usage where int are big sizes.
 type wafConfig struct {
 	ruleObserver             func(rule types.RuleMetadata)
+	telemetrySink            plugintypes.TelemetrySink
+	perRuleTiming            bool
 	rules                    []wafRule
 	auditLog                 *auditLogConfig
 	requestBodyAccess        bool
@@ -123,6 +125,31 @@ func (c *wafConfig) WithRules(rules ...*corazawaf.Rule) WAFConfig {
 func (c *wafConfig) WithRuleObserver(observer func(rule types.RuleMetadata)) WAFConfig {
 	ret := c.clone()
 	ret.ruleObserver = observer
+	return ret
+}
+
+// WithTelemetrySink attaches a TelemetrySink to the WAF configuration.
+// A nil sink is treated the same as no sink and disables event emission
+// with zero hot-path cost.
+//
+// This method is not part of the public WAFConfig interface; callers must
+// use experimental.WAFConfigWithTelemetrySink to set it. It may be promoted
+// to the stable API in Coraza v4.
+func (c *wafConfig) WithTelemetrySink(sink plugintypes.TelemetrySink) WAFConfig {
+	ret := c.clone()
+	ret.telemetrySink = sink
+	return ret
+}
+
+// WithPerRuleTiming enables per-rule timing emission at startup. The flag
+// can also be flipped at runtime on a live WAF via
+// experimental.WAFEnablePerRuleTiming.
+//
+// Not part of the public WAFConfig interface; access via
+// experimental.WAFConfigWithPerRuleTiming.
+func (c *wafConfig) WithPerRuleTiming(enabled bool) WAFConfig {
+	ret := c.clone()
+	ret.perRuleTiming = enabled
 	return ret
 }
 

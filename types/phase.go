@@ -27,6 +27,24 @@ const (
 	PhaseLogging RulePhase = 5
 )
 
+// String returns a short stable identifier for the phase, suitable for use
+// as a metric label or log key.
+func (p RulePhase) String() string {
+	switch p {
+	case PhaseRequestHeaders:
+		return "request_headers"
+	case PhaseRequestBody:
+		return "request_body"
+	case PhaseResponseHeaders:
+		return "response_headers"
+	case PhaseResponseBody:
+		return "response_body"
+	case PhaseLogging:
+		return "logging"
+	}
+	return "unknown"
+}
+
 // ParseRulePhase parses the phase of the rule from a to 5
 // or request:2, response:4, logging:5
 // if the phase is invalid it will return an error

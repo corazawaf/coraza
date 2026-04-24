@@ -48,7 +48,13 @@ const (
 // You can use as many WAF instances as you want, and they are
 // concurrent safe
 // All WAF instance fields are immutable, if you update any
-// of them in runtime you might create concurrency issues
+// of them in runtime you might create concurrency issues.
+//
+// Exception: the perRuleTimingEnabled atomic is designed to be toggled
+// at runtime via SetPerRuleTimingEnabled. The TelemetrySink and cached
+// ruleTimingSink fields must only be set before the WAF is published to
+// any transaction (use SetTelemetrySink; direct assignment bypasses the
+// RuleTimingSink assertion and races with the hot path).
 type WAF struct {
 	txPool sync.Pool
 
@@ -132,6 +138,26 @@ type WAF struct {
 	Logger debuglog.Logger
 
 	ErrorLogCb func(rule types.MatchedRule)
+
+	// TelemetrySink receives engine events (transaction lifecycle, rule
+	// matches, engine errors). A nil sink disables all telemetry without
+	// allocation on the hot path. See plugintypes.TelemetrySink.
+	//
+	// Do not assign this field directly after WAF construction: use
+	// SetTelemetrySink so the cached ruleTimingSink assertion stays in
+	// sync. Runtime reassignment is unsupported and races with the
+	// unsynchronized hot-path reads in emitTransactionStart et al.
+	TelemetrySink plugintypes.TelemetrySink
+
+	// ruleTimingSink is the cached type assertion of TelemetrySink to
+	// plugintypes.RuleTimingSink. Populated at NewWAF time so the hot path
+	// pays only a pointer compare (not a type assertion) per rule.
+	ruleTimingSink plugintypes.RuleTimingSink
+
+	// perRuleTimingEnabled gates per-rule timing emission. Uses atomic so
+	// operators can toggle it at runtime without a WAF rebuild. When off,
+	// the hot-path cost is a single atomic load per rule evaluation loop.
+	perRuleTimingEnabled atomic.Bool
 
 	// Audit mode status
 	AuditEngine types.AuditEngineStatus
@@ -274,6 +300,8 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.setTimeVariables()
 
 	tx.debugLogger.Debug().Msg("Transaction started")
+
+	tx.emitTransactionStart()
 
 	return tx
 }

@@ -7,7 +7,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
@@ -29,6 +31,7 @@ type WAF interface {
 
 // NewWAF creates a new WAF instance with the provided configuration.
 func NewWAF(config WAFConfig) (WAF, error) {
+	initStart := time.Now()
 	c := config.(*wafConfig)
 
 	waf := corazawaf.NewWAF()
@@ -45,6 +48,13 @@ func NewWAF(config WAFConfig) (WAF, error) {
 
 	if c.ruleObserver != nil {
 		waf.Rules.SetObserver(c.ruleObserver)
+	}
+
+	if c.telemetrySink != nil {
+		waf.SetTelemetrySink(c.telemetrySink)
+	}
+	if c.perRuleTiming {
+		waf.SetPerRuleTimingEnabled(true)
 	}
 
 	parser := seclang.NewParser(waf)
@@ -120,6 +130,13 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		return nil, err
 	}
 
+	if waf.TelemetrySink != nil {
+		waf.TelemetrySink.OnEngineReady(plugintypes.EngineReadyEvent{
+			RulesLoaded:  waf.Rules.Count(),
+			InitDuration: time.Since(initStart),
+		})
+	}
+
 	return wafWrapper{waf: waf}, nil
 }
 
@@ -175,4 +192,15 @@ func (w wafWrapper) RulesCount() int {
 // Close releases cached resources owned by this WAF instance.
 func (w wafWrapper) Close() error {
 	return w.waf.Close()
+}
+
+// SetPerRuleTimingEnabled flips per-rule timing on the underlying WAF.
+// Exported so experimental.WAFEnablePerRuleTiming can type-assert to it.
+func (w wafWrapper) SetPerRuleTimingEnabled(enabled bool) {
+	w.waf.SetPerRuleTimingEnabled(enabled)
+}
+
+// PerRuleTimingEnabled reports the current per-rule timing flag state.
+func (w wafWrapper) PerRuleTimingEnabled() bool {
+	return w.waf.PerRuleTimingEnabled()
 }
