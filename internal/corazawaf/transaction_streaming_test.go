@@ -497,17 +497,14 @@ func TestProcessBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T) {
 }
 
 func TestStreamingTransactionInterface(t *testing.T) {
-	// Verify that *Transaction satisfies the StreamingTransaction contract
-	// by actually exercising the exported methods (not just a type assertion).
+	// Verify that *Transaction satisfies the StreamingTransaction contract by
+	// exercising the exported methods. The compile-time assertion against the
+	// exported experimental.StreamingTransaction interface is in
+	// streaming_interface_test.go (package corazawaf_test) to avoid the circular
+	// import that would result from importing experimental here.
 	waf := NewWAF()
 	tx := waf.NewTransaction()
 	defer tx.Close()
-
-	// Compile-time interface check
-	var _ interface {
-		ProcessRequestBodyFromStream(io.Reader, io.Writer) (*types.Interruption, error)
-		ProcessResponseBodyFromStream(io.Reader, io.Writer) (*types.Interruption, error)
-	} = tx
 
 	// Exercise the request path: no body processor set, should pass through
 	tx.RequestBodyAccess = true
@@ -605,6 +602,13 @@ func (c *capturingStreamProcessor) ProcessRequestRecords(r io.Reader, opts plugi
 // so tests can inspect the options after ProcessRequestBodyFromStream returns.
 var lastCapturingProcessor *capturingStreamProcessor
 
+// benchRelayProcessor is the processor used by BenchmarkStreamingRelay.
+// The factory registered for "benchstreamrelay" returns this pointer so each
+// benchmark sub-case can swap in a different records slice before calling
+// ProcessRequestBodyFromStream. Benchmarks run sequentially so there is no
+// concurrent access.
+var benchRelayProcessor = &benchStreamProcessor{}
+
 func init() {
 	// Register a streaming mock body processor for testing.
 	bodyprocessors.RegisterBodyProcessor("teststream", func() plugintypes.BodyProcessor {
@@ -634,6 +638,11 @@ func init() {
 		}
 		lastCapturingProcessor = p
 		return p
+	})
+	// Register the benchmark relay processor. benchRelayProcessor.records is
+	// swapped per sub-benchmark before ProcessRequestBodyFromStream is called.
+	bodyprocessors.RegisterBodyProcessor("benchstreamrelay", func() plugintypes.BodyProcessor {
+		return benchRelayProcessor
 	})
 }
 
@@ -1228,7 +1237,9 @@ func BenchmarkStreamingEval(b *testing.B) {
 	}
 }
 
-// BenchmarkStreamingRelay measures the relay path (evaluate + write to output).
+// BenchmarkStreamingRelay measures the relay path through ProcessRequestBodyFromStream,
+// exercising processor lookup, access gating, option propagation, and the
+// full per-record evaluate-then-write loop.
 //
 //	go test -bench=BenchmarkStreamingRelay -benchmem ./internal/corazawaf/
 func BenchmarkStreamingRelay(b *testing.B) {
@@ -1252,28 +1263,21 @@ func BenchmarkStreamingRelay(b *testing.B) {
 
 		b.Run(tc.name, func(b *testing.B) {
 			waf := newBenchWAF(b)
-			sp := &benchStreamProcessor{records: records}
+			// Point the global factory at the records for this sub-case.
+			benchRelayProcessor.records = records
 			b.SetBytes(int64(totalRaw))
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
 				tx := waf.NewTransaction()
 				tx.RequestBodyAccess = true
+				// Set lastPhase so ProcessRequestBodyFromStream passes the phase gate
+				// without the overhead of a full ProcessRequestHeaders call.
+				tx.lastPhase = types.PhaseRequestHeaders
+				tx.variables.reqbodyProcessor.Set("benchstreamrelay")
 				var output bytes.Buffer
 				output.Grow(totalRaw)
-				_ = sp.ProcessRequestRecords(nil, plugintypes.BodyProcessorOptions{},
-					func(recordNum int, record plugintypes.Record) error {
-						tx.variables.argsPost.Reset()
-						for key, value := range record.Fields() {
-							tx.variables.argsPost.SetIndex(key, 0, value)
-						}
-						tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-						if tx.interruption != nil {
-							return errStreamInterrupted
-						}
-						_, _ = output.Write(record.Raw())
-						return nil
-					})
+				_, _ = tx.ProcessRequestBodyFromStream(nil, &output)
 				_ = tx.Close()
 			}
 		})
