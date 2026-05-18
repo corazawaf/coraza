@@ -941,6 +941,28 @@ func TestCookiesCaseSensitive(t *testing.T) {
 	}
 }
 
+func TestCtlRuleRemoveTargetByTagForAbckCookie(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	rules := `SecAction "id:1000250,phase:1,pass,nolog,ctl:ruleRemoveTargetByTag=attack-rce;REQUEST_COOKIES:_abck"
+SecRule REQUEST_COOKIES|REQUEST_COOKIES_NAMES "@contains /32~-1" "id:932270,phase:1,deny,tag:attack-rce"`
+	parser := NewParser(waf)
+
+	if err := parser.FromString(rules); err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	tx.AddRequestHeader("cookie", "_abck=f672ea8d260dd9b181c8cee7e8a56ea2~0~yaaqreqf9cadggxaqaaf.../32~-1; _ga=GA1.1.123456789; OptanonConsent=isIABGlobal=false")
+	it := tx.ProcessRequestHeaders()
+	if it != nil {
+		t.Fatalf("expected _abck cookie target to be removed, got interruption %+v", it)
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestHeadersCaseSensitive(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rules := `SecRule REQUEST_HEADERS:Test1 "Xyz" "id:3, phase:2, log, deny"`
