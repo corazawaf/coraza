@@ -345,13 +345,20 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 // Description: Removes the matching rules from the current configuration context.
 // Syntax: SecRuleRemoveByTag [TAG]
 // ---
-// Normally, you would use `SecRuleRemoveById` to remove rules, but it may occasionally
-// be easier to disable an entire group of rules with `SecRuleRemoveByTag`. Matching is
-// by case-sensitive string equality.
+// Permanently removes all rules carrying the given tag from the WAF configuration at
+// parse time. The removal applies to all transactions, check the per-transaction run time
+// `ctl:ruleRemoveByTag` action for more granular control when disabling rules.
+//
+// Matching is by case-sensitive string equality.
+//
+// Note: This directive operates on the rules already loaded at the point it is parsed,
+// so it must appear AFTER any directive that loads the rules to be removed.
+// Placing it before has no effect because those rules do not yet exist in the configuration.
 //
 // Example:
-// ```apache
-// SecRuleRemoveByTag attack-dos
+// ```seclang
+// SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,log,deny,tag:my-tag"
+// SecRuleRemoveByTag my-tag
 // ```
 //
 // Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
@@ -367,13 +374,20 @@ func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 // Description: Removes the matching rules from the current configuration context.
 // Syntax: SecRuleRemoveByMsg MESSAGE
 // ---
-// Normally, you would use `SecRuleRemoveById` to remove rules, but it may occasionally
-// be easier to disable one or more rules with `SecRuleRemoveByMsg`. Matching is
-// by case-sensitive string equality.
+// Permanently removes all rules with the given message from the WAF configuration at
+// parse time. The removal applies to all transactions, check the per-transaction run time
+// `ctl:ruleRemoveByMsg` action for more granular control when disabling rules.
+//
+// Matching is by case-sensitive string equality.
+//
+// Note: This directive operates on the rules already loaded at the point it is parsed,
+// so it must appear AFTER any directive that loads the rules to be removed.
+// Placing it before has no effect because those rules do not yet exist in the configuration.
 //
 // Example:
-// ```apache
-// SecRuleRemoveByMsg "Directory Listing"
+// ```seclang
+// SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,log,deny,msg:'My Custom Rule Msg'"
+// SecRuleRemoveByMsg "My Custom Rule Msg"
 // ```
 func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
@@ -385,7 +399,22 @@ func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
 }
 
 // Description: Removes the matching rules from the current configuration context.
-// Syntax: SecRuleRemoveById ...[ID OR RANGE]
+// Syntax: SecRuleRemoveById ID|RANGE [ID|RANGE ...]
+// ---
+// Permanently removes rules by ID or inclusive range from the WAF configuration at
+// parse time. The removal applies to all transactions, check the per-transaction run time
+// `ctl:ruleRemoveById` action for more granular control when disabling a rule.
+//
+// Note: This directive operates on the rules already loaded at the point it is parsed,
+// so it must appear AFTER any Include directive that loads the rules to be removed.
+// Placing it before the include has no effect because those rules do not yet exist in
+// the configuration.
+//
+// Example:
+// ```seclang
+// SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,log,deny"
+// SecRuleRemoveById 1000
+// ```
 func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
