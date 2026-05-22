@@ -41,7 +41,7 @@ func (o *validateURLEncoding) Evaluate(_ plugintypes.TransactionState, value str
 		return false
 	}
 	rc := validateURLEncodingInternal(value)
-	// rc valute might be used for more detailed logging, but the operator so far only
+	// rc value might be used for more detailed logging, but the operator so far only
 	// returns true/false for violation detection, so we consider any non-1 return value as a violation.
 	// Return value mapping:
 	// 1: Valid encoding
