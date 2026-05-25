@@ -9,6 +9,14 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+type urlEncodingResult int
+
+const (
+	urlEncodingValid urlEncodingResult = iota
+	urlEncodingInvalidNonHex
+	urlEncodingInvalidTruncated
+)
+
 // Description:
 // Validates URL-encoded characters in the input string. Checks that percent-encoding
 // follows proper format (%XX where X is a hexadecimal digit). Returns true if invalid
@@ -40,26 +48,17 @@ func (o *validateURLEncoding) Evaluate(_ plugintypes.TransactionState, value str
 	if len(value) == 0 {
 		return false
 	}
-	rc := validateURLEncodingInternal(value)
-	// rc value might be used for more detailed logging, but the operator so far only
-	// returns true/false for violation detection, so we consider any non-1 return value as a violation.
-	// Return value mapping:
-	// 1: Valid encoding
-	// -2: Invalid URL Encoding: Non-hexadecimal
-	// -3: Invalid URL Encoding: Not enough characters at the end of input
-	return rc != 1
+	// The return value might be used for more detailed logging, but the operator
+	// so far only returns only a boolean for violation detection.
+	return validateURLEncodingInternal(value) != urlEncodingValid
 }
 
 func isHexDigit(c byte) bool {
 	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }
 
-func validateURLEncodingInternal(input string) int {
+func validateURLEncodingInternal(input string) urlEncodingResult {
 	inputLen := len(input)
-	if inputLen == 0 {
-		return -1
-	}
-
 	i := 0
 	for i < inputLen {
 		if input[i] != '%' {
@@ -67,16 +66,14 @@ func validateURLEncodingInternal(input string) int {
 			continue
 		}
 		if i+2 >= inputLen {
-			// Not enough bytes after '%' for a valid encoding sequence
-			return -3
+			return urlEncodingInvalidTruncated
 		}
 		if !isHexDigit(input[i+1]) || !isHexDigit(input[i+2]) {
-			// Non-hexadecimal characters used in encoding.
-			return -2
+			return urlEncodingInvalidNonHex
 		}
 		i += 3
 	}
-	return 1
+	return urlEncodingValid
 }
 
 func init() {
