@@ -9,6 +9,14 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
+type urlEncodingResult int
+
+const (
+	urlEncodingValid urlEncodingResult = iota
+	urlEncodingInvalidNonHex
+	urlEncodingInvalidTruncated
+)
+
 // Description:
 // Validates URL-encoded characters in the input string. Checks that percent-encoding
 // follows proper format (%XX where X is a hexadecimal digit). Returns true if invalid
@@ -40,56 +48,32 @@ func (o *validateURLEncoding) Evaluate(_ plugintypes.TransactionState, value str
 	if len(value) == 0 {
 		return false
 	}
-
-	rc := validateURLEncodingInternal(value, len(value))
-	switch rc {
-	case 1:
-		/* Encoding is valid */
-		return false
-	case -2:
-		// Invalid URL Encoding: Non-hexadecimal
-		return true
-	case -3:
-		// Invalid URL Encoding: Not enough characters at the end of input
-		return true
-	case -1:
-
-	default:
-		// Invalid URL Encoding: Internal error
-		return true
-	}
-	return true
+	// The return value might be used for more detailed logging, but the operator
+	// so far only returns only a boolean for violation detection.
+	return validateURLEncodingInternal(value) != urlEncodingValid
 }
 
-func validateURLEncodingInternal(input string, inputLen int) int {
-	if inputLen == 0 {
-		return -1
-	}
+func isHexDigit(c byte) bool {
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+}
 
-	var i int
+func validateURLEncodingInternal(input string) urlEncodingResult {
+	inputLen := len(input)
+	i := 0
 	for i < inputLen {
-		if input[i] == '%' {
-			if i+2 >= inputLen {
-				/* Not enough bytes. */
-				return -3
-			}
-			/* Here we only decode a %xx combination if it is valid,
-			 * leaving it as is otherwise.
-			 */
-			c1 := input[i+1]
-			c2 := input[i+2]
-
-			if (((c1 >= '0') && (c1 <= '9')) || ((c1 >= 'a') && (c1 <= 'f')) || ((c1 >= 'A') && (c1 <= 'F'))) && (((c2 >= '0') && (c2 <= '9')) || ((c2 >= 'a') && (c2 <= 'f')) || ((c2 >= 'A') && (c2 <= 'F'))) {
-				i += 3
-			} else {
-				/* Non-hexadecimal characters used in encoding. */
-				return -2
-			}
-		} else {
+		if input[i] != '%' {
 			i++
+			continue
 		}
+		if i+2 >= inputLen {
+			return urlEncodingInvalidTruncated
+		}
+		if !isHexDigit(input[i+1]) || !isHexDigit(input[i+2]) {
+			return urlEncodingInvalidNonHex
+		}
+		i += 3
 	}
-	return 1
+	return urlEncodingValid
 }
 
 func init() {
