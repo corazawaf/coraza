@@ -247,9 +247,12 @@ func ndjsonServer(lines []string) *httptest.Server {
 func ollamaWAFProxyHandler(waf coraza.WAF, ollamaURL string) http.HandlerFunc {
 	client := &http.Client{}
 	upstreamHost, upstreamPort := func() (string, int) {
-		u, _ := url.Parse(ollamaURL)
-		host, portStr, err := net.SplitHostPort(u.Host)
-		if err != nil {
+		u, err := url.Parse(ollamaURL)
+		if err != nil || u == nil {
+			return ollamaURL, 0
+		}
+		host, portStr, splitErr := net.SplitHostPort(u.Host)
+		if splitErr != nil {
 			return u.Host, 0
 		}
 		p, _ := strconv.Atoi(portStr)
