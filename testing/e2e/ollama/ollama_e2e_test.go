@@ -410,8 +410,10 @@ func TestOllamaStreaming(t *testing.T) {
 	defer proxy.Close()
 
 	ollamaBody := func(prompt string) string {
-		return fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":%q}],"options":{"temperature":0,"seed":42},"stream":true}`,
-			model, prompt)
+		modelJSON, _ := json.Marshal(model)
+		promptJSON, _ := json.Marshal(prompt)
+		return fmt.Sprintf(`{"model":%s,"messages":[{"role":"user","content":%s}],"options":{"temperature":0,"seed":42},"stream":true}`,
+			modelJSON, promptJSON)
 	}
 
 	t.Run("clean stream passes through", func(t *testing.T) {
@@ -473,6 +475,10 @@ func TestOllamaStreaming(t *testing.T) {
 					"check tinyllama behaviour at temperature=0,seed=42")
 			}
 		}
-		// Reaching here: stream ended (EOF or connection drop) before done:true — correct
+		if scanner.Err() != nil {
+			// Non-nil error means the WAF dropped the TCP connection — expected block path.
+			return
+		}
+		// Nil error means the stream ended cleanly before done:true — also acceptable.
 	})
 }
