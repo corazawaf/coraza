@@ -321,8 +321,9 @@ func ollamaWAFProxyHandler(waf coraza.WAF, ollamaURL string) http.HandlerFunc {
 		if it != nil || streamErr != nil {
 			// Cannot change status; drop the TCP connection to signal interruption or error
 			if hijacker, ok := w.(http.Hijacker); ok {
-				conn, _, _ := hijacker.Hijack()
-				conn.Close()
+				if conn, _, err := hijacker.Hijack(); err == nil {
+					conn.Close()
+				}
 			}
 		}
 	}
