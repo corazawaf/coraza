@@ -1,9 +1,7 @@
 # testing/e2e/ollama/compose.yml
 services:
   ollama:
-    # ⚠️ Replace tag with pinned digest before merging:
-    # docker pull ollama/ollama:latest && docker inspect --format='{{index .RepoDigests 0}}' ollama/ollama:latest
-    image: ollama/ollama:latest
+    image: ollama/ollama@sha256:fbaaecc6c632a73c2b4ca25ef52dbee0b68d07783fcb850f916404c004040f90
     ports:
       - "11434:11434"
     volumes:

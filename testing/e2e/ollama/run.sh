@@ -15,9 +15,7 @@ trap cleanup EXIT
 docker compose -f "$SCRIPT_DIR/compose.yml" up -d
 
 echo "Waiting for Ollama..."
-until curl -sf "$OLLAMA_URL/api/version" >/dev/null 2>&1; do
-  sleep 2
-done
+timeout 120 bash -c "until curl -sf \"$OLLAMA_URL/api/version\" >/dev/null 2>&1; do sleep 2; done"
 echo "Ollama ready."
 
 echo "Pulling model: $MODEL"
@@ -25,6 +23,7 @@ docker compose -f "$SCRIPT_DIR/compose.yml" exec ollama ollama pull "$MODEL"
 echo "Model ready."
 
 echo "Running e2e tests..."
+cd "$SCRIPT_DIR/../../.."
 OLLAMA_BASE_URL="$OLLAMA_URL" OLLAMA_MODEL="$MODEL" \
   go test -v -timeout 180s -run TestOllamaStreaming ./testing/e2e/ollama/...
 echo "Done."

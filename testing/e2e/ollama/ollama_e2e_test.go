@@ -10,9 +10,12 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -243,13 +246,22 @@ func ndjsonServer(lines []string) *httptest.Server {
 
 func ollamaWAFProxyHandler(waf coraza.WAF, ollamaURL string) http.HandlerFunc {
 	client := &http.Client{}
+	upstreamHost, upstreamPort := func() (string, int) {
+		u, _ := url.Parse(ollamaURL)
+		host, portStr, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			return u.Host, 0
+		}
+		p, _ := strconv.Atoi(portStr)
+		return host, p
+	}()
 	return func(w http.ResponseWriter, r *http.Request) {
 		tx := waf.NewTransaction()
 		defer tx.Close()
 		defer tx.ProcessLogging()
 
 		// Phase 1: connection + request headers
-		tx.ProcessConnection(r.RemoteAddr, 0, ollamaURL, 11434)
+		tx.ProcessConnection(r.RemoteAddr, 0, upstreamHost, upstreamPort)
 		tx.ProcessURI(r.RequestURI, r.Method, r.Proto)
 		for k, vals := range r.Header {
 			for _, v := range vals {
