@@ -43,6 +43,7 @@ func (*ollamaChatBodyProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes
 
 func (*ollamaChatBodyProcessor) ProcessResponseRecords(r io.Reader, _ plugintypes.BodyProcessorOptions, fn func(int, plugintypes.Record) error) error {
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 64*1024), 1*1024*1024)
 	for i := 0; scanner.Scan(); i++ {
 		raw := scanner.Bytes()
 		if len(raw) == 0 {
@@ -148,11 +149,13 @@ func TestOllamaChatBodyProcessor_MalformedJSON(t *testing.T) {
 		raw    string
 	}
 	var got []rec
-	_ = p.ProcessResponseRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+	if err := p.ProcessResponseRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
 		func(_ int, r plugintypes.Record) error {
 			got = append(got, rec{fields: r.Fields(), raw: string(r.Raw())})
 			return nil
-		})
+		}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if len(got) != 2 {
 		t.Fatalf("expected 2 records, got %d", len(got))
 	}
