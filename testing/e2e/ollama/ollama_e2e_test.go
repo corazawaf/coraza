@@ -4,13 +4,19 @@ package ollamae2e
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -167,5 +173,221 @@ func TestOllamaChatBodyProcessor_MalformedJSON(t *testing.T) {
 	}
 	if got[1].fields["ollama.content"] != "ok" {
 		t.Errorf("valid line after malformed: got %q, want %q", got[1].fields["ollama.content"], "ok")
+	}
+}
+
+// --- flushWriter ---
+
+type flushWriter struct {
+	w http.ResponseWriter
+	f http.Flusher
+}
+
+func (fw *flushWriter) Write(p []byte) (int, error) {
+	n, err := fw.w.Write(p)
+	if err == nil {
+		fw.f.Flush()
+	}
+	return n, err
+}
+
+func TestFlushWriter(t *testing.T) {
+	rec := httptest.NewRecorder()
+	fw := &flushWriter{w: rec, f: rec}
+	n, err := fw.Write([]byte("hello"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n != 5 {
+		t.Errorf("wrote %d bytes, want 5", n)
+	}
+	if !rec.Flushed {
+		t.Error("expected Flush to be called after Write")
+	}
+	if got := rec.Body.String(); got != "hello" {
+		t.Errorf("body: got %q, want %q", got, "hello")
+	}
+}
+
+// --- WAF helpers ---
+
+func buildWAF(t *testing.T) coraza.WAF {
+	t.Helper()
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+SecRuleEngine On
+SecResponseBodyAccess On
+SecResponseBodyMimeType application/x-ndjson
+SecRule RESPONSE_HEADERS:Content-Type "@contains application/x-ndjson" "id:1,phase:3,pass,nolog,ctl:responseBodyProcessor=ollama-chat"
+SecRule RESPONSE_ARGS:ollama.content "@rx CORAZA_BLOCK" "id:200,phase:4,deny,log,msg:'Blocked LLM output'"
+`))
+	if err != nil {
+		t.Fatalf("NewWAF: %v", err)
+	}
+	return waf
+}
+
+func ndjsonServer(lines []string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		w.WriteHeader(http.StatusOK)
+		f, _ := w.(http.Flusher)
+		for _, line := range lines {
+			fmt.Fprintln(w, line)
+			if f != nil {
+				f.Flush()
+			}
+		}
+	}))
+}
+
+func ollamaWAFProxyHandler(waf coraza.WAF, ollamaURL string) http.HandlerFunc {
+	client := &http.Client{}
+	return func(w http.ResponseWriter, r *http.Request) {
+		tx := waf.NewTransaction()
+		defer tx.ProcessLogging()
+		defer tx.Close()
+
+		// Phase 1: connection + request headers
+		tx.ProcessConnection(r.RemoteAddr, 0, ollamaURL, 11434)
+		tx.ProcessURI(r.RequestURI, r.Method, r.Proto)
+		for k, vals := range r.Header {
+			for _, v := range vals {
+				tx.AddRequestHeader(k, v)
+			}
+		}
+		if it := tx.ProcessRequestHeaders(); it != nil {
+			http.Error(w, "blocked", http.StatusForbidden)
+			return
+		}
+
+		// Phase 2: request body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "read error", http.StatusBadRequest)
+			return
+		}
+		if it, _, err := tx.WriteRequestBody(body); it != nil || err != nil {
+			http.Error(w, "blocked", http.StatusForbidden)
+			return
+		}
+		if it, err := tx.ProcessRequestBody(); it != nil || err != nil {
+			http.Error(w, "blocked", http.StatusForbidden)
+			return
+		}
+
+		// Forward to upstream
+		upReq, err := http.NewRequestWithContext(r.Context(), r.Method,
+			ollamaURL+r.URL.Path, bytes.NewReader(body))
+		if err != nil {
+			http.Error(w, "upstream error", http.StatusBadGateway)
+			return
+		}
+		upReq.Header = r.Header.Clone()
+		resp, err := client.Do(upReq)
+		if err != nil {
+			http.Error(w, "upstream error", http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Phase 3: response headers
+		for k, vals := range resp.Header {
+			for _, v := range vals {
+				tx.AddResponseHeader(k, v)
+			}
+		}
+		if it := tx.ProcessResponseHeaders(resp.StatusCode, resp.Proto); it != nil {
+			http.Error(w, "blocked", http.StatusForbidden)
+			return
+		}
+
+		// Commit response headers — status code is fixed after this line
+		for k, vals := range resp.Header {
+			for _, v := range vals {
+				w.Header().Set(k, v)
+			}
+		}
+		w.WriteHeader(resp.StatusCode)
+
+		// Phase 4: stream response through WAF with per-record flush
+		flusher, hasFlusher := w.(http.Flusher)
+		streamTx, hasStreaming := tx.(experimental.StreamingTransaction)
+		if !hasFlusher || !hasStreaming {
+			_, _ = io.Copy(w, resp.Body)
+			return
+		}
+		fw := &flushWriter{w: w, f: flusher}
+		it, _ := streamTx.ProcessResponseBodyFromStream(resp.Body, fw)
+		if it != nil {
+			// Cannot change status; drop the TCP connection to signal interruption
+			if hijacker, ok := w.(http.Hijacker); ok {
+				conn, _, _ := hijacker.Hijack()
+				conn.Close()
+			}
+		}
+	}
+}
+
+// --- Unit tests for ollamaWAFProxyHandler (mock Ollama, no real LLM) ---
+
+func TestOllamaWAFProxy_CleanPath(t *testing.T) {
+	backend := ndjsonServer([]string{
+		`{"model":"tinyllama","message":{"role":"assistant","content":"Hello"},"done":false}`,
+		`{"model":"tinyllama","message":{"role":"assistant","content":" world"},"done":false}`,
+		`{"model":"tinyllama","done":true}`,
+	})
+	defer backend.Close()
+
+	proxy := httptest.NewServer(ollamaWAFProxyHandler(buildWAF(t), backend.URL))
+	defer proxy.Close()
+
+	resp, err := http.Post(proxy.URL+"/api/chat", "application/json",
+		strings.NewReader(`{"model":"tinyllama","messages":[],"stream":true}`))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status: got %d, want 200", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if !strings.Contains(string(body), `"done":true`) {
+		t.Errorf("expected done:true in response, got: %q", string(body))
+	}
+	if !strings.Contains(string(body), "Hello") {
+		t.Errorf("expected content in response, got: %q", string(body))
+	}
+}
+
+func TestOllamaWAFProxy_BlockPath(t *testing.T) {
+	backend := ndjsonServer([]string{
+		`{"model":"tinyllama","message":{"role":"assistant","content":"CORAZA_BLOCK_TEST"},"done":false}`,
+		`{"model":"tinyllama","done":true}`,
+	})
+	defer backend.Close()
+
+	proxy := httptest.NewServer(ollamaWAFProxyHandler(buildWAF(t), backend.URL))
+	defer proxy.Close()
+
+	resp, err := http.Post(proxy.URL+"/api/chat", "application/json",
+		strings.NewReader(`{"model":"tinyllama","messages":[],"stream":true}`))
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Status is committed before streaming — 200 is expected even when blocked
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status: got %d, want 200 (headers already committed before block)", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	// WAF drops the connection on interrupt: either ReadAll returns an error,
+	// or it returns without having seen done:true
+	if err == nil && strings.Contains(string(body), `"done":true`) {
+		t.Error("WAF did not block: done:true reached client")
 	}
 }
