@@ -244,8 +244,8 @@ func ollamaWAFProxyHandler(waf coraza.WAF, ollamaURL string) http.HandlerFunc {
 	client := &http.Client{}
 	return func(w http.ResponseWriter, r *http.Request) {
 		tx := waf.NewTransaction()
-		defer tx.ProcessLogging()
 		defer tx.Close()
+		defer tx.ProcessLogging()
 
 		// Phase 1: connection + request headers
 		tx.ProcessConnection(r.RemoteAddr, 0, ollamaURL, 11434)
@@ -317,9 +317,9 @@ func ollamaWAFProxyHandler(waf coraza.WAF, ollamaURL string) http.HandlerFunc {
 			return
 		}
 		fw := &flushWriter{w: w, f: flusher}
-		it, _ := streamTx.ProcessResponseBodyFromStream(resp.Body, fw)
-		if it != nil {
-			// Cannot change status; drop the TCP connection to signal interruption
+		it, streamErr := streamTx.ProcessResponseBodyFromStream(resp.Body, fw)
+		if it != nil || streamErr != nil {
+			// Cannot change status; drop the TCP connection to signal interruption or error
 			if hijacker, ok := w.(http.Hijacker); ok {
 				conn, _, _ := hijacker.Hijack()
 				conn.Close()
