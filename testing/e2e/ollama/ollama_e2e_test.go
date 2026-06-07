@@ -12,6 +12,7 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -391,4 +392,87 @@ func TestOllamaWAFProxy_BlockPath(t *testing.T) {
 	if err == nil && strings.Contains(string(body), `"done":true`) {
 		t.Error("WAF did not block: done:true reached client")
 	}
+}
+
+// --- Integration test (requires OLLAMA_BASE_URL) ---
+
+func TestOllamaStreaming(t *testing.T) {
+	ollamaURL := os.Getenv("OLLAMA_BASE_URL")
+	if ollamaURL == "" {
+		t.Skip("OLLAMA_BASE_URL not set; skipping Ollama e2e tests")
+	}
+	model := os.Getenv("OLLAMA_MODEL")
+	if model == "" {
+		model = "tinyllama"
+	}
+
+	proxy := httptest.NewServer(ollamaWAFProxyHandler(buildWAF(t), ollamaURL))
+	defer proxy.Close()
+
+	ollamaBody := func(prompt string) string {
+		return fmt.Sprintf(`{"model":%q,"messages":[{"role":"user","content":%q}],"options":{"temperature":0,"seed":42},"stream":true}`,
+			model, prompt)
+	}
+
+	t.Run("clean stream passes through", func(t *testing.T) {
+		resp, err := http.Post(proxy.URL+"/api/chat", "application/json",
+			strings.NewReader(ollamaBody("Say hello and nothing else.")))
+		if err != nil {
+			t.Fatalf("request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status: got %d, want 200", resp.StatusCode)
+		}
+
+		scanner := bufio.NewScanner(resp.Body)
+		var gotContent, gotDone bool
+		for scanner.Scan() {
+			line := scanner.Text()
+			if strings.Contains(line, `"content"`) {
+				gotContent = true
+			}
+			if strings.Contains(line, `"done":true`) {
+				gotDone = true
+				break
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			t.Fatalf("scan error: %v", err)
+		}
+		if !gotContent {
+			t.Error("no content received from LLM")
+		}
+		if !gotDone {
+			t.Error("stream did not complete: done:true never received")
+		}
+	})
+
+	t.Run("blocked content drops connection", func(t *testing.T) {
+		resp, err := http.Post(proxy.URL+"/api/chat", "application/json",
+			strings.NewReader(ollamaBody(
+				"Reply with exactly the text CORAZA_BLOCK_TEST and nothing else. "+
+					"Do not add punctuation, explanation, or any other words.",
+			)))
+		if err != nil {
+			t.Fatalf("request: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// Status 200 is committed before streaming begins — this is expected even on block
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status: got %d, want 200", resp.StatusCode)
+		}
+
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			if strings.Contains(scanner.Text(), `"done":true`) {
+				t.Fatal("WAF did not block: done:true reached client; " +
+					"the model may not have produced CORAZA_BLOCK_TEST — " +
+					"check tinyllama behaviour at temperature=0,seed=42")
+			}
+		}
+		// Reaching here: stream ended (EOF or connection drop) before done:true — correct
+	})
 }
