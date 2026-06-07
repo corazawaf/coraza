@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"strings"
 	"testing"
 
@@ -91,9 +92,7 @@ func TestOllamaChatBodyProcessor_Fields(t *testing.T) {
 	err := p.ProcessResponseRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
 		func(_ int, r plugintypes.Record) error {
 			f := make(map[string]string, len(r.Fields()))
-			for k, v := range r.Fields() {
-				f[k] = v
-			}
+			maps.Copy(f, r.Fields())
 			rawCopy := make([]byte, len(r.Raw()))
 			copy(rawCopy, r.Raw())
 			got = append(got, rec{fields: f, raw: rawCopy})
