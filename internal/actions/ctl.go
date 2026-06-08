@@ -82,7 +82,8 @@ const (
 //     Pattern matching is always case-insensitive because variable names are lowercased before comparison.
 //     Users do not need to use the `!` character before the target list.
 //
-//  2. Option `ruleRemoveById` is triggered at run time and should be specified before the rule in which it is disabling.
+//  2. Options `ruleRemoveById`, `ruleRemoveByMsg`, and `ruleRemoveByTag` are per-transaction run-time removals
+//     and should be specified before the rule they are disabling.
 //
 //  3. Option `requestBodyProcessor` allows you to configure the request body processor.
 //     By default, Coraza will use the `URLENCODED` and `MULTIPART` processors to process an `application/x-www-form-urlencoded` and a `multipart/form-data` body respectively.
