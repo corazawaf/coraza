@@ -28,7 +28,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 							},
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{777, 778, 942101},
+							// Rules 777 and 778 rely on t:md5, which is disabled
+							// in FIPS builds (no-op), so they no longer trigger.
+							TriggeredRules:    []int{942101},
+							NonTriggeredRules: []int{777, 778},
 						},
 					},
 				},

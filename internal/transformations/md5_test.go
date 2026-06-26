@@ -14,8 +14,9 @@ func BenchmarkMD5(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, _, err := md5T(tt); err != nil {
-					b.Fatal(err)
+				// md5 is disabled in FIPS builds and always returns an error.
+				if _, _, err := md5T(tt); err == nil {
+					b.Fatal("expected md5 transformation to be disabled")
 				}
 			}
 		})

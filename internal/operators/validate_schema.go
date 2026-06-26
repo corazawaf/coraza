@@ -6,13 +6,13 @@
 package operators
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io/fs"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
@@ -47,10 +47,14 @@ type validateSchema struct {
 
 var _ plugintypes.Operator = (*validateSchema)(nil)
 
-func md5Hash(b []byte) string {
-	hasher := md5.New()
-	hasher.Write(b)
-	return hex.EncodeToString(hasher.Sum(nil))
+// schemaCacheKey provides a memoizer key from the schema contents. FNV-1a is used
+// (not a crypto hash) since this is only for cache deduplication.
+// The "schema:" prefix avoids collisions with other key types in the shared global
+// memoizer (e.g. regexes)
+func schemaCacheKey(b []byte) string {
+	h := fnv.New64a()
+	h.Write(b)
+	return "schema:" + strconv.FormatUint(h.Sum64(), 16)
 }
 
 // NewValidateSchema creates a new validateSchema operator
@@ -77,7 +81,7 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 		return nil, fmt.Errorf("reading schema from root FS: %v", err)
 	}
 
-	key := md5Hash(schemaData)
+	key := schemaCacheKey(schemaData)
 	schema, err := memoizeDo(options.Memoizer, key, func() (any, error) {
 		// Preliminarily validate that the schema is valid JSON
 		var jsonSchema any

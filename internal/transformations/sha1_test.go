@@ -14,8 +14,9 @@ func BenchmarkSHA1(b *testing.B) {
 		tt := tc
 		b.Run(tt, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				if _, _, err := sha1T(tt); err != nil {
-					b.Fatal(err)
+				// sha1 is disabled in FIPS builds and always returns an error.
+				if _, _, err := sha1T(tt); err == nil {
+					b.Fatal("expected sha1 transformation to be disabled")
 				}
 			}
 		})

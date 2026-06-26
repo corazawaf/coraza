@@ -3,31 +3,14 @@
 
 package transformations
 
-import (
-	"crypto/md5"
-	"io"
+import "errors"
 
-	"github.com/corazawaf/coraza/v3/internal/strings"
-)
-
-var emptyMD5 string
+// errMD5Disabled is returned on every evaluation of a rule using md5. md5 is not
+// available in FIPS builds.
+// The transformation stays registered so rules still load (allowing the CRS to load as-is);
+// the engine logs a warning each time such a rule is actually triggered at runtime.
+var errMD5Disabled = errors.New("md5 transformation is not available in FIPS builds")
 
 func md5T(data string) (string, bool, error) {
-	if len(data) == 0 {
-		return emptyMD5, true, nil
-	}
-
-	h := md5.New()
-	_, err := io.WriteString(h, data)
-	if err != nil {
-		return data, false, err
-	}
-	// The occurrence of an invariant transformation is so unlikely that we can assume the transformation returns a changed value
-	// https://crypto.stackexchange.com/questions/68674/md5-existence-of-invariant-fixed-point
-	return strings.WrapUnsafe(h.Sum(nil)), true, nil
-}
-
-func init() {
-	buf := md5.Sum(nil)
-	emptyMD5 = string(buf[:])
+	return data, false, errMD5Disabled
 }
