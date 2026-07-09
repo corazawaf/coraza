@@ -137,7 +137,6 @@ SecRule REQUEST_HEADERS:content-type "application/json" "id: 100, phase:1, pass,
 SecRule RESPONSE_HEADERS:content-type "application/json" "id:1000, phase:3, pass, log, ctl:responseBodyProcessor=JSON"
 SecRule REQBODY_PROCESSOR "JSON" "id: 101,phase:2,log,block"
 
-# This is commented out because we want to check if body processor can work with partial JSON
 SecRule REQBODY_ERROR "!@eq 0" "id:1111, phase:2, log, block"
 
 SecRule REQUEST_BODY "456" "id:103, phase:2, log"
