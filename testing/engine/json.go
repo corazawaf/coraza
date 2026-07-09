@@ -77,7 +77,7 @@ SecRule RESPONSE_ARGS:json.test4 "@eq 3" "id: 1011, phase:4, log, block"
 
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
-		Author:      "jptosso",
+		Author:      "kabbohus",
 		Description: "Test if truncated JSON request/response body work",
 		Enabled:     true,
 		Name:        "truncatedjsonyaml",
