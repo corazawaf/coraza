@@ -106,6 +106,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								1010,
 								1000,
 								1011,
+								1111,
 								1200,
 								1201,
 							},
@@ -113,7 +114,6 @@ var _ = profile.RegisterProfile(profile.Profile{
 								103,
 								1102,
 								1103,
-								1111,
 								1202,
 								1203,
 							},
@@ -138,7 +138,7 @@ SecRule RESPONSE_HEADERS:content-type "application/json" "id:1000, phase:3, pass
 SecRule REQBODY_PROCESSOR "JSON" "id: 101,phase:2,log,block"
 
 # This is commented out because we want to check if body processor can work with partial JSON
-# SecRule REQBODY_ERROR "!@eq 0" "id:1111, phase:2, log, block"
+SecRule REQBODY_ERROR "!@eq 0" "id:1111, phase:2, log, block"
 
 SecRule REQUEST_BODY "456" "id:103, phase:2, log"
 SecRule ARGS:json.test "@eq 123" "id:1100, phase:2, log, block"
