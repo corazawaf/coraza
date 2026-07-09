@@ -82,10 +82,13 @@ func readJSON(s string, maxRecursion int) (map[string]string, error) {
 
 	json := gjson.Parse(s)
 	err := readItems(json, key, maxRecursion, res)
+	if err != nil {
+		return res, err
+	}
 	if !gjson.Valid(s) {
 		return res, errors.New("invalid JSON")
 	}
-	return res, err
+	return res, nil
 }
 
 // Transform JSON to a map[string]string
