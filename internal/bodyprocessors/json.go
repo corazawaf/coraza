@@ -30,6 +30,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	// Process with recursion limit
 	col := v.ArgsPost()
 	data, err := readJSON(ss, bpo.RequestBodyRecursionLimit)
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
 	}
@@ -59,6 +60,7 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	// Process with no recursion limit as we don't have a directive for response body
 	col := v.ResponseArgs()
 	data, err := readJSON(ss, ignoreJSONRecursionLimit)
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
 	}
