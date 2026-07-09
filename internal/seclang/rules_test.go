@@ -534,6 +534,46 @@ func TestPrintedMultipleMsgAndDataWithMultiMatch(t *testing.T) {
 	}
 }
 
+// TestMultiMatchNoDuplicateOnUnchangedTransformation is a regression test for
+// https://github.com/corazawaf/coraza/issues/1612. A transformation that reported
+// changed=true while producing a byte-identical value (as cmdLine used to for any
+// input containing a bare '/') made multiMatch evaluate the operator twice against
+// the same value, doubling the matches and inflating the CRS anomaly score.
+// The rule below mirrors CRS 930110: same variables, transformations, operator and
+// multiMatch. The path-traversal request matches REQUEST_URI_RAW and ARGS:file once
+// each, so exactly two matches are expected (four before the fix).
+func TestMultiMatchNoDuplicateOnUnchangedTransformation(t *testing.T) {
+	waf := corazawaf.NewWAF()
+	var matched []types.MatchedRule
+	waf.SetErrorCallback(func(mr types.MatchedRule) {
+		matched = append(matched, mr)
+	})
+	parser := NewParser(waf)
+	err := parser.FromString(`
+	SecRule REQUEST_URI_RAW|ARGS "@rx (?:^|[/;\x5c])\.{2,3}[/;\x5c]" "id:930110, phase:2, block, capture, t:none, t:utf8toUnicode, t:urlDecodeUni, t:removeNulls, t:cmdLine, msg:'Path Traversal', multiMatch"
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := waf.NewTransaction()
+	// ProcessURI also extracts the query string into ARGS (ARGS:file).
+	tx.ProcessURI("/?file=../../etc/passwd", "GET", "HTTP/1.1")
+	tx.ProcessRequestHeaders()
+	if _, err := tx.ProcessRequestBody(); err != nil {
+		t.Fatal(err)
+	}
+
+	total := 0
+	for _, mr := range matched {
+		if mr.Rule().ID() == 930110 {
+			total += len(mr.MatchedDatas())
+		}
+	}
+	if total != 2 {
+		t.Errorf("expected 2 matches for rule 930110 (one per matching variable), got %d", total)
+	}
+}
+
 func TestStatusFromInterruptions(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	var logs []string
