@@ -46,7 +46,10 @@ func TestHttpServer(t *testing.T) {
 		body      []byte // if body is populated, POST request is sent
 	}{
 		{"negative", "/", 200, nil, nil},
-		{"positive for query parameter", "/?id=0", 403, nil, nil},
+		// Test custom rule
+		{"positive for custom id rule", "/?id=0", 403, nil, nil},
+		// Test embedded CRS
+		{"positive for CRS path traversal", "/?file=../../etc/passwd", 403, nil, nil},
 		{
 			"positive for response body",
 			"/",
@@ -126,10 +129,11 @@ func TestHttpServerConcurrent(t *testing.T) {
 		body      []byte // if body is populated, POST request is sent
 	}{
 		{"negative", "/", 200, nil},
-		{"positive for query parameter 1", "/?id=0", 403, nil},
-		{"positive for request body", "/", 403, []byte("password")},
+		{"positive for custom id rule", "/?id=0", 403, nil},
+		{"positive for custom request body rule", "/", 403, []byte("password")},
+		{"positive for CRS path traversal", "/?file=../../etc/passwd", 403, nil},
+		{"positive for CRS request body sqli", "/", 403, []byte("q=1' OR '1'='1")},
 	}
-	// Spin up the test server with default.conf configuration
 	testServer := setupTestServer(t)
 	defer testServer.Close()
 	// a t.Run wraps all the concurrent tests and permits to close the server only once test is done
@@ -137,7 +141,7 @@ func TestHttpServerConcurrent(t *testing.T) {
 	t.Run("concurrent test", func(t *testing.T) {
 		for _, tc := range tests {
 			tt := tc
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				// Each test case is added 10 times and then run concurrently
 				t.Run(tt.name, func(t *testing.T) {
 					t.Parallel()
