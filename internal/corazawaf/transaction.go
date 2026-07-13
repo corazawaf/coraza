@@ -354,6 +354,7 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 // If On: it will cause the transaction to skip rules according to the allow type (phase, request, all).
 // If DetectionOnly: allow is not enforced (rules keep being evaluated), but the
 // decision is still recorded so IsAllowed() reports what would have happened.
+// TODO(4.x): evaluate to expose it in the interface.
 func (tx *Transaction) Allow(allowType corazatypes.AllowType) {
 	// Record the decision regardless of the engine mode. This is observability
 	// only and must not gate enforcement, so it is kept separate from AllowType.

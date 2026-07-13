@@ -225,8 +225,12 @@ func TestTransactionIsAllowed(t *testing.T) {
 			tx.ProcessURI("/", "GET", "1.1")
 			tx.ProcessRequestHeaders()
 
-			if got := tx.IsAllowed(); got != tt.wantAllowed {
-				t.Errorf("IsAllowed() = %t, want %t", got, tt.wantAllowed)
+			type allower interface{ IsAllowed() bool }
+			txAllower, ok := tx.(allower)
+			if ok {
+				if got := txAllower.IsAllowed(); got != tt.wantAllowed {
+					t.Errorf("IsAllowed() = %t, want %t", got, tt.wantAllowed)
+				}
 			}
 			// allow must never manifest as an interruption.
 			if tx.IsInterrupted() {

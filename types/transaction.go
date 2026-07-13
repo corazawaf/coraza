@@ -183,12 +183,6 @@ type Transaction interface {
 	// IsInterrupted will return true if the transaction was interrupted
 	IsInterrupted() bool
 
-	// IsAllowed will return true if an allow disruptive action matched during
-	// the transaction. Unlike deny/drop, allow never produces an Interruption,
-	// so this is the way to observe it. It also reports true in DetectionOnly
-	// mode, reflecting what would have happened had the engine been On.
-	IsAllowed() bool
-
 	// Interruption returns the types.Interruption if the request was interrupted,
 	// or nil otherwise.
 	Interruption() *Interruption
