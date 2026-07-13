@@ -581,12 +581,14 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	// The Disruptive_ boolean still allows to identify actual disruptions from "potential" disruptions.
 	// Disruptive_ field is also used during logging to print different messages if the disruption has been real or not
 	// so it is important to set it according to the RuleEngine mode.
+	var actionName string
 	for _, a := range r.actions {
 		// There can be only one disruptive action per rule
 		if a.Function.Type() == plugintypes.ActionTypeDisruptive {
 			// if not found it will default to DisruptiveActionUnknown.
 			mr.DisruptiveAction_ = corazarules.DisruptiveActionMap[a.Name]
 			mr.Disruptive_ = tx.RuleEngine == types.RuleEngineOn
+			actionName = a.Name
 			break
 		}
 	}
@@ -604,6 +606,8 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	if tx.WAF.ErrorLogCb != nil && r.Log {
 		tx.WAF.ErrorLogCb(mr)
 	}
+
+	tx.emitRuleMatch(r, actionName, mr.Disruptive_, mds)
 }
 
 // GetStopWatch is used to debug phase durations
@@ -909,6 +913,7 @@ func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Inte
 		Status: status,
 		Action: "deny",
 	}
+	tx.emitEngineError(plugintypes.EngineEventBodyTruncated, nil, "body exceeded configured limit")
 	return tx.interruption, 0, nil
 }
 
@@ -1664,7 +1669,14 @@ func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionR
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
 func (tx *Transaction) Close() error {
+	// Defers execute LIFO: txPool.Put is registered first so it runs last.
+	// emitTransactionFinish runs between the cleanup body (variables.reset
+	// / buffer.Reset below) and the pool put, so if a user-supplied sink
+	// panics the cleanup has already run and the transaction is returned
+	// to the pool in a clean state. Without this ordering a panicking sink
+	// would leave dirty buffers and stale variables in the pooled tx.
 	defer tx.WAF.txPool.Put(tx)
+	defer tx.emitTransactionFinish()
 
 	var errs []error
 	if environment.HasAccessToFS {
@@ -1737,6 +1749,7 @@ func (tx *Transaction) generateRequestBodyError(err error) {
 	tx.variables.reqbodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.reqbodyProcessor.Get(), err.Error()))
 	tx.variables.reqbodyProcessorError.Set("1")
 	tx.variables.reqbodyProcessorErrorMsg.Set(err.Error())
+	tx.emitEngineError(plugintypes.EngineEventBodyProcessor, err, "request body processor failed")
 }
 
 // generateResponseBodyError generates all the error variables for the response body parser
@@ -1745,6 +1758,7 @@ func (tx *Transaction) generateResponseBodyError(err error) {
 	tx.variables.resBodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.resBodyProcessor.Get(), err.Error()))
 	tx.variables.resBodyProcessorError.Set("1")
 	tx.variables.resBodyProcessorErrorMsg.Set(err.Error())
+	tx.emitEngineError(plugintypes.EngineEventBodyProcessor, err, "response body processor failed")
 }
 
 // setTimeVariables sets all the time variables

@@ -160,6 +160,10 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
+	// Load the per-rule timing gate once per phase. When off, the only
+	// hot-path cost is this single atomic load + branch; the inner loop
+	// stays identical to the no-telemetry baseline.
+	perRuleTiming := tx.WAF.perRuleTimingEnabled.Load() && tx.WAF.ruleTimingSink != nil
 	transformationCache := tx.transformationCache
 	for k := range transformationCache {
 		delete(transformationCache, k)
@@ -258,7 +262,17 @@ RulesLoop:
 			tx.variables.matchedVars.Reset()
 		}
 
-		r.Evaluate(phase, tx, transformationCache)
+		if perRuleTiming {
+			ruleStart := time.Now().UnixNano()
+			matchCountBefore := len(tx.matchedRules)
+			r.Evaluate(phase, tx, transformationCache)
+			tx.emitRuleTimed(r,
+				time.Duration(time.Now().UnixNano()-ruleStart),
+				len(tx.matchedRules) > matchCountBefore,
+			)
+		} else {
+			r.Evaluate(phase, tx, transformationCache)
+		}
 		tx.Capture = false // we reset captures
 		usedRules++
 	}
@@ -275,7 +289,9 @@ RulesLoop:
 	// Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
 	tx.Skip = 0
 
-	tx.stopWatches[phase] = time.Now().UnixNano() - ts
+	elapsed := time.Now().UnixNano() - ts
+	tx.stopWatches[phase] = elapsed
+	tx.emitPhaseEnd(phase, time.Duration(elapsed), usedRules)
 	return tx.IsInterrupted()
 }
 
