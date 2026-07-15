@@ -1594,6 +1594,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	return al
 }
 
+// auditLogResponse returns the response object, creating it from transaction state when needed.
 func (tx *Transaction) auditLogResponse(transaction *auditlog.Transaction) *auditlog.TransactionResponse {
 	if transaction.Response_ == nil {
 		status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
@@ -1606,11 +1607,13 @@ func (tx *Transaction) auditLogResponse(transaction *auditlog.Transaction) *audi
 	return transaction.Response_
 }
 
+// auditLogMatchData exposes optional structured match data carried by rule matches.
 type auditLogMatchData interface {
 	Match() string
 	Reference() string
 }
 
+// auditLogMessages builds structured audit messages for matched rules marked for auditing.
 func (tx *Transaction) auditLogMessages(includeErrorMessage bool) []plugintypes.AuditLogMessage {
 	var messages []plugintypes.AuditLogMessage
 	actionset := strings.Join(tx.WAF.ComponentNames, " ")

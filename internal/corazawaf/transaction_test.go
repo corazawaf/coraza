@@ -839,6 +839,7 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
+// TestAuditLogTrailerIncludesStructuredMessages verifies H-only logs retain structured rule data.
 func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
 	tx := makeTransaction(t)
 	tx.AuditLogParts = types.AuditLogParts("ABCHZ")
@@ -890,6 +891,7 @@ func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
 	}
 }
 
+// TestAuditLogMatchDetailsUseOriginatingRuleForChain verifies chained matches use their source rules.
 func TestAuditLogMatchDetailsUseOriginatingRuleForChain(t *testing.T) {
 	parent := NewRule()
 	parent.ID_ = 132

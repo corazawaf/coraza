@@ -14,14 +14,18 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// libmodsecurityJSONProducerName is the producer label emitted in ModSecurity v3 JSON logs.
 const libmodsecurityJSONProducerName = "Coraza"
 
+// libmodsecurityJSONFormatter serializes audit logs using the libmodsecurity v3 JSON schema.
 type libmodsecurityJSONFormatter struct{}
 
+// libmodsecurityJSONLog is the root object of a libmodsecurity v3 JSON audit log.
 type libmodsecurityJSONLog struct {
 	Transaction libmodsecurityJSONTransaction `json:"transaction"`
 }
 
+// libmodsecurityJSONTransaction contains the transaction fields emitted by libmodsecurity v3.
 type libmodsecurityJSONTransaction struct {
 	ClientIP      string                       `json:"client_ip"`
 	Timestamp     string                       `json:"time_stamp"`
@@ -37,6 +41,7 @@ type libmodsecurityJSONTransaction struct {
 	Messages      *[]libmodsecurityJSONMessage `json:"messages,omitempty"`
 }
 
+// libmodsecurityJSONRequest contains the request fields emitted by libmodsecurity v3.
 type libmodsecurityJSONRequest struct {
 	Method      string             `json:"method"`
 	HTTPVersion string             `json:"http_version"`
@@ -46,12 +51,14 @@ type libmodsecurityJSONRequest struct {
 	Headers     *map[string]string `json:"headers,omitempty"`
 }
 
+// libmodsecurityJSONResponse contains the response fields emitted by libmodsecurity v3.
 type libmodsecurityJSONResponse struct {
 	Body     *string            `json:"body,omitempty"`
 	HTTPCode int                `json:"http_code"`
 	Headers  *map[string]string `json:"headers,omitempty"`
 }
 
+// libmodsecurityJSONProducer contains the producer metadata emitted with audit trailer data.
 type libmodsecurityJSONProducer struct {
 	ModSecurity    string   `json:"modsecurity"`
 	Connector      string   `json:"connector"`
@@ -59,11 +66,13 @@ type libmodsecurityJSONProducer struct {
 	Components     []string `json:"components"`
 }
 
+// libmodsecurityJSONMessage contains one structured rule message.
 type libmodsecurityJSONMessage struct {
 	Message string                          `json:"message"`
 	Details libmodsecurityJSONMessageDetail `json:"details"`
 }
 
+// libmodsecurityJSONMessageDetail contains the rule metadata nested under a message.
 type libmodsecurityJSONMessageDetail struct {
 	Match      string   `json:"match"`
 	Reference  string   `json:"reference"`
@@ -79,11 +88,13 @@ type libmodsecurityJSONMessageDetail struct {
 	Accuracy   string   `json:"accuracy"`
 }
 
+// libmodsecurityJSONMessageData exposes optional ModSecurity v3 message fields.
 type libmodsecurityJSONMessageData interface {
 	Match() string
 	Reference() string
 }
 
+// Format renders an audit log using the libmodsecurity v3 JSON schema.
 func (libmodsecurityJSONFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	transaction := al.Transaction()
 	formatted := libmodsecurityJSONLog{
@@ -147,10 +158,12 @@ func (libmodsecurityJSONFormatter) Format(al plugintypes.AuditLog) ([]byte, erro
 	return json.Marshal(formatted)
 }
 
+// MIME returns the media type for libmodsecurity v3 JSON audit logs.
 func (libmodsecurityJSONFormatter) MIME() string {
 	return "application/json; charset=utf-8"
 }
 
+// libmodsecurityJSONTimestamp returns the timestamp format expected by libmodsecurity v3.
 func libmodsecurityJSONTimestamp(transaction plugintypes.AuditLogTransaction) string {
 	if timestamp := transaction.UnixTimestamp(); timestamp != 0 {
 		return time.Unix(0, timestamp).Format(time.ANSIC)
@@ -159,6 +172,7 @@ func libmodsecurityJSONTimestamp(transaction plugintypes.AuditLogTransaction) st
 	return transaction.Timestamp()
 }
 
+// libmodsecurityJSONHTTPVersion returns the HTTP version without the HTTP/ prefix.
 func libmodsecurityJSONHTTPVersion(request plugintypes.AuditLogTransactionRequest) string {
 	version := request.HTTPVersion()
 	if version == "" {
@@ -172,6 +186,7 @@ func libmodsecurityJSONHTTPVersion(request plugintypes.AuditLogTransactionReques
 	return version
 }
 
+// libmodsecurityJSONHeaders flattens repeated header values into the v3 JSON representation.
 func libmodsecurityJSONHeaders(headers map[string][]string) map[string]string {
 	formatted := make(map[string]string, len(headers))
 	for key, values := range headers {
@@ -181,6 +196,7 @@ func libmodsecurityJSONHeaders(headers map[string][]string) map[string]string {
 	return formatted
 }
 
+// libmodsecurityJSONHeader returns a header value using a case-insensitive lookup.
 func libmodsecurityJSONHeader(headers map[string]string, name string) string {
 	for key, value := range headers {
 		if strings.EqualFold(key, name) {
@@ -191,6 +207,7 @@ func libmodsecurityJSONHeader(headers map[string]string, name string) string {
 	return ""
 }
 
+// libmodsecurityJSONProducerFrom builds the v3 producer block from Coraza metadata.
 func libmodsecurityJSONProducerFrom(producer plugintypes.AuditLogTransactionProducer) *libmodsecurityJSONProducer {
 	formatted := &libmodsecurityJSONProducer{
 		ModSecurity: libmodsecurityJSONProducerName,
@@ -206,6 +223,7 @@ func libmodsecurityJSONProducerFrom(producer plugintypes.AuditLogTransactionProd
 	return formatted
 }
 
+// libmodsecurityJSONRuleEngine maps Coraza rule engine modes to v3 labels.
 func libmodsecurityJSONRuleEngine(ruleEngine string) string {
 	switch strings.ToLower(ruleEngine) {
 	case "on":
@@ -217,6 +235,7 @@ func libmodsecurityJSONRuleEngine(ruleEngine string) string {
 	}
 }
 
+// libmodsecurityJSONMessages converts Coraza audit messages to v3 message entries.
 func libmodsecurityJSONMessages(messages []plugintypes.AuditLogMessage) []libmodsecurityJSONMessage {
 	formatted := make([]libmodsecurityJSONMessage, 0, len(messages))
 	for _, message := range messages {
@@ -260,6 +279,7 @@ func libmodsecurityJSONMessages(messages []plugintypes.AuditLogMessage) []libmod
 	return formatted
 }
 
+// dashIfEmpty returns the libmodsecurity placeholder for missing string values.
 func dashIfEmpty(value string) string {
 	if value == "" {
 		return "-"

@@ -160,6 +160,7 @@ func TestJSONFormatterPartJ(t *testing.T) {
 	}
 }
 
+// TestLibModSecurityJSONFormatter verifies the full libmodsecurity v3 JSON shape.
 func TestLibModSecurityJSONFormatter(t *testing.T) {
 	timestamp := time.Date(2024, time.January, 2, 3, 4, 5, 0, time.UTC).UnixNano()
 	al := &Log{
@@ -290,6 +291,7 @@ func TestLibModSecurityJSONFormatter(t *testing.T) {
 	}
 }
 
+// TestLibModSecurityJSONFormatterHonorsParts verifies audit-part gated fields are omitted correctly.
 func TestLibModSecurityJSONFormatterHonorsParts(t *testing.T) {
 	al := &Log{
 		Parts_: types.AuditLogParts("A"),
@@ -355,6 +357,7 @@ func TestLibModSecurityJSONFormatterHonorsParts(t *testing.T) {
 	}
 }
 
+// TestLibModSecurityJSONFormatterRegistered verifies the formatter can be selected by name.
 func TestLibModSecurityJSONFormatterRegistered(t *testing.T) {
 	formatter, err := GetFormatter("ModSecurityV3")
 	if err != nil {

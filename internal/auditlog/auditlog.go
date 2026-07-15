@@ -460,6 +460,7 @@ func (md *MessageData) Raw() string {
 	return md.Raw_
 }
 
+// Match returns the structured operator match detail, when available.
 func (md *MessageData) Match() string {
 	if md == nil {
 		return ""
@@ -468,6 +469,7 @@ func (md *MessageData) Match() string {
 	return md.Match_
 }
 
+// Reference returns the ModSecurity-compatible match reference, when available.
 func (md *MessageData) Reference() string {
 	if md == nil {
 		return ""

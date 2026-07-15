@@ -712,6 +712,7 @@ func (r *Rule) SetOperator(operator plugintypes.Operator, functionName string, p
 	}
 }
 
+// auditLogMatch formats a rule match using the libmodsecurity v3 detail syntax.
 func (r *Rule) auditLogMatch(md types.MatchData) string {
 	if r.operator == nil || r.operator.Function == "" {
 		return "Matched."

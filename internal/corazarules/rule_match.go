@@ -57,10 +57,12 @@ func (m MatchData) Data() string {
 	return m.Data_
 }
 
+// Match returns the structured operator match detail, when available.
 func (m MatchData) Match() string {
 	return m.Match_
 }
 
+// Reference returns the ModSecurity-compatible match reference, when available.
 func (m MatchData) Reference() string {
 	return m.Reference_
 }
