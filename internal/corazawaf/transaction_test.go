@@ -842,11 +842,7 @@ func TestAuditLogFields(t *testing.T) {
 // TestAuditLogTrailerIncludesStructuredMessages verifies H-only logs retain structured rule data.
 func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
 	tx := makeTransaction(t)
-	defer func() {
-		if err := tx.Close(); err != nil {
-			t.Errorf("Failed to close transaction: %s", err.Error())
-		}
-	}()
+	defer closeTransaction(t, tx)
 	tx.AuditLogParts = types.AuditLogParts("ABCHZ")
 	tx.ProcessResponseHeaders(http.StatusForbidden, "HTTP/1.1")
 
@@ -916,11 +912,7 @@ func TestAuditLogMatchDetailsUseOriginatingRuleForChain(t *testing.T) {
 	parent.Chain = child
 
 	tx := NewWAF().NewTransaction()
-	defer func() {
-		if err := tx.Close(); err != nil {
-			t.Errorf("Failed to close transaction: %s", err.Error())
-		}
-	}()
+	defer closeTransaction(t, tx)
 	tx.AuditLogParts = types.AuditLogParts("H")
 	tx.ProcessURI("0", "GET", "HTTP/1.1")
 	tx.AddGetRequestArgument("child", "0")
@@ -1938,6 +1930,14 @@ func makeTransaction(t testing.TB) *Transaction {
 		panic(err)
 	}
 	return tx
+}
+
+// closeTransaction closes a transaction and reports cleanup failures to the test.
+func closeTransaction(t testing.TB, tx *Transaction) {
+	t.Helper()
+	if err := tx.Close(); err != nil {
+		t.Errorf("Failed to close transaction: %s", err.Error())
+	}
 }
 
 func makeTransactionTimestamped(t testing.TB) *Transaction {
