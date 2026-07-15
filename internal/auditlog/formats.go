@@ -7,6 +7,7 @@
 // The following log formats are supported:
 //
 // - JSON
+// - JSONV3
 // - Coraza
 // - Native
 //

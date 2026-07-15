@@ -564,6 +564,12 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		}
 	}
 
+	for _, md := range mds {
+		if matchData, ok := md.(*corazarules.MatchData); ok && matchData.Match_ == "" {
+			matchData.Match_ = r.auditLogMatch(md)
+		}
+	}
+
 	mr := &corazarules.MatchedRule{
 		URI_:             tx.variables.requestURI.Get(),
 		TransactionID_:   tx.id,
@@ -1521,13 +1527,21 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		HostPort_:      hostPort,
 		ServerID_:      tx.variables.serverName.Get(), // TODO check
 		Request_: &auditlog.TransactionRequest{
-			Method_:   tx.variables.requestMethod.Get(),
-			URI_:      tx.variables.requestURI.Get(),
-			Protocol_: tx.variables.requestProtocol.Get(),
-			Args_:     tx.variables.args,
-			Length_:   int32(requestLength),
+			Method_:      tx.variables.requestMethod.Get(),
+			URI_:         tx.variables.requestURI.Get(),
+			Protocol_:    tx.variables.requestProtocol.Get(),
+			HTTPVersion_: tx.variables.requestProtocol.Get(),
+			Args_:        tx.variables.args,
+			Length_:      int32(requestLength),
 		},
 		IsInterrupted_: tx.IsInterrupted(),
+	}
+	if responseStatus := tx.variables.responseStatus.Get(); responseStatus != "" || tx.variables.responseProtocol.Get() != "" {
+		status, _ := strconv.Atoi(responseStatus)
+		al.Transaction_.Response_ = &auditlog.TransactionResponse{
+			Protocol_: tx.variables.responseProtocol.Get(),
+			Status_:   status,
+		}
 	}
 
 	var auditLogPartAuditLogTrailerSet, auditLogPartRulesMatchedSet bool
@@ -1550,17 +1564,9 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		case types.AuditLogPartUploadedFiles:
 			al.Transaction_.Request_.Files_ = tx.auditLogCollectFiles()
 		case types.AuditLogPartIntermediaryResponseBody:
-			if al.Transaction_.Response_ == nil {
-				al.Transaction_.Response_ = &auditlog.TransactionResponse{}
-			}
-			al.Transaction_.Response_.Body_ = tx.variables.responseBody.Get()
+			tx.auditLogResponse(&al.Transaction_).Body_ = tx.variables.responseBody.Get()
 		case types.AuditLogPartResponseHeaders:
-			if al.Transaction_.Response_ == nil {
-				al.Transaction_.Response_ = &auditlog.TransactionResponse{}
-			}
-			status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-			al.Transaction_.Response_.Status_ = status
-			al.Transaction_.Response_.Headers_ = tx.variables.responseHeaders.Data()
+			tx.auditLogResponse(&al.Transaction_).Headers_ = tx.variables.responseHeaders.Data()
 		case types.AuditLogPartAuditLogTrailer:
 			auditLogPartAuditLogTrailerSet = true
 			al.Transaction_.Producer_ = &auditlog.TransactionProducer{
@@ -1573,62 +1579,96 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			}
 		case types.AuditLogPartRulesMatched:
 			auditLogPartRulesMatchedSet = true
-			for _, mr := range tx.matchedRules {
-				// Audit flag controls whether a matched rule appears in the audit log.
-				// This aligns with ModSecurity behavior where:
-				// - log: sets both Log and Audit (appears in error log AND audit log)
-				// - nolog: clears both (appears in neither)
-				// - nolog,auditlog: Log=false, Audit=true (audit log only)
-				// - log,noauditlog: Log=true, Audit=false (error log only)
-				mrWithlog, ok := mr.(*corazarules.MatchedRule)
-				if ok && mrWithlog.Audit() {
-					r := mr.Rule()
-					for _, matchData := range mr.MatchedDatas() {
-						newAlEntry := auditlog.Message{
-							Actionset_: strings.Join(tx.WAF.ComponentNames, " "),
-							Message_:   matchData.Message(),
-							Data_: &auditlog.MessageData{
-								File_:     mr.Rule().File(),
-								Line_:     mr.Rule().Line(),
-								ID_:       r.ID(),
-								Rev_:      r.Revision(),
-								Msg_:      matchData.Message(),
-								Data_:     matchData.Data(),
-								Severity_: r.Severity(),
-								Ver_:      r.Version(),
-								Maturity_: r.Maturity(),
-								Accuracy_: r.Accuracy(),
-								Tags_:     r.Tags(),
-								Raw_:      r.Raw(),
-							},
-						}
-						// If AuditLogPartAuditLogTrailer (H) is set, we expect to log the error messages emitted by the rules
-						// in the audit log
-						if auditLogPartAuditLogTrailerSet {
-							newAlEntry.ErrorMessage_ = mr.ErrorLog()
-						}
-						al.Messages_ = append(al.Messages_, newAlEntry)
-					}
-				}
-			}
 		}
 	}
 
-	// If AuditLogPartRulesMatched (K) is not set, but AuditLogPartAuditLogTrailer (H) is set, we still expect to
-	// log the error messages emitted by the rules (if the rule has Audit set to true)
-	if !auditLogPartRulesMatchedSet && auditLogPartAuditLogTrailerSet {
-		for _, mr := range tx.matchedRules {
-			mrWithlog, ok := mr.(*corazarules.MatchedRule)
-			if ok && mrWithlog.Audit() {
-				al.Messages_ = append(al.Messages_, auditlog.Message{
-					ErrorMessage_: mr.ErrorLog(),
-				})
-			}
-		}
-
+	if auditLogPartAuditLogTrailerSet || auditLogPartRulesMatchedSet {
+		al.Messages_ = tx.auditLogMessages(auditLogPartAuditLogTrailerSet)
 	}
 
 	return al
+}
+
+func (tx *Transaction) auditLogResponse(transaction *auditlog.Transaction) *auditlog.TransactionResponse {
+	if transaction.Response_ == nil {
+		status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
+		transaction.Response_ = &auditlog.TransactionResponse{
+			Protocol_: tx.variables.responseProtocol.Get(),
+			Status_:   status,
+		}
+	}
+
+	return transaction.Response_
+}
+
+type auditLogMatchData interface {
+	Match() string
+	Reference() string
+}
+
+func (tx *Transaction) auditLogMessages(includeErrorMessage bool) []plugintypes.AuditLogMessage {
+	var messages []plugintypes.AuditLogMessage
+
+	for _, mr := range tx.matchedRules {
+		// Audit flag controls whether a matched rule appears in the audit log.
+		// This aligns with ModSecurity behavior where:
+		// - log: sets both Log and Audit (appears in error log AND audit log)
+		// - nolog: clears both (appears in neither)
+		// - nolog,auditlog: Log=false, Audit=true (audit log only)
+		// - log,noauditlog: Log=true, Audit=false (error log only)
+		mrWithLog, ok := mr.(*corazarules.MatchedRule)
+		if !ok || !mrWithLog.Audit() {
+			continue
+		}
+
+		matchedDatas := mr.MatchedDatas()
+		if len(matchedDatas) == 0 {
+			continue
+		}
+
+		errorMessage := ""
+		if includeErrorMessage {
+			errorMessage = mr.ErrorLog()
+		}
+
+		r := mr.Rule()
+		for i, matchData := range matchedDatas {
+			messageError := ""
+			if i == 0 {
+				messageError = errorMessage
+			}
+
+			match, reference := "", ""
+			if details, ok := matchData.(auditLogMatchData); ok {
+				match = details.Match()
+				reference = details.Reference()
+			}
+
+			messages = append(messages, auditlog.Message{
+				Actionset_:    strings.Join(tx.WAF.ComponentNames, " "),
+				Message_:      matchData.Message(),
+				ErrorMessage_: messageError,
+				Data_: &auditlog.MessageData{
+					File_:      r.File(),
+					Line_:      r.Line(),
+					ID_:        r.ID(),
+					Rev_:       r.Revision(),
+					Msg_:       matchData.Message(),
+					Data_:      matchData.Data(),
+					Severity_:  r.Severity(),
+					Ver_:       r.Version(),
+					Maturity_:  r.Maturity(),
+					Accuracy_:  r.Accuracy(),
+					Tags_:      r.Tags(),
+					Raw_:       r.Raw(),
+					Match_:     match,
+					Reference_: reference,
+				},
+			})
+		}
+	}
+
+	return messages
 }
 
 // auditLogCollectFiles collects uploaded file metadata from transaction variables

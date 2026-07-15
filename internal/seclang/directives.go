@@ -758,8 +758,9 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 }
 
 // Description: Select the output format of the AuditLogs. The format can be
-// the native AuditLogs format, JSON, or OCSF (Open CyberSecurity Schema Framework).
-// Syntax: SecAuditLogFormat JSON|JsonLegacy|Native|OCSF
+// the native AuditLogs format, JSON, libmodsecurity v3 JSON, or OCSF
+// (Open CyberSecurity Schema Framework).
+// Syntax: SecAuditLogFormat JSON|JSONV3|JsonLegacy|Native|OCSF
 // Default: Native
 func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {

@@ -710,6 +710,32 @@ func (r *Rule) SetOperator(operator plugintypes.Operator, functionName string, p
 	}
 }
 
+func (r *Rule) auditLogMatch(md types.MatchData) string {
+	if r.operator == nil || r.operator.Function == "" {
+		return "Matched."
+	}
+
+	operator := strings.TrimPrefix(r.operator.Function, "!")
+	operator = strings.TrimPrefix(operator, "@")
+	if operator == "" {
+		return "Matched."
+	}
+	operator = strings.ToUpper(operator[:1]) + operator[1:]
+
+	variable := md.Variable().Name()
+	if key := md.Key(); key != "" {
+		variable += ":" + key
+	}
+
+	if r.operator.Data != "" {
+		return fmt.Sprintf("Matched \"Operator `%s' with parameter `%s' against variable `%s' (Value: `%s' )\"",
+			operator, r.operator.Data, variable, md.Value())
+	}
+
+	return fmt.Sprintf("Matched \"Operator `%s' against variable `%s' (Value: `%s' )\"",
+		operator, variable, md.Value())
+}
+
 func (r *Rule) executeOperator(data string, tx *Transaction) (result bool) {
 	result = r.operator.Operator.Evaluate(tx, data)
 	if r.operator.Negation {

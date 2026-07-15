@@ -839,6 +839,57 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
+func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
+	tx := makeTransaction(t)
+	tx.AuditLogParts = types.AuditLogParts("ABCHZ")
+	tx.ProcessResponseHeaders(http.StatusForbidden, "HTTP/1.1")
+
+	rule := NewRule()
+	rule.ID_ = 131
+	rule.Log = true
+	rule.Audit = true
+	rule.SetOperator(&dummyEqOperator{}, "@eq", "matched")
+	tx.MatchRule(rule, []types.MatchData{
+		&corazarules.MatchData{
+			Variable_: variables.UniqueID,
+			Value_:    "matched",
+			Message_:  "matched request",
+			Data_:     "matched data",
+		},
+	})
+
+	al := tx.AuditLog()
+	if got := al.Transaction().Request().HTTPVersion(); got != "HTTP/1.1" {
+		t.Fatalf("expected request HTTP version HTTP/1.1, got %q", got)
+	}
+	if got := al.Transaction().Response().Protocol(); got != "HTTP/1.1" {
+		t.Fatalf("expected response protocol HTTP/1.1, got %q", got)
+	}
+	if got := al.Transaction().Response().Status(); got != http.StatusForbidden {
+		t.Fatalf("expected response status %d, got %d", http.StatusForbidden, got)
+	}
+
+	if len(al.Messages()) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(al.Messages()))
+	}
+	if got := al.Messages()[0].Message(); got != "matched request" {
+		t.Fatalf("expected message %q, got %q", "matched request", got)
+	}
+	if got := al.Messages()[0].Data().ID(); got != rule.ID_ {
+		t.Fatalf("expected message rule ID %d, got %d", rule.ID_, got)
+	}
+	if got := al.Messages()[0].Data().Data(); got != "matched data" {
+		t.Fatalf("expected message data %q, got %q", "matched data", got)
+	}
+	if got := al.Messages()[0].Data().(interface{ Match() string }).Match(); got == "" {
+		t.Fatal("expected structured message match detail")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestAuditLogMessageFiltering(t *testing.T) {
 	tests := []struct {
 		name           string
