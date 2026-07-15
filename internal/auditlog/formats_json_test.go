@@ -270,6 +270,9 @@ func TestLibModSecurityJSONFormatter(t *testing.T) {
 	if got := (*transaction.Messages)[0].Details.Reference; got != "o1,10v8,11" {
 		t.Fatalf("expected reference %q, got %q", "o1,10v8,11", got)
 	}
+	if got := (*transaction.Messages)[0].Details.Match; got != "Matched \"Operator `PmFromFile' against variable `ARGS:x'\"" {
+		t.Fatalf("expected match text, got %q", got)
+	}
 
 	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -353,11 +356,11 @@ func TestLibModSecurityJSONFormatterHonorsParts(t *testing.T) {
 }
 
 func TestLibModSecurityJSONFormatterRegistered(t *testing.T) {
-	formatter, err := GetFormatter("JSONV3")
+	formatter, err := GetFormatter("ModSecurityV3")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := formatter.(*libmodsecurityJSONFormatter); !ok {
-		t.Fatalf("expected JSONV3 formatter, got %T", formatter)
+		t.Fatalf("expected ModSecurityV3 formatter, got %T", formatter)
 	}
 }

@@ -7,7 +7,7 @@
 // The following log formats are supported:
 //
 // - JSON
-// - JSONV3
+// - ModSecurityV3
 // - Coraza
 // - Native
 //

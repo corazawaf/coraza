@@ -890,6 +890,60 @@ func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
 	}
 }
 
+func TestAuditLogMatchDetailsUseOriginatingRuleForChain(t *testing.T) {
+	parent := NewRule()
+	parent.ID_ = 132
+	parent.LogID_ = "132"
+	parent.Log = true
+	parent.Audit = true
+	parent.HasChain = true
+	if err := parent.AddVariable(variables.RequestURI, "", false); err != nil {
+		t.Fatal(err)
+	}
+	parent.SetOperator(&dummyEqOperator{}, "@eq", "parent")
+
+	child := NewRule()
+	child.ID_ = noID
+	child.ParentID_ = parent.ID_
+	child.LogID_ = parent.LogID_
+	if err := child.AddVariable(variables.ArgsGet, "", false); err != nil {
+		t.Fatal(err)
+	}
+	child.SetOperator(&dummyEqOperator{}, "@eq", "child")
+	parent.Chain = child
+
+	tx := NewWAF().NewTransaction()
+	tx.AuditLogParts = types.AuditLogParts("H")
+	tx.ProcessURI("0", "GET", "HTTP/1.1")
+	tx.AddGetRequestArgument("child", "0")
+
+	var matchedValues []types.MatchData
+	parent.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+
+	al := tx.AuditLog()
+	if len(al.Messages()) != 2 {
+		t.Fatalf("expected 2 messages, got %d", len(al.Messages()))
+	}
+
+	expected := []string{
+		"Matched \"Operator `Eq' with parameter `parent' against variable `REQUEST_URI' (Value: `0' )\"",
+		"Matched \"Operator `Eq' with parameter `child' against variable `ARGS_GET:child' (Value: `0' )\"",
+	}
+	for i, want := range expected {
+		details, ok := al.Messages()[i].Data().(auditLogMatchData)
+		if !ok {
+			t.Fatalf("expected message %d to expose match details", i)
+		}
+		if got := details.Match(); got != want {
+			t.Fatalf("expected message %d match %q, got %q", i, want, got)
+		}
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestAuditLogMessageFiltering(t *testing.T) {
 	tests := []struct {
 		name           string

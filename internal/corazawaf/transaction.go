@@ -565,9 +565,14 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 	}
 
 	for _, md := range mds {
-		if matchData, ok := md.(*corazarules.MatchData); ok && matchData.Match_ == "" {
-			matchData.Match_ = r.auditLogMatch(md)
+		matchData, ok := md.(*corazarules.MatchData)
+		if !ok || matchData.Match_ != "" || matchData.ChainLevel_ != 0 {
+			continue
 		}
+
+		// Evaluator-created matches already carry origin-specific details.
+		// This fallback covers manually constructed top-level match data.
+		matchData.Match_ = r.auditLogMatch(md)
 	}
 
 	mr := &corazarules.MatchedRule{
@@ -1608,6 +1613,7 @@ type auditLogMatchData interface {
 
 func (tx *Transaction) auditLogMessages(includeErrorMessage bool) []plugintypes.AuditLogMessage {
 	var messages []plugintypes.AuditLogMessage
+	actionset := strings.Join(tx.WAF.ComponentNames, " ")
 
 	for _, mr := range tx.matchedRules {
 		// Audit flag controls whether a matched rule appears in the audit log.
@@ -1645,7 +1651,7 @@ func (tx *Transaction) auditLogMessages(includeErrorMessage bool) []plugintypes.
 			}
 
 			messages = append(messages, auditlog.Message{
-				Actionset_:    strings.Join(tx.WAF.ComponentNames, " "),
+				Actionset_:    actionset,
 				Message_:      matchData.Message(),
 				ErrorMessage_: messageError,
 				Data_: &auditlog.MessageData{
