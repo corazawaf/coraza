@@ -842,6 +842,11 @@ func TestAuditLogFields(t *testing.T) {
 // TestAuditLogTrailerIncludesStructuredMessages verifies H-only logs retain structured rule data.
 func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
 	tx := makeTransaction(t)
+	defer func() {
+		if err := tx.Close(); err != nil {
+			t.Errorf("Failed to close transaction: %s", err.Error())
+		}
+	}()
 	tx.AuditLogParts = types.AuditLogParts("ABCHZ")
 	tx.ProcessResponseHeaders(http.StatusForbidden, "HTTP/1.1")
 
@@ -885,10 +890,6 @@ func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
 	if got := al.Messages()[0].Data().(interface{ Match() string }).Match(); got == "" {
 		t.Fatal("expected structured message match detail")
 	}
-
-	if err := tx.Close(); err != nil {
-		t.Fatalf("Failed to close transaction: %s", err.Error())
-	}
 }
 
 // TestAuditLogMatchDetailsUseOriginatingRuleForChain verifies chained matches use their source rules.
@@ -915,6 +916,11 @@ func TestAuditLogMatchDetailsUseOriginatingRuleForChain(t *testing.T) {
 	parent.Chain = child
 
 	tx := NewWAF().NewTransaction()
+	defer func() {
+		if err := tx.Close(); err != nil {
+			t.Errorf("Failed to close transaction: %s", err.Error())
+		}
+	}()
 	tx.AuditLogParts = types.AuditLogParts("H")
 	tx.ProcessURI("0", "GET", "HTTP/1.1")
 	tx.AddGetRequestArgument("child", "0")
@@ -939,10 +945,6 @@ func TestAuditLogMatchDetailsUseOriginatingRuleForChain(t *testing.T) {
 		if got := details.Match(); got != want {
 			t.Fatalf("expected message %d match %q, got %q", i, want, got)
 		}
-	}
-
-	if err := tx.Close(); err != nil {
-		t.Fatalf("Failed to close transaction: %s", err.Error())
 	}
 }
 
