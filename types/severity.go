@@ -20,13 +20,13 @@ import (
 // 5 - Notice
 // 6 - Info
 // 7 - Debug
-// RuleSeverity is used by error callbacks to chose wether to
+// RuleSeverity is used by error callbacks to choose whether to
 // log the error or not
 type RuleSeverity int
 
 const (
 	// RuleSeverityEmergency represents the emergency severity
-	// We "shold" exit the process immediately
+	// We "should" exit the process immediately
 	RuleSeverityEmergency RuleSeverity = 0
 	// RuleSeverityAlert represents the alert severity
 	RuleSeverityAlert RuleSeverity = 1
