@@ -41,6 +41,27 @@ func TestNewTransaction(t *testing.T) {
 	}
 }
 
+func TestNewTransactionResetsDetectionOnlyInterruption(t *testing.T) {
+	waf := NewWAF()
+
+	// A transaction that recorded a detection-only interruption, then returned
+	// to the pool via Close().
+	tx := waf.NewTransaction()
+	tx.detectionOnlyInterruption = &types.Interruption{Status: 403}
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// A subsequent transaction reuses the pooled object and must not inherit it.
+	reused := waf.NewTransaction()
+	if reused.IsDetectionOnlyInterrupted() {
+		t.Error("detectionOnlyInterruption leaked from a pooled transaction into a reused one")
+	}
+	if err := reused.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSetDebugLogPath(t *testing.T) {
 	tests := map[string]struct {
 		path string
