@@ -201,6 +201,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.context = opts.Context
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
+	tx.detectionOnlyInterruption = nil
 	tx.Logdata = "" // Deprecated, this variable is not used. Logdata for each matched rule is stored in the MatchData field.
 	tx.SkipAfter = ""
 	tx.AuditEngine = w.AuditEngine
