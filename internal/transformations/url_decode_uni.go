@@ -10,17 +10,25 @@ import (
 func urlDecodeUni(data string) (string, bool, error) {
 	for i := 0; i < len(data); i++ {
 		if data[i] == '%' || data[i] == '+' {
-			return inplaceUniDecode(data, []byte(data), i), true, nil
+			// The presence of '%' or '+' does not guarantee a change: an invalid
+			// or truncated percent-encoding (e.g. "%zz" or a trailing "%") decodes
+			// to itself.
+			transformed, changed := inplaceUniDecode(data, []byte(data), i)
+			return transformed, changed, nil
 		}
 	}
 	return data, false, nil
 }
 
-func inplaceUniDecode(input string, d []byte, pos int) string {
+func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 	inputLen := len(d)
 	i := pos
 	c := pos
 	hmap := -1
+	// changed tracks whether an actual decode or space substitution took
+	// place. Skipped (invalid/truncated) percent sequences are copied verbatim and
+	// do not lead to a change.
+	changed := false
 
 	for i < inputLen {
 		if d[i] == '%' {
@@ -68,6 +76,7 @@ func inplaceUniDecode(input string, d []byte, pos int) string {
 						}
 						c++
 						i += 6
+						changed = true
 					} else {
 						/* Invalid data, skip %u. */
 						d[c] = input[i]
@@ -101,6 +110,7 @@ func inplaceUniDecode(input string, d []byte, pos int) string {
 						d[c] = strings.X2c(input[i+1:])
 						c++
 						i += 3
+						changed = true
 					} else {
 						/* Not a valid encoding, skip this % */
 						d[c] = input[i]
@@ -119,6 +129,7 @@ func inplaceUniDecode(input string, d []byte, pos int) string {
 			if input[i] == '+' {
 				d[c] = ' '
 				c++
+				changed = true
 			} else {
 				d[c] = input[i]
 				c++
@@ -128,5 +139,5 @@ func inplaceUniDecode(input string, d []byte, pos int) string {
 		}
 	}
 
-	return strings.WrapUnsafe(d[0:c])
+	return strings.WrapUnsafe(d[0:c]), changed
 }

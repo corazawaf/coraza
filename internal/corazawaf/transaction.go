@@ -40,7 +40,7 @@ import (
 // Transactions are used to store all data like URLs, request and response
 // headers. Transactions are used to evaluate rules by phase and generate disruptive
 // actions. Disruptive actions can be read from *tx.Interruption.
-// It is safe to manage multiple transactions but transactions themself are not
+// It is safe to manage multiple transactions but transactions themselves are not
 // thread safe
 type Transaction struct {
 	// Transaction ID
@@ -877,7 +877,7 @@ func (tx *Transaction) SetServerName(serverName string) {
 	tx.variables.serverName.Set(serverName)
 }
 
-// ProcessRequestHeaders Performs the analysis on the request readers.
+// ProcessRequestHeaders performs the analysis on the request headers.
 //
 // This method perform the analysis on the request headers, notice however
 // that the headers should be added prior to the execution of this function.
@@ -1306,13 +1306,13 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	return tx.interruption, int(w), err
 }
 
-// ProcessResponseBody Perform the analysis of the the response body (if any)
+// ProcessResponseBody performs the analysis of the response body (if any)
 //
 // It is recommended to call this method even if it is not expected to have a body.
-// It permits to execute rules belonging to request body phase, but not necessarily
+// It permits to execute rules belonging to response body phase, but not necessarily
 // processing the response body.
 //
-// note Remember to check for a possible intervention.
+// Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.IsRuleEngineOff() {
 		return nil, nil
