@@ -195,6 +195,20 @@ func TestRuleGroupFindByIDAfterDelete(t *testing.T) {
 	})
 }
 
+func TestRuleGroupFindByIDZero(t *testing.T) {
+	rg := newTestRuleGroup(t, 1)
+	mark := newTestRule(0)
+	mark.SecMark_ = "test-mark"
+	if err := rg.Add(mark); err != nil {
+		t.Fatalf("Failed to add rule to rulegroup: %s", err.Error())
+	}
+	// id 0 must keep resolving via linear scan even when the index exists
+	r := rg.FindByID(0)
+	if r == nil || r.SecMark_ != "test-mark" {
+		t.Error("FindByID(0): expected the ID-less rule to be found")
+	}
+}
+
 func TestRuleGroupDiscardPendingChain(t *testing.T) {
 	t.Run("last rule without chain is kept", func(t *testing.T) {
 		rg := newTestRuleGroup(t, 1, 2)

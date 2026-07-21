@@ -105,7 +105,8 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 		return nil
 	}
 
-	// fallback for group not having indexed anything, e.g. SecMarks
+	// fallback for id 0 (rules without an ID are never indexed) or a group
+	// that never indexed anything, e.g. SecMarks
 	for i, r := range rg.rules {
 		if r.ID_ == id {
 			return &rg.rules[i]
