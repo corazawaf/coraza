@@ -98,7 +98,7 @@ func (rg *RuleGroup) GetRules() []Rule {
 
 // FindByID return a Rule with the requested Id
 func (rg *RuleGroup) FindByID(id int) *Rule {
-	if rg.idIndex != nil {
+	if rg.idIndex != nil && id != 0 {
 		if i, ok := rg.idIndex[id]; ok {
 			return &rg.rules[i]
 		}
