@@ -37,30 +37,30 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 				if i+5 < inputLen {
 					/* We have at least 4 data bytes. */
 					if strings.ValidHex(input[i+2]) && strings.ValidHex(input[i+3]) && strings.ValidHex(input[i+4]) && strings.ValidHex(input[i+5]) {
-						hmap := -1
+						mappedByte := -1
 						code := 0
-						fact := 1
+						placeValue := 1
 						for j := 5; j >= 2; j-- {
 							if strings.ValidHex(input[i+j]) {
-								var xv int
+								var hexValue int
 								switch {
 								case input[i+j] >= 'a':
-									xv = (int(input[i+j]) - 'a') + 10
+									hexValue = (int(input[i+j]) - 'a') + 10
 								case input[i+j] >= 'A':
-									xv = (int(input[i+j]) - 'A') + 10
+									hexValue = (int(input[i+j]) - 'A') + 10
 								default:
-									xv = int(input[i+j]) - '0'
+									hexValue = int(input[i+j]) - '0'
 								}
-								code += xv * fact
-								fact *= 16
+								code += hexValue * placeValue
+								placeValue *= 16
 							}
 						}
 						if b, ok := unicodeBestFitASCII[rune(code)]; ok {
-							hmap = int(b)
+							mappedByte = int(b)
 						}
 
-						if hmap != -1 {
-							d[c] = byte(hmap)
+						if mappedByte != -1 {
+							d[c] = byte(mappedByte)
 						} else {
 							/* We first make use of the lower byte here,
 							 * ignoring the higher byte. */
