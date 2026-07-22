@@ -222,6 +222,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
 	tx.Skip = 0
 	tx.AllowType = 0
+	tx.allowedType = 0
 	tx.Capture = false
 	tx.stopWatches = map[types.RulePhase]int64{}
 	tx.WAF = w
