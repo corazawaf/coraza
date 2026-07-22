@@ -840,6 +840,107 @@ func TestAuditLogFields(t *testing.T) {
 	}
 }
 
+// TestAuditLogTrailerIncludesStructuredMessages verifies H-only logs retain structured rule data.
+func TestAuditLogTrailerIncludesStructuredMessages(t *testing.T) {
+	tx := makeTransaction(t)
+	defer closeTransaction(t, tx)
+	tx.AuditLogParts = types.AuditLogParts("ABCHZ")
+	tx.ProcessResponseHeaders(http.StatusForbidden, "HTTP/1.1")
+
+	rule := NewRule()
+	rule.ID_ = 131
+	rule.Log = true
+	rule.Audit = true
+	rule.SetOperator(&dummyEqOperator{}, "@eq", "matched")
+	tx.MatchRule(rule, []types.MatchData{
+		&corazarules.MatchData{
+			Variable_: variables.UniqueID,
+			Value_:    "matched",
+			Message_:  "matched request",
+			Data_:     "matched data",
+		},
+	})
+
+	al := tx.AuditLog()
+	if got := al.Transaction().Request().HTTPVersion(); got != "HTTP/1.1" {
+		t.Fatalf("expected request HTTP version HTTP/1.1, got %q", got)
+	}
+	if got := al.Transaction().Response().Protocol(); got != "HTTP/1.1" {
+		t.Fatalf("expected response protocol HTTP/1.1, got %q", got)
+	}
+	if got := al.Transaction().Response().Status(); got != http.StatusForbidden {
+		t.Fatalf("expected response status %d, got %d", http.StatusForbidden, got)
+	}
+
+	if len(al.Messages()) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(al.Messages()))
+	}
+	if got := al.Messages()[0].Message(); got != "matched request" {
+		t.Fatalf("expected message %q, got %q", "matched request", got)
+	}
+	if got := al.Messages()[0].Data().ID(); got != rule.ID_ {
+		t.Fatalf("expected message rule ID %d, got %d", rule.ID_, got)
+	}
+	if got := al.Messages()[0].Data().Data(); got != "matched data" {
+		t.Fatalf("expected message data %q, got %q", "matched data", got)
+	}
+	if got := al.Messages()[0].Data().(interface{ Match() string }).Match(); got == "" {
+		t.Fatal("expected structured message match detail")
+	}
+}
+
+// TestAuditLogMatchDetailsUseOriginatingRuleForChain verifies chained matches use their source rules.
+func TestAuditLogMatchDetailsUseOriginatingRuleForChain(t *testing.T) {
+	parent := NewRule()
+	parent.ID_ = 132
+	parent.LogID_ = "132"
+	parent.Log = true
+	parent.Audit = true
+	parent.HasChain = true
+	if err := parent.AddVariable(variables.RequestURI, "", false); err != nil {
+		t.Fatal(err)
+	}
+	parent.SetOperator(&dummyEqOperator{}, "@eq", "parent")
+
+	child := NewRule()
+	child.ID_ = noID
+	child.ParentID_ = parent.ID_
+	child.LogID_ = parent.LogID_
+	if err := child.AddVariable(variables.ArgsGet, "", false); err != nil {
+		t.Fatal(err)
+	}
+	child.SetOperator(&dummyEqOperator{}, "@eq", "child")
+	parent.Chain = child
+
+	tx := NewWAF().NewTransaction()
+	defer closeTransaction(t, tx)
+	tx.AuditLogParts = types.AuditLogParts("H")
+	tx.ProcessURI("0", "GET", "HTTP/1.1")
+	tx.AddGetRequestArgument("child", "0")
+
+	var matchedValues []types.MatchData
+	parent.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+
+	al := tx.AuditLog()
+	if len(al.Messages()) != 2 {
+		t.Fatalf("expected 2 messages, got %d", len(al.Messages()))
+	}
+
+	expected := []string{
+		"Matched \"Operator `Eq' with parameter `parent' against variable `REQUEST_URI' (Value: `0' )\"",
+		"Matched \"Operator `Eq' with parameter `child' against variable `ARGS_GET:child' (Value: `0' )\"",
+	}
+	for i, want := range expected {
+		details, ok := al.Messages()[i].Data().(auditLogMatchData)
+		if !ok {
+			t.Fatalf("expected message %d to expose match details", i)
+		}
+		if got := details.Match(); got != want {
+			t.Fatalf("expected message %d match %q, got %q", i, want, got)
+		}
+	}
+}
+
 func TestAuditLogMessageFiltering(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -1845,6 +1946,14 @@ func makeTransaction(t testing.TB) *Transaction {
 		panic(err)
 	}
 	return tx
+}
+
+// closeTransaction closes a transaction and reports cleanup failures to the test.
+func closeTransaction(t testing.TB, tx *Transaction) {
+	t.Helper()
+	if err := tx.Close(); err != nil {
+		t.Errorf("Failed to close transaction: %s", err.Error())
+	}
 }
 
 func makeTransactionTimestamped(t testing.TB) *Transaction {

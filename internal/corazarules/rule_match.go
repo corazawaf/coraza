@@ -26,6 +26,10 @@ type MatchData struct {
 	Message_ string
 	// Macro expanded logdata
 	Data_ string
+	// Human-readable operator match detail for structured audit logs.
+	Match_ string
+	// ModSecurity-compatible reference detail, when available.
+	Reference_ string
 	// Keeps track of the chain depth in which the data matched.
 	// Multiphase specific field
 	ChainLevel_ int
@@ -51,6 +55,16 @@ func (m MatchData) Message() string {
 
 func (m MatchData) Data() string {
 	return m.Data_
+}
+
+// Match returns the structured operator match detail, when available.
+func (m MatchData) Match() string {
+	return m.Match_
+}
+
+// Reference returns the ModSecurity-compatible match reference, when available.
+func (m MatchData) Reference() string {
+	return m.Reference_
 }
 
 func (m MatchData) ChainLevel() int {

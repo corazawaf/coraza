@@ -22,6 +22,7 @@ func init() {
 	})
 
 	RegisterFormatter("json", &jsonFormatter{})
+	RegisterFormatter("modsecurityv3", &libmodsecurityJSONFormatter{})
 	RegisterFormatter("jsonlegacy", &legacyJSONFormatter{})
 	RegisterFormatter("native", &nativeFormatter{})
 	RegisterFormatter("ocsf", &ocsfFormatter{})
