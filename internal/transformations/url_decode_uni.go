@@ -24,7 +24,6 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 	inputLen := len(d)
 	i := pos
 	c := pos
-	hmap := -1
 	// changed tracks whether an actual decode or space substitution took
 	// place. Skipped (invalid/truncated) percent sequences are copied verbatim and
 	// do not lead to a change.
@@ -37,29 +36,28 @@ func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 				/* IIS-specific %u encoding. */
 				if i+5 < inputLen {
 					/* We have at least 4 data bytes. */
-					if (strings.ValidHex(input[i+2])) && (strings.ValidHex(input[i+3])) && (strings.ValidHex(input[i+4])) && (strings.ValidHex(input[i+5])) {
-						/*
-							TODO unicode mapping
-							code = 0
-							fact = 1
-							for j = 5; j >= 2; j-- {
-								if strings.ValidHex((input[i+j])) {
-									if input[i+j] >= 97 {
-										xv = (int(input[i+j]) - 97) + 10
-									} else if input[i+j] >= 65 {
-										xv = (int(input[i+j]) - 65) + 10
-									} else {
-										xv = int(input[i+j]) - 48
-									}
-									code += (xv * fact)
-									fact *= 16
+					if strings.ValidHex(input[i+2]) && strings.ValidHex(input[i+3]) && strings.ValidHex(input[i+4]) && strings.ValidHex(input[i+5]) {
+						hmap := -1
+						code := 0
+						fact := 1
+						for j := 5; j >= 2; j-- {
+							if strings.ValidHex(input[i+j]) {
+								var xv int
+								switch {
+								case input[i+j] >= 'a':
+									xv = (int(input[i+j]) - 'a') + 10
+								case input[i+j] >= 'A':
+									xv = (int(input[i+j]) - 'A') + 10
+								default:
+									xv = int(input[i+j]) - '0'
 								}
+								code += xv * fact
+								fact *= 16
 							}
-							if code >= 0 && code <= 65535 {
-								t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
-								result, _, _ := transform.String(t, string(code))
-								hmap = result
-							}*/
+						}
+						if b, ok := unicodeBestFitASCII[rune(code)]; ok {
+							hmap = int(b)
+						}
 
 						if hmap != -1 {
 							d[c] = byte(hmap)
