@@ -54,8 +54,12 @@ func newRBL(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
 func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
-	// TODO validate address
-	resC := make(chan bool)
+	if net.ParseIP(ipAddr) == nil {
+		tx.DebugLogger().Info().Str("address", ipAddr).Msg("Invalid IP address")
+		return false
+	}
+
+	resC := make(chan bool, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	defer func() {
@@ -68,9 +72,10 @@ func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
 		defer func() {
 			close(resC)
 		}()
-		res, err := o.resolver.LookupHost(ctx, addr)
 
+		res, err := o.resolver.LookupHost(ctx, addr)
 		if err != nil {
+			tx.DebugLogger().Error().Err(err).Msg("DNS lookup failed")
 			resC <- false
 			return
 		}
@@ -78,6 +83,7 @@ func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
 		if len(res) > 0 {
 			txt, err := o.resolver.LookupTXT(ctx, addr)
 			if err != nil {
+				tx.DebugLogger().Error().Err(err).Msg("DNS TXT lookup failed")
 				resC <- false
 				return
 			}
