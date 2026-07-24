@@ -12,6 +12,13 @@ package transformations
 //
 // A codepoint absent from this table falls back to the raw low byte of the
 // %uXXXX escape, matching ModSecurity's behavior when no mapping is found.
+//
+// Security note: this is ModSecurity's legacy best-fit folder for IIS-style %uXXXX
+// decoding, not a Unicode confusables/homoglyph defense. It does not cover
+// cross-script lookalikes (e.g. Cyrillic а/е/о/р/с/х for Latin a/e/o/p/c/x),
+// mathematical alphanumeric symbols (U+1D400-U+1D7FF), or enclosed/letterlike
+// alphanumerics (U+24B6+, U+2100+). Homoglyph evasion defense would require a
+// separate transformation based on the Unicode Consortium's confusables.txt.
 var unicodeBestFitASCII = map[rune]byte{
 	0x00a0: 0x20, // U+00A0 NO-BREAK SPACE -> ' '
 	0x00a1: 0x21, // U+00A1 INVERTED EXCLAMATION MARK -> '!'
