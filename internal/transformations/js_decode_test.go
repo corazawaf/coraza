@@ -26,6 +26,40 @@ func TestCJSDecode(t *testing.T) {
 			input: "\\",
 			want:  "\\",
 		},
+		// \u{H...H} is the ES2015+ extended Unicode code point escape (1-6
+		// hex digits in braces), used by every modern JS engine. Before
+		// recognizing it, doJsDecode fell through to the generic \C branch,
+		// dropping the backslash and keeping a literal "u" while copying the
+		// rest through unchanged -- silently failing to decode the escape at
+		// all. See https://github.com/corazawaf/coraza/issues/1653.
+		{
+			input: "\\u{61}\\u{6c}\\u{65}\\u{72}\\u{74}",
+			want:  "alert",
+		},
+		{
+			input: "\\u{ff01}",
+			want:  "!",
+		},
+		{
+			input: "\\u{1}",
+			want:  "\x01",
+		},
+		{
+			input: "\\u{41}",
+			want:  "A",
+		},
+		{
+			input: "\\u{",
+			want:  "u{",
+		},
+		{
+			input: "\\u{41",
+			want:  "u{41",
+		},
+		{
+			input: "\\u{zz}",
+			want:  "u{zz}",
+		},
 	}
 
 	for _, tc := range tests {
@@ -50,6 +84,7 @@ func BenchmarkJSDecode(b *testing.B) {
 		"",
 		"hello world",
 		"\\a\\b\\f\\n\\r\\t\\v\\u0000\\?\\'\\\"\\0\\12\\123\\x00\\xff",
+		"\\u{61}\\u{6c}\\u{65}\\u{72}\\u{74}",
 	}
 
 	for _, tc := range tests {
