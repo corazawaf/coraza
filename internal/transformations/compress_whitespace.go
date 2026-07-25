@@ -4,12 +4,14 @@
 package transformations
 
 import (
+	"unicode/utf8"
+
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 func compressWhitespace(value string) (string, bool, error) {
-	for i := 0; i < len(value); i++ {
-		if isLatinSpace(value[i]) {
+	for i, r := range value {
+		if isLatinSpace(r) {
 			transformedValue, changed := doCompressWhitespace(value, i)
 			return transformedValue, changed, nil
 		}
@@ -24,27 +26,34 @@ func doCompressWhitespace(input string, pos int) (string, bool) {
 	changed := false
 	inWhiteSpace := false
 	for i := pos; i < len(input); {
-		if isLatinSpace(input[i]) {
+		// Decode a full rune rather than indexing a single byte: U+0085 and
+		// U+00A0 are multi-byte in UTF-8, and the raw bytes 0x85/0xA0 also
+		// occur as the trailing byte of many unrelated characters (e.g. à,
+		// Å, ą). Byte-level matching corrupted those characters by matching
+		// on that trailing byte alone.
+		r, size := utf8.DecodeRuneInString(input[i:])
+		if isLatinSpace(r) {
 			if inWhiteSpace {
-				i++
 				changed = true
-				continue
 			} else {
 				inWhiteSpace = true
+				if r != ' ' {
+					changed = true
+				}
 				ret = append(ret, ' ')
 			}
 		} else {
 			inWhiteSpace = false
-			ret = append(ret, input[i])
+			ret = append(ret, input[i:i+size]...)
 		}
-		i++
+		i += size
 	}
 
 	return strings.WrapUnsafe(ret), changed
 }
 
-func isLatinSpace(c byte) bool { // copied from unicode.IsSpace
-	switch c {
+func isLatinSpace(r rune) bool { // copied from unicode.IsSpace
+	switch r {
 	case '\t', '\n', '\v', '\f', '\r', ' ', 0x85, 0xA0:
 		return true
 	}
