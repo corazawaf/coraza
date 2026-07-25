@@ -35,6 +35,29 @@ func doJsDecode(input string, pos int) (string, bool) {
 
 			switch {
 
+			case (i+2 < inputLen) && (input[i+1] == 'u') && (input[i+2] == '{') && jsExtendedUnicodeEscapeLen(input, i+3) > 0:
+				/* \u{H...H} - ES2015+ extended Unicode code point escape
+				 * (1-6 hex digits). Handled the same way as \uHHHH below:
+				 * lower byte of the value, with the same full-width-ASCII
+				 * fold. */
+				j := jsExtendedUnicodeEscapeLen(input, i+3)
+
+				/* Use only the lower byte. */
+				if j == 1 {
+					d[c] = xsingle2c(input[i+3])
+				} else {
+					d[c] = utils.X2c(input[i+3+j-2:])
+				}
+				changed = true
+
+				/* Full width ASCII (ff01 - ff5e) needs 0x20 added */
+				if (j == 4) && (d[c] > 0x00) && (d[c] < 0x5f) && ((input[i+3] == 'f') || (input[i+3] == 'F')) && ((input[i+4] == 'f') || (input[i+4] == 'F')) {
+					d[c] += 0x20
+				}
+
+				c++
+				i += j + 4 // '\', 'u', '{', j hex digits, '}'
+
 			case (i+5 < inputLen) && (input[i+1] == 'u') && (utils.ValidHex(input[i+2])) && (utils.ValidHex(input[i+3])) && (utils.ValidHex(input[i+4])) && (utils.ValidHex(input[i+5])):
 				/* \uHHHH */
 
@@ -130,4 +153,19 @@ func doJsDecode(input string, pos int) (string, bool) {
 
 func isodigit(x byte) bool {
 	return (x >= '0') && (x <= '7')
+}
+
+// jsExtendedUnicodeEscapeLen returns the number of hex digits (1-6) in a
+// \u{H...H} escape whose first hex digit is at pos, or 0 if the escape is
+// malformed (no digits, more than 6 digits, or missing the closing '}').
+func jsExtendedUnicodeEscapeLen(input string, pos int) int {
+	inputLen := len(input)
+	j := 0
+	for (j < 6) && (pos+j < inputLen) && utils.ValidHex(input[pos+j]) {
+		j++
+	}
+	if (j == 0) || (pos+j >= inputLen) || (input[pos+j] != '}') {
+		return 0
+	}
+	return j
 }
