@@ -39,19 +39,22 @@ func doJsDecode(input string, pos int) (string, bool) {
 				/* \u{H...H} - ES2015+ extended Unicode code point escape
 				 * (1-6 hex digits). Handled the same way as \uHHHH below:
 				 * lower byte of the value, with the same full-width-ASCII
-				 * fold. */
+				 * fold -- checked against the fully resolved value, not a
+				 * fixed digit count, so a leading-zero encoding (e.g.
+				 * \u{0ff01}) folds the same as \u{ff01}. */
 				j := jsExtendedUnicodeEscapeLen(input, i+3)
 
-				/* Use only the lower byte. */
-				if j == 1 {
-					d[c] = xsingle2c(input[i+3])
-				} else {
-					d[c] = utils.X2c(input[i+3+j-2:])
+				var code rune
+				for k := 0; k < j; k++ {
+					code = code<<4 | rune(xsingle2c(input[i+3+k]))
 				}
+
+				/* Use only the lower byte. */
+				d[c] = byte(code)
 				changed = true
 
 				/* Full width ASCII (ff01 - ff5e) needs 0x20 added */
-				if (j == 4) && (d[c] > 0x00) && (d[c] < 0x5f) && ((input[i+3] == 'f') || (input[i+3] == 'F')) && ((input[i+4] == 'f') || (input[i+4] == 'F')) {
+				if (code >= 0xff01) && (code <= 0xff5e) {
 					d[c] += 0x20
 				}
 

@@ -60,6 +60,31 @@ func TestCJSDecode(t *testing.T) {
 			input: "\\u{zz}",
 			want:  "u{zz}",
 		},
+		// The full-width-ASCII fold must key off the fully resolved value,
+		// not a fixed 4-digit count -- a leading-zero encoding of the same
+		// value (5 or 6 digits) must fold identically to the 4-digit form.
+		{
+			input: "\\u{0ff01}",
+			want:  "!",
+		},
+		{
+			input: "\\u{00ff01}",
+			want:  "!",
+		},
+		{
+			input: "\\u{0ff5e}",
+			want:  "~",
+		},
+		{
+			input: "\\u{000061}",
+			want:  "a",
+		},
+		{
+			// 7 hex digits exceeds the 6-digit maximum: malformed, falls
+			// through to the generic escape handling unchanged.
+			input: "\\u{1234567}",
+			want:  "u{1234567}",
+		},
 	}
 
 	for _, tc := range tests {
