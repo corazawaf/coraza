@@ -49,6 +49,20 @@ func TestCSSDecode(t *testing.T) {
 			input: "\\123456",
 			want:  "\uFFFD",
 		},
+		// A zero-value escaped code point is also invalid per the CSS
+		// Syntax spec and must resolve to U+FFFD, not a literal NUL byte.
+		// This also regression-tests the in-place buffer: "\0" is 2 input
+		// bytes but U+FFFD is 3 output bytes, which panicked before the
+		// decoder switched to a growable buffer. Found by CodeRabbit
+		// review.
+		{
+			input: "\\0",
+			want:  "\uFFFD",
+		},
+		{
+			input: "\\000000",
+			want:  "\uFFFD",
+		},
 	}
 
 	for _, tc := range tests {

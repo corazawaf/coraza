@@ -20,10 +20,15 @@ func cssDecode(data string) (string, bool, error) {
 }
 
 func cssDecodeInplace(input string, pos int) string {
-	d := []byte(input)
-	inputLen := len(d)
+	inputLen := len(input)
+	// A zero-value escape (see below) expands from as little as 2 input
+	// bytes ("\0") to 3 output bytes (U+FFFD), so the output can't be
+	// written in place over the input's own backing array. Grow into a
+	// separate buffer instead; len(input) is still the right capacity
+	// guess for the overwhelmingly common case where output doesn't grow.
+	d := make([]byte, pos, inputLen)
+	copy(d, input[:pos])
 	i := pos
-	c := pos
 
 	for i < inputLen {
 		/* Is the character a backslash? */
@@ -53,6 +58,15 @@ func cssDecodeInplace(input string, pos int) string {
 						code = code<<4 | rune(xsingle2c(input[i+k]))
 					}
 
+					/* Per the CSS Syntax spec, a zero-value escaped code
+					 * point is invalid and must resolve to U+FFFD, same as
+					 * a surrogate or an out-of-range value (the latter two
+					 * are already handled for free by utf8.EncodeRune
+					 * below). */
+					if code == 0 {
+						code = utf8.RuneError
+					}
+
 					/* Full width ASCII (U+FF01 - U+FF5E) folds to plain
 					 * ASCII ('!' - '~'), matching ModSecurity's best-fit
 					 * behavior for this transform. */
@@ -60,7 +74,9 @@ func cssDecodeInplace(input string, pos int) string {
 						code -= 0xfee0
 					}
 
-					c += utf8.EncodeRune(d[c:], code)
+					var buf [utf8.UTFMax]byte
+					n := utf8.EncodeRune(buf[:], code)
+					d = append(d, buf[:n]...)
 
 					/* We must ignore a single whitespace after a hex escape */
 					if (i+j < inputLen) && isspace(input[i+j]) {
@@ -77,9 +93,8 @@ func cssDecodeInplace(input string, pos int) string {
 					/* The character after backslash is not a hexadecimal digit,
 					 * nor a newline. */
 					/* Use one character after backslash as is. */
-					d[c] = input[i]
+					d = append(d, input[i])
 					i++
-					c++
 				}
 			} else {
 				/* No characters after backslash. */
@@ -90,14 +105,10 @@ func cssDecodeInplace(input string, pos int) string {
 		} else {
 			/* Character is not a backslash. */
 			/* Copy one normal character to output. */
-			d[c] = input[i]
-			c++
+			d = append(d, input[i])
 			i++
 		}
 	}
-
-	/* Terminate output string. */
-	d = d[:c]
 
 	return utils.WrapUnsafe(d)
 }
