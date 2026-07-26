@@ -215,5 +215,12 @@
       "input" : "\\.\\..\\.\\..\\..\\..\\..\\..\\..\\..\\\\0\\..\\etc\\.\\passwd",
       "name" : "normalisePathWin",
       "type" : "tfn"
+   },
+   {
+      "output" : "//",
+      "ret" : 0,
+      "input" : "//",
+      "name" : "normalisePathWin",
+      "type" : "tfn"
    }
 ]

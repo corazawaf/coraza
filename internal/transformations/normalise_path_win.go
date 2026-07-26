@@ -12,6 +12,7 @@ func normalisePathWin(data string) (string, bool, error) {
 	if leng < 1 {
 		return data, false, nil
 	}
-	data = strings.ReplaceAll(data, "\\", "/")
-	return normalisePath(data)
+	replaced := strings.ReplaceAll(data, "\\", "/")
+	result, _, err := normalisePath(replaced)
+	return result, data != result, err
 }
