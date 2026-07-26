@@ -222,5 +222,12 @@
       "input" : "//",
       "name" : "normalisePathWin",
       "type" : "tfn"
+   },
+   {
+      "output" : "foo/bar",
+      "ret" : 1,
+      "input" : "foo\\bar",
+      "name" : "normalisePathWin",
+      "type" : "tfn"
    }
 ]
