@@ -30,7 +30,7 @@ func TestParseAuditLogParts(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 
-				require.Equal(t, len(test.expectedParts), len(parts), "unexpected parts length")
+				require.Len(t, parts, len(test.expectedParts))
 
 				for i, part := range test.expectedParts {
 					require.Equal(t, part, parts[i], "unexpected part at index %d", i)
@@ -177,7 +177,7 @@ func TestApplyAuditLogParts(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 
-				require.Equal(t, len(test.expectedParts), len(parts), "unexpected parts length")
+				require.Len(t, parts, len(test.expectedParts), "unexpected parts length")
 
 				for i, part := range test.expectedParts {
 					require.Less(t, i, len(parts), "missing part at index %d", i)

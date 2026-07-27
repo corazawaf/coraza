@@ -66,7 +66,7 @@ func TestMsg(t *testing.T) {
 	t.Run("empty error", func(t *testing.T) {
 		l := Default().WithOutput(io.Discard).WithLevel(LevelInfo)
 		fields := l.Info().Err(nil).(*defaultEvent).fields
-		require.Equal(t, 0, len(fields), "unexpected number of fields")
+		require.Empty(t, fields, "unexpected number of fields")
 	})
 
 	t.Run("empty message", func(t *testing.T) {

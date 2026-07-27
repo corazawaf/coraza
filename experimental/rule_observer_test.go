@@ -60,7 +60,7 @@ func TestRuleObserver(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, waf)
 
-			require.Equal(t, tc.expectRules, len(observed))
+			require.Len(t, observed, tc.expectRules)
 
 			for _, rule := range observed {
 				require.NotZero(t, rule.ID())

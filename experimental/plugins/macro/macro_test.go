@@ -85,7 +85,7 @@ func TestCompile(t *testing.T) {
 		err := m.compile("%{tx.missing_key}")
 		require.NoError(t, err)
 
-		require.Equal(t, 1, len(m.tokens))
+		require.Len(t, m.tokens, 1)
 
 		expectedMacro := macroToken{"tx.missing_key", variables.TX, "missing_key"}
 		require.Equal(t, expectedMacro, m.tokens[0])
@@ -105,7 +105,7 @@ func TestCompile(t *testing.T) {
 			err := m.compile(tc.input)
 			require.NoError(t, err)
 
-			require.Equal(t, 1, len(m.tokens))
+			require.Len(t, m.tokens, 1)
 
 			require.Equal(t, tc.expectedMacro, m.tokens[0])
 		}
@@ -116,7 +116,7 @@ func TestCompile(t *testing.T) {
 		err := m.compile("%{tx.id} got %{tx.count} in this transaction and as zero %{tx.0}")
 		require.NoError(t, err)
 
-		require.Equal(t, 5, len(m.tokens))
+		require.Len(t, m.tokens, 5)
 
 		expectedMacro0 := macroToken{"tx.id", variables.TX, "id"}
 		require.Equal(t, expectedMacro0, m.tokens[0])
