@@ -3,7 +3,11 @@
 
 package types
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestParseAuditLogParts(t *testing.T) {
 	tests := []struct {
@@ -22,22 +26,14 @@ func TestParseAuditLogParts(t *testing.T) {
 		t.Run(test.input, func(t *testing.T) {
 			parts, err := ParseAuditLogParts(test.input)
 			if test.expectedHasError {
-				if err == nil {
-					t.Error("expected error")
-				}
+				require.Error(t, err)
 			} else {
-				if err != nil {
-					t.Error("unexpected error")
-				}
+				require.NoError(t, err)
 
-				if want, have := len(test.expectedParts), len(parts); want != have {
-					t.Errorf("unexpected parts length, want %d, have %d", want, have)
-				}
+				require.Equal(t, len(test.expectedParts), len(parts), "unexpected parts length")
 
 				for i, part := range test.expectedParts {
-					if want, have := part, parts[i]; want != have {
-						t.Errorf("unexpected part, want %q, have %q", want, have)
-					}
+					require.Equal(t, part, parts[i], "unexpected part at index %d", i)
 				}
 			}
 		})
@@ -177,26 +173,15 @@ func TestApplyAuditLogParts(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parts, err := ApplyAuditLogParts(test.base, test.modification)
 			if test.expectedHasError {
-				if err == nil {
-					t.Error("expected error")
-				}
+				require.Error(t, err)
 			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
+				require.NoError(t, err)
 
-				if want, have := len(test.expectedParts), len(parts); want != have {
-					t.Errorf("unexpected parts length, want %d, have %d", want, have)
-				}
+				require.Equal(t, len(test.expectedParts), len(parts), "unexpected parts length")
 
 				for i, part := range test.expectedParts {
-					if i >= len(parts) {
-						t.Errorf("missing part at index %d, want %q", i, part)
-						continue
-					}
-					if want, have := part, parts[i]; want != have {
-						t.Errorf("unexpected part at index %d, want %q, have %q", i, want, have)
-					}
+					require.Less(t, i, len(parts), "missing part at index %d", i)
+					require.Equal(t, part, parts[i], "unexpected part at index %d", i)
 				}
 			}
 		})

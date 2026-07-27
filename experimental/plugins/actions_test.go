@@ -6,6 +6,8 @@ package plugins_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/actions"
@@ -19,8 +21,6 @@ func TestAction(t *testing.T) {
 
 		plugins.RegisterAction("custom_action", action)
 		_, err := actions.Get("custom_action")
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 	})
 }

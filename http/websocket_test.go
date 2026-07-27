@@ -7,7 +7,6 @@ package http
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"net"
 	"net/http"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/stretchr/testify/require"
 )
 
 // wsUpgradeViaWriteHeader is a WebSocket echo handler that follows the standard
@@ -54,7 +54,7 @@ func wsUpgradeViaWriteHeader(w http.ResponseWriter, r *http.Request) {
 
 	conn, brw, err := hijacker.Hijack()
 	if err != nil {
-		// 101 already sent; nothing useful can be written to the client now.
+		// 101 already sent; nothing useful can be written to the client now. Control flow, not assertion.
 		return
 	}
 	defer conn.Close()
@@ -75,30 +75,21 @@ func doRawWSUpgrade(t *testing.T, conn net.Conn, addr, key string, extraHeaders 
 	}
 	fmt.Fprintf(&sb, "\r\n")
 
-	if _, err := fmt.Fprint(conn, sb.String()); err != nil {
-		t.Fatalf("writing upgrade request: %v", err)
-	}
+	_, err := fmt.Fprint(conn, sb.String())
+	require.NoError(t, err)
 
 	br := bufio.NewReader(conn)
 	statusLine, err := br.ReadString('\n')
-	if err != nil {
-		t.Fatalf("reading status line: %v", err)
-	}
+	require.NoError(t, err)
 
 	parts := strings.SplitN(strings.TrimSpace(statusLine), " ", 3)
-	if len(parts) < 2 {
-		t.Fatalf("malformed status line: %q", statusLine)
-	}
+	require.GreaterOrEqual(t, len(parts), 2)
 	statusCode, err := strconv.Atoi(parts[1])
-	if err != nil {
-		t.Fatalf("parsing status code from %q: %v", statusLine, err)
-	}
+	require.NoError(t, err)
 
 	for {
 		line, err := br.ReadString('\n')
-		if err != nil {
-			t.Fatalf("reading response headers: %v", err)
-		}
+		require.NoError(t, err)
 		if line == "\r\n" {
 			break
 		}
@@ -119,42 +110,30 @@ SecRequestBodyAccess On
 SecResponseBodyAccess On
 SecResponseBodyMimeType application/json
 `))
-	if err != nil {
-		t.Fatalf("creating WAF: %v", err)
-	}
+	require.NoError(t, err)
 
 	ts := httptest.NewServer(WrapHandler(waf, http.HandlerFunc(wsUpgradeViaWriteHeader)))
 	t.Cleanup(ts.Close)
 
 	conn, err := net.Dial("tcp", ts.Listener.Addr().String())
-	if err != nil {
-		t.Fatalf("dialing test server: %v", err)
-	}
+	require.NoError(t, err)
 	defer conn.Close()
-	if err := conn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
-		t.Fatalf("set deadline: %v", err)
-	}
+	err = conn.SetDeadline(time.Now().Add(2 * time.Second))
+	require.NoError(t, err)
 
 	const key = "dGhlIHNhbXBsZSBub25jZQ=="
 	br, statusCode := doRawWSUpgrade(t, conn, ts.Listener.Addr().String(), key, nil)
 
-	if statusCode != http.StatusSwitchingProtocols {
-		t.Fatalf("expected 101 Switching Protocols, got %d", statusCode)
-	}
+	require.Equal(t, http.StatusSwitchingProtocols, statusCode)
 
 	// Send a masked WebSocket text frame and verify the echo.
 	const msg = "hello coraza"
-	if _, err := conn.Write(wsBuildMaskedFrame([]byte(msg))); err != nil {
-		t.Fatalf("writing WebSocket frame: %v", err)
-	}
+	_, err = conn.Write(wsBuildMaskedFrame([]byte(msg)))
+	require.NoError(t, err)
 
 	echo, err := wsReadFrame(br)
-	if err != nil {
-		t.Fatalf("reading WebSocket echo: %v", err)
-	}
-	if !bytes.Equal(echo, []byte(msg)) {
-		t.Fatalf("echo mismatch: want %q, got %q", msg, echo)
-	}
+	require.NoError(t, err)
+	require.Equal(t, []byte(msg), echo)
 }
 
 // TestWebSocketUpgradeBlockedByWAF verifies that a WebSocket upgrade request
@@ -165,28 +144,21 @@ func TestWebSocketUpgradeBlockedByWAF(t *testing.T) {
 SecRuleEngine On
 SecRule REQUEST_HEADERS:X-Attack "@streq malicious" "id:1,phase:1,deny,status:403"
 `))
-	if err != nil {
-		t.Fatalf("creating WAF: %v", err)
-	}
+	require.NoError(t, err)
 
 	ts := httptest.NewServer(WrapHandler(waf, http.HandlerFunc(wsUpgradeViaWriteHeader)))
 	t.Cleanup(ts.Close)
 
 	conn, err := net.Dial("tcp", ts.Listener.Addr().String())
-	if err != nil {
-		t.Fatalf("dialing test server: %v", err)
-	}
+	require.NoError(t, err)
 	defer conn.Close()
-	if err := conn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
-		t.Fatalf("set deadline: %v", err)
-	}
+	err = conn.SetDeadline(time.Now().Add(2 * time.Second))
+	require.NoError(t, err)
 
 	const key = "dGhlIHNhbXBsZSBub25jZQ=="
 	_, statusCode := doRawWSUpgrade(t, conn, ts.Listener.Addr().String(), key, map[string]string{
 		"X-Attack": "malicious",
 	})
 
-	if statusCode != http.StatusForbidden {
-		t.Fatalf("expected 403 Forbidden for malicious upgrade, got %d", statusCode)
-	}
+	require.Equal(t, http.StatusForbidden, statusCode)
 }

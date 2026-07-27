@@ -25,21 +25,18 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestProcessRequest(t *testing.T) {
 	req, _ := http.NewRequest("POST", "https://www.coraza.io/test", strings.NewReader("test=456"))
 	waf, _ := coraza.NewWAF(coraza.NewWAFConfig())
 	tx := waf.NewTransaction().(*corazawaf.Transaction)
-	if _, err := processRequest(tx, req); err != nil {
-		t.Fatal(err)
-	}
-	if tx.Variables().RequestMethod().Get() != "POST" {
-		t.Fatal("failed to set request from request object")
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatal(err)
-	}
+	_, err := processRequest(tx, req)
+	require.NoError(t, err)
+	require.Equal(t, "POST", tx.Variables().RequestMethod().Get())
+	err = tx.Close()
+	require.NoError(t, err)
 }
 
 func TestProcessRequestEngineOff(t *testing.T) {
@@ -47,15 +44,11 @@ func TestProcessRequestEngineOff(t *testing.T) {
 	// TODO(jcchavezs): Shall we make RuleEngine a first class method in WAF config?
 	waf, _ := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine OFF"))
 	tx := waf.NewTransaction().(*corazawaf.Transaction)
-	if _, err := processRequest(tx, req); err != nil {
-		t.Fatal(err)
-	}
-	if tx.Variables().RequestMethod().Get() != "POST" {
-		t.Fatal("failed to set request from request object")
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatal(err)
-	}
+	_, err := processRequest(tx, req)
+	require.NoError(t, err)
+	require.Equal(t, "POST", tx.Variables().RequestMethod().Get())
+	err = tx.Close()
+	require.NoError(t, err)
 }
 
 func TestProcessRequestMultipart(t *testing.T) {
@@ -65,23 +58,18 @@ func TestProcessRequestMultipart(t *testing.T) {
 
 	req := createMultipartRequest(t)
 
-	if _, err := processRequest(tx, req); err != nil {
-		t.Fatal(err)
-	}
+	_, err := processRequest(tx, req)
+	require.NoError(t, err)
 
-	if req.Body == nil {
-		t.Error("failed to process multipart request: nil body")
-	}
+	require.NotNil(t, req.Body)
 	defer req.Body.Close()
 
 	reader := bufio.NewReader(req.Body)
-	if _, err := reader.ReadString('\n'); err != nil {
-		t.Errorf("failed to read multipart request: %s", err.Error())
-	}
+	_, err = reader.ReadString('\n')
+	require.NoError(t, err)
 
-	if err := tx.Close(); err != nil {
-		t.Fatal(err)
-	}
+	err = tx.Close()
+	require.NoError(t, err)
 }
 
 func TestProcessRequestTransferEncodingChunked(t *testing.T) {
@@ -95,17 +83,11 @@ SecRule &REQUEST_HEADERS:Transfer-Encoding "!@eq 0" "id:1,phase:1,deny"
 	req.TransferEncoding = []string{"chunked"}
 
 	it, err := processRequest(tx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if it == nil {
-		t.Fatal("Expected interruption")
-	} else if it.RuleID != 1 {
-		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NotNil(t, it)
+	require.Equal(t, 1, it.RuleID)
+	err = tx.Close()
+	require.NoError(t, err)
 }
 
 func TestProcessRequestMultipleTransferEncodings(t *testing.T) {
@@ -121,17 +103,11 @@ SecRule REQUEST_HEADERS:Transfer-Encoding "@contains identity" "id:1,phase:1,den
 	req.TransferEncoding = []string{"chunked", "identity"}
 
 	it, err := processRequest(tx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if it == nil {
-		t.Fatal("Expected interruption: second Transfer-Encoding value should be processed")
-	} else if it.RuleID != 1 {
-		t.Fatalf("Expected rule 1 to be triggered, got rule %d", it.RuleID)
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.NotNil(t, it)
+	require.Equal(t, 1, it.RuleID)
+	err = tx.Close()
+	require.NoError(t, err)
 }
 
 func createMultipartRequest(t *testing.T) *http.Request {
@@ -144,26 +120,20 @@ func createMultipartRequest(t *testing.T) *http.Request {
 	metadataHeader.Set("Content-Type", "application/json; charset=UTF-8")
 
 	part, err := writer.CreatePart(metadataHeader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, _ = part.Write([]byte(metadata))
 
 	mediaHeader := textproto.MIMEHeader{}
 	mediaHeader.Set("Content-Type", "image/jpeg")
 
 	mediaPart, err := writer.CreatePart(mediaHeader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	_, _ = io.Copy(mediaPart, bytes.NewReader([]byte{255, 1, 2}))
 
 	writer.Close()
 
 	req, err := http.NewRequest("POST", "/some", body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Content-Length", fmt.Sprintf("%d", body.Len()))
@@ -175,16 +145,14 @@ func createMultipartRequest(t *testing.T) *http.Request {
 func TestChainEvaluation(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	waf.RequestBodyAccess = true
-	if err := seclang.NewParser(waf).FromString(`
+	err := seclang.NewParser(waf).FromString(`
 	SecRule REQUEST_FILENAME "@unconditionalMatch" "id:100, phase:2, t:none, log, setvar:'tx.count=+1',chain"
 		SecRule ARGS_POST:username "@unconditionalMatch" "t:none, setvar:'tx.count=+2',chain"
 			SecRule ARGS_POST:password "@unconditionalMatch" "t:none, setvar:'tx.count=+3'"
-	`); err != nil {
-		t.Fatal(err)
-	}
-	if err := waf.Validate(); err != nil {
-		t.Fatal(err)
-	}
+	`)
+	require.NoError(t, err)
+	err = waf.Validate()
+	require.NoError(t, err)
 
 	tx := waf.NewTransaction()
 	defer tx.Close()
@@ -207,14 +175,10 @@ func TestChainEvaluation(t *testing.T) {
 	}
 	data := bytes.NewBuffer([]byte(strings.Join(rdata, "\r\n")))
 	req, err := http.ReadRequest(bufio.NewReader(data))
-	if err != nil {
-		t.Errorf("Description HTTP request parsing failed")
-	}
+	require.NoError(t, err)
 
 	_, err = processRequest(tx, req)
-	if err != nil {
-		t.Errorf("Failed to load the HTTP request")
-	}
+	require.NoError(t, err)
 
 	rulesCounter := 0
 	r := waf.Rules.FindByID(100)
@@ -222,19 +186,13 @@ func TestChainEvaluation(t *testing.T) {
 		rulesCounter++
 		r = r.Chain
 	}
-	if want, have := 3, rulesCounter; want != have {
-		t.Errorf("failed to compile multiple chains, want: %d, have: %d", want, have)
-	}
+	require.Equal(t, 3, rulesCounter)
 
 	m, err := macro.NewMacro("%{tx.count}")
-	if err != nil {
-		t.Fatalf("failed to initialize the macro: %v", err)
-	}
+	require.NoError(t, err)
 
 	txCount, _ := strconv.Atoi(m.Expand(tx))
-	if want, have := 6, txCount; want != have {
-		t.Errorf("incorrect counter, want %d, have %d", want, have)
-	}
+	require.Equal(t, 6, txCount)
 }
 
 func errLogger(t *testing.T) func(rule types.MatchedRule) {
@@ -395,9 +353,7 @@ func TestHttpServer(t *testing.T) {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
 			}
 			waf, err := coraza.NewWAF(conf)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			runAgainstWAF(t, tCase, waf)
 		})
 	}
@@ -445,9 +401,7 @@ func TestHttpServerWithRuleEngineOff(t *testing.T) {
 			SecRule ARGS:id "@eq 0" "id:1, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 			SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
 			`).WithErrorCallback(errLogger(t)).WithDebugLogger(logger))
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			runAgainstWAF(t, tCase, waf)
 		})
 	}
@@ -502,9 +456,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	// See https://github.com/corazawaf/coraza/issues/438
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 	res, err := ts.Client().Do(req)
-	if err != nil {
-		t.Fatalf("unexpected error when performing the request: %v", err)
-	}
+	require.NoError(t, err)
 
 	if want, have := tCase.expectedStatus, res.StatusCode; want != have {
 		t.Errorf("unexpected status code, want: %d, have: %d", want, have)
@@ -515,9 +467,7 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	}
 
 	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("unexpected error when reading the response body: %v", err)
-	}
+	require.NoError(t, err)
 
 	if want, have := tCase.expectedRespBody, string(resBody); want != have {
 		t.Errorf("unexpected response body, want: %q, have %q", want, have)
@@ -649,9 +599,7 @@ func TestHandlerAPI(t *testing.T) {
 	}
 
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithRequestBodyLimit(3))
-	if err != nil {
-		t.Fatalf("unexpected error while creating the WAF: %s", err.Error())
-	}
+	require.NoError(t, err)
 
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -659,9 +607,7 @@ func TestHandlerAPI(t *testing.T) {
 			defer srv.Close()
 
 			res, err := http.Post(srv.URL, "application/json", bytes.NewBufferString("the payload"))
-			if err != nil {
-				t.Fatalf("unexpected error while performing the request: %s", err.Error())
-			}
+			require.NoError(t, err)
 			defer res.Body.Close()
 
 			if want, have := tCase.expectedStatusCode, res.StatusCode; want != have {
@@ -669,9 +615,7 @@ func TestHandlerAPI(t *testing.T) {
 			}
 
 			_, err = io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatalf("unexpected error while reading the body: %s", err.Error())
-			}
+			require.NoError(t, err)
 		})
 	}
 }

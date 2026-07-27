@@ -8,6 +8,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	_ "github.com/corazawaf/coraza/v3/testing/engine"
@@ -15,17 +17,13 @@ import (
 )
 
 func TestEngine(t *testing.T) {
-	if len(profile.Profiles) == 0 {
-		t.Error("failed to find tests")
-	}
+	require.NotEmpty(t, profile.Profiles, "failed to find tests")
 
 	t.Logf("Loading %d profiles\n", len(profile.Profiles))
 	for _, p := range profile.Profiles {
 		t.Run(p.Meta.Name, func(t *testing.T) {
 			tt, err := testList(t, &p)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 
 			for _, test := range tt {
 				t.Run(test.Name, func(t *testing.T) {

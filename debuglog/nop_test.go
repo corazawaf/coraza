@@ -6,16 +6,14 @@ package debuglog
 import (
 	"io"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestNop(t *testing.T) {
 	l := Noop().(defaultLogger)
-	if want, have := l.level, LevelNoLog; want != have {
-		t.Fatalf("unexpected log level when nop")
-	}
+	require.Equal(t, LevelNoLog, l.level, "unexpected log level when nop")
 
 	lwo := l.WithOutput(io.Discard).(defaultLogger)
-	if lwo.factory == nil {
-		t.Fatalf("unexpected logger factory")
-	}
+	require.NotNil(t, lwo.factory, "unexpected logger factory")
 }

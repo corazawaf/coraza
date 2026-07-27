@@ -12,6 +12,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/mccutchen/go-httpbin/v2/httpbin"
 
 	"github.com/corazawaf/coraza/v3"
@@ -27,9 +29,7 @@ func TestE2e(t *testing.T) {
 		WithDirectives(e2e.Directives)
 
 	waf, err := coraza.NewWAF(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if closer, ok := waf.(experimental.WAFCloser); ok {
 		defer closer.Close()
 	}
@@ -49,7 +49,5 @@ func TestE2e(t *testing.T) {
 		ProxiedEntrypoint: s.URL,
 		HttpbinEntrypoint: s.URL,
 	})
-	if err != nil {
-		t.Fatalf("e2e tests failed: %v", err)
-	}
+	require.NoError(t, err)
 }

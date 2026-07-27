@@ -6,6 +6,8 @@ package plugins_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/internal/transformations"
 )
@@ -18,8 +20,6 @@ func TestTransformation(t *testing.T) {
 
 		plugins.RegisterTransformation("custom_transformation", transformation)
 		_, err := transformations.GetTransformation("custom_transformation")
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 	})
 }
