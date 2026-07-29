@@ -51,6 +51,47 @@ func TestCompressWhiteSpace(t *testing.T) {
 			input: "x\u00a0y",
 			want:  "x y",
 		},
+		// Coraza transforms arbitrary request bytes, not guaranteed-UTF-8
+		// strings, and ModSecurity's compressWhitespace matches the raw byte
+		// (`#define NBSP 160`) regardless of encoding. A lone 0xA0 that isn't
+		// part of a valid UTF-8 sequence must still collapse, or input like
+		// "SELECT\xa01" would reach the operator unnormalized.
+		{
+			input: "SELECT\xa01",
+			want:  "SELECT 1",
+		},
+		{
+			input: "a\xa0\xa0b",
+			want:  "a b",
+		},
+		{
+			input: "a\xa0 b",
+			want:  "a b",
+		},
+		// Raw 0x85 is not given the same treatment: isspace() in the C
+		// locale ModSecurity uses never matched it, so byte-matching it here
+		// would be more permissive than ModSecurity, not parity with it.
+		{
+			input: "SELECT\x851",
+			want:  "SELECT\x851",
+		},
+		// Any other invalid byte is passed through untouched rather than
+		// being swallowed or replaced.
+		{
+			input: "a\xffb",
+			want:  "a\xffb",
+		},
+		{
+			input: "a\xff\xa0b",
+			want:  "a\xff b",
+		},
+		// 0xA0 as the trailing (continuation) byte of a valid multi-byte
+		// rune is never whitespace -- this is the corruption from #1655,
+		// and not limited to accented Latin letters: \u4f60 is E4 BD A0.
+		{
+			input: "\u4f60\u597d  \u4e16\u754c",
+			want:  "\u4f60\u597d \u4e16\u754c",
+		},
 	}
 
 	for _, tc := range tests {
