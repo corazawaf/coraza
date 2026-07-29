@@ -59,13 +59,28 @@ func doBase64decode(src string, ext bool) string {
 		if currChar == '\r' || currChar == '\n' {
 			continue
 		}
-		// If invalid character or padding reached, we stop decoding
-		if currChar == '=' || currChar == ' ' || currChar > 127 {
+		// Padding always ends decoding.
+		if currChar == '=' || currChar == ' ' {
 			break
 		}
-		decodedChar := base64DecMap[currChar]
-		// Another condition of invalid character
+
+		decodedChar := byte(127)
+		if currChar <= 127 {
+			decodedChar = base64DecMap[currChar]
+		}
 		if decodedChar == 127 {
+			// Invalid character, including any byte > 127. The strict
+			// decoder stops here and returns whatever was decoded so far
+			// (see base64decode's doc comment). The forgiving decoder
+			// skips it and keeps going instead, matching ModSecurity's
+			// own decode_forgiven_engine and how real-world consumers
+			// (PHP's base64_decode, Node's Buffer.from(..., 'base64'))
+			// treat out-of-alphabet bytes -- otherwise a single stray byte
+			// anywhere in the input, not just at a specific position,
+			// could make the entire decoded value disappear.
+			if ext {
+				continue
+			}
 			break
 		}
 

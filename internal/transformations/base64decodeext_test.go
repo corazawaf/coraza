@@ -50,6 +50,34 @@ var b64DecodeExtTests = []struct {
 		input:    "PHNjcmlwdD.5hbGVydCgxKTwvc2NyaXB0Pg==",
 		expected: "<script>alert(1)</script>",
 	},
+	// A byte outside the base64 alphabet -- including any byte > 127, not
+	// just punctuation -- must be skipped and decoding must continue,
+	// matching ModSecurity's own forgiving decoder and real-world
+	// consumers (PHP's base64_decode, Node's Buffer.from(str, 'base64')).
+	// Before this, a single such byte anywhere in the input made the
+	// entire decoded value disappear if it came first, or silently
+	// truncated it otherwise. See
+	// https://github.com/corazawaf/coraza/issues/1661.
+	{
+		name:     "Invalid non-ASCII byte at the start",
+		input:    "\xc2\xa9dzBzV==",
+		expected: "w0s",
+	},
+	{
+		name:     "Invalid non-ASCII byte in the middle",
+		input:    "dzBz\xc2\xa9V==",
+		expected: "w0s",
+	},
+	{
+		name:     "Invalid ASCII punctuation at the start",
+		input:    "!dzBzV==",
+		expected: "w0s",
+	},
+	{
+		name:     "Invalid ASCII punctuation in the middle",
+		input:    "dz!BzV==",
+		expected: "w0s",
+	},
 }
 
 func TestBase64DecodeExt(t *testing.T) {
