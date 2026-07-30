@@ -20,123 +20,128 @@ func urlDecodeUni(data string) (string, bool, error) {
 	return data, false, nil
 }
 
+// hexNibble maps an ASCII byte to its hex nibble value (0-15), or -1 if the
+// byte is not a valid hex digit. It replaces repeated strings.ValidHex +
+// strings.X2c calls with a single branch-free array lookup, since this table
+// is read up to 4 times per %uXXXX escape in the hot decode loop below.
+var hexNibble = func() [256]int8 {
+	var t [256]int8
+	for i := range t {
+		t[i] = -1
+	}
+	for c := byte('0'); c <= '9'; c++ {
+		t[c] = int8(c - '0')
+	}
+	for c := byte('a'); c <= 'f'; c++ {
+		t[c] = int8(c-'a') + 10
+	}
+	for c := byte('A'); c <= 'F'; c++ {
+		t[c] = int8(c-'A') + 10
+	}
+	return t
+}()
+
 func inplaceUniDecode(input string, d []byte, pos int) (string, bool) {
 	inputLen := len(d)
 	i := pos
 	c := pos
-	hmap := -1
 	// changed tracks whether an actual decode or space substitution took
 	// place. Skipped (invalid/truncated) percent sequences are copied verbatim and
 	// do not lead to a change.
 	changed := false
 
 	for i < inputLen {
-		if d[i] == '%' {
-			if (i+1 < inputLen) && ((input[i+1] == 'u') || (input[i+1] == 'U')) {
-				/* Character is a percent sign. */
-				/* IIS-specific %u encoding. */
-				if i+5 < inputLen {
-					/* We have at least 4 data bytes. */
-					if (strings.ValidHex(input[i+2])) && (strings.ValidHex(input[i+3])) && (strings.ValidHex(input[i+4])) && (strings.ValidHex(input[i+5])) {
-						/*
-							TODO unicode mapping
-							code = 0
-							fact = 1
-							for j = 5; j >= 2; j-- {
-								if strings.ValidHex((input[i+j])) {
-									if input[i+j] >= 97 {
-										xv = (int(input[i+j]) - 97) + 10
-									} else if input[i+j] >= 65 {
-										xv = (int(input[i+j]) - 65) + 10
-									} else {
-										xv = int(input[i+j]) - 48
-									}
-									code += (xv * fact)
-									fact *= 16
-								}
-							}
-							if code >= 0 && code <= 65535 {
-								t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
-								result, _, _ := transform.String(t, string(code))
-								hmap = result
-							}*/
+		ch := input[i]
 
-						if hmap != -1 {
-							d[c] = byte(hmap)
-						} else {
-							/* We first make use of the lower byte here,
-							 * ignoring the higher byte. */
-							d[c] = strings.X2c(input[i+4:])
-
-							/* Full width ASCII (ff01 - ff5e)
-							 * needs 0x20 added */
-							if (d[c] > 0x00) && (d[c] < 0x5f) && ((input[i+2] == 'f') || (input[i+2] == 'F')) && ((input[i+3] == 'f') || (input[i+3] == 'F')) {
-								d[c] += 0x20
-							}
-						}
-						c++
-						i += 6
-						changed = true
-					} else {
-						/* Invalid data, skip %u. */
-						d[c] = input[i]
-						i++
-						c++
-						d[c] = input[i]
-						c++
-						i++
-					}
-				} else {
-					/* Not enough bytes (4 data bytes), skip %u. */
-					d[c] = input[i]
-					i++
-					c++
-					d[c] = input[i]
-					i++
-					c++
-				}
-			} else {
-				/* Standard URL encoding. */
-				/* Are there enough bytes available? */
-				if i+2 < inputLen {
-					/* Yes. */
-
-					/* Decode a %xx combo only if it is valid.
-					 */
-					c1 := input[i+1]
-					c2 := input[i+2]
-
-					if strings.ValidHex(c1) && strings.ValidHex(c2) {
-						d[c] = strings.X2c(input[i+1:])
-						c++
-						i += 3
-						changed = true
-					} else {
-						/* Not a valid encoding, skip this % */
-						d[c] = input[i]
-						i++
-						c++
-					}
-				} else {
-					/* Not enough bytes available, skip this % */
-					d[c] = input[i]
-					i++
-					c++
-				}
-			}
-		} else {
-			/* Character is not a percent sign. */
-			if input[i] == '+' {
-				d[c] = ' '
-				c++
-				changed = true
-			} else {
-				d[c] = input[i]
-				c++
-			}
-
+		if ch != '%' && ch != '+' {
+			// Bulk-copy the literal run up to the next '%' or '+' instead of
+			// shifting one byte at a time.
+			start := i
 			i++
+			for i < inputLen && input[i] != '%' && input[i] != '+' {
+				i++
+			}
+			// copy()'s runtime.memmove call costs more than it saves on short
+			// runs; a direct store (n==1) or manual loop wins until the run
+			// is long enough to amortize that call.
+			switch n := i - start; {
+			case n == 1:
+				d[c] = input[start]
+			case n == 2:
+				d[c] = input[start]
+				d[c+1] = input[start+1]
+			case n <= 8:
+				for k := range n {
+					d[c+k] = input[start+k]
+				}
+			default:
+				copy(d[c:], input[start:i])
+			}
+			c += i - start
+			continue
 		}
+
+		if ch == '+' {
+			d[c] = ' '
+			c++
+			i++
+			changed = true
+			continue
+		}
+
+		// ch == '%'
+		if i+1 < inputLen && (input[i+1] == 'u' || input[i+1] == 'U') {
+			/* IIS-specific %u encoding. */
+			if i+5 < inputLen {
+				h2 := hexNibble[input[i+2]]
+				h3 := hexNibble[input[i+3]]
+				h4 := hexNibble[input[i+4]]
+				h5 := hexNibble[input[i+5]]
+				if h2 >= 0 && h3 >= 0 && h4 >= 0 && h5 >= 0 {
+					code := rune(h2)<<12 | rune(h3)<<8 | rune(h4)<<4 | rune(h5)
+					if b, ok := unicodeBestFitASCII[code]; ok {
+						d[c] = b
+					} else {
+						/* We first make use of the lower byte here,
+						 * ignoring the higher byte. */
+						low := byte(h4)<<4 | byte(h5)
+
+						/* Full width ASCII (ff01 - ff5e) needs 0x20 added. */
+						if low > 0x00 && low < 0x5f && h2 == 15 && h3 == 15 {
+							low += 0x20
+						}
+						d[c] = low
+					}
+					c++
+					i += 6
+					changed = true
+					continue
+				}
+			}
+			/* Invalid or truncated %u escape: copy "%u" verbatim. */
+			d[c] = input[i]
+			d[c+1] = input[i+1]
+			c += 2
+			i += 2
+			continue
+		}
+
+		/* Standard URL encoding. */
+		if i+2 < inputLen {
+			h1 := hexNibble[input[i+1]]
+			h2 := hexNibble[input[i+2]]
+			if h1 >= 0 && h2 >= 0 {
+				d[c] = byte(h1)<<4 | byte(h2)
+				c++
+				i += 3
+				changed = true
+				continue
+			}
+		}
+		/* Not a valid (or truncated) encoding, skip this '%'. */
+		d[c] = input[i]
+		i++
+		c++
 	}
 
 	return strings.WrapUnsafe(d[0:c]), changed
