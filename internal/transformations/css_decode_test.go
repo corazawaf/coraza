@@ -46,6 +46,17 @@ func TestCSSDecode(t *testing.T) {
 			input: "a\rb\fc\\x",
 			want:  "a\rb\fcx",
 		},
+		// Only the four CSS newlines are continuations. An escaped control
+		// character that is not one of them still comes out as itself, and a
+		// hex escape is not terminated by one either.
+		{
+			input: "a\\\x19b",
+			want:  "a\x19b",
+		},
+		{
+			input: "\\41\x19b",
+			want:  "A\x19b",
+		},
 	}
 
 	for _, tc := range tests {
