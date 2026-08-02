@@ -22,6 +22,30 @@ func TestCSSDecode(t *testing.T) {
 			input: "test\\a\\b\\f\\n\\r\\t\\v\\?\\'\\\"\\\u0000\\12\\123\\1234\\12345\\123456\\ff01\\ff5e\\\n\\\u0000  string",
 			want:  "test\n\u000b\u000fnrtv?'\"\u0000\u0012#4EV!~\u0000  string",
 		},
+		// A backslash before any CSS newline is a line continuation that
+		// produces nothing, so "aler\<newline>t(1)" has to fold back into
+		// "alert(1)" before a rule ever gets to look at it.
+		{
+			input: "aler\\\r\nt(1)",
+			want:  "alert(1)",
+		},
+		{
+			input: "aler\\\rt(1)",
+			want:  "alert(1)",
+		},
+		{
+			input: "aler\\\ft(1)",
+			want:  "alert(1)",
+		},
+		{
+			input: "aler\\\nt(1)",
+			want:  "alert(1)",
+		},
+		// A CR or FF that is not preceded by a backslash stays where it is.
+		{
+			input: "a\rb\fc\\x",
+			want:  "a\rb\fcx",
+		},
 	}
 
 	for _, tc := range tests {
