@@ -62,6 +62,20 @@ func TestNormalisePathWin(t *testing.T) {
 			input: `C:`,
 			want:  "C:",
 		},
+		{
+			// A trailing separator after an ADS suffix must not push the
+			// ADS-bearing component out of "last segment" position and
+			// bypass the colon truncation.
+			input: `C:\path\web.config:$DATA\`,
+			want:  "C:/path/web.config/",
+		},
+		{
+			// A component that is entirely spaces trims down to nothing;
+			// Windows drops it rather than resolving through an empty
+			// component, which would otherwise surface as "//".
+			input: `C:\ \file.txt`,
+			want:  "C:/file.txt",
+		},
 	}
 
 	for _, tc := range tests {

@@ -44,6 +44,14 @@ func stripWindowsADS(data string) string {
 		prefix, data = data[:2], data[2:]
 	}
 
+	// normalisePath preserves a trailing separator, which would otherwise
+	// push the ADS-bearing component out of "last segment" position and
+	// leave the colon-truncation below looking at an empty final segment.
+	trailingSlash := ""
+	if len(data) > 0 && data[len(data)-1] == '/' {
+		trailingSlash, data = "/", data[:len(data)-1]
+	}
+
 	if idx := strings.LastIndexByte(data, '/'); idx >= 0 {
 		if colon := strings.IndexByte(data[idx+1:], ':'); colon >= 0 {
 			data = data[:idx+1+colon]
@@ -52,7 +60,7 @@ func stripWindowsADS(data string) string {
 		data = data[:colon]
 	}
 
-	return prefix + data
+	return prefix + data + trailingSlash
 }
 
 // stripWindowsTrailingDotsAndSpaces mimics the Windows API (CreateFile et
@@ -60,16 +68,63 @@ func stripWindowsADS(data string) string {
 // component before resolving it. A component that is entirely dots (".",
 // "..", a leading ".." that filepath.Clean couldn't resolve further, or an
 // empty component from a repeated "/") is left untouched -- those are
-// navigation syntax, not a filename to canonicalize.
+// navigation syntax, not a filename to canonicalize. A component that
+// trims down to nothing (e.g. " ") is dropped entirely, matching how
+// Windows resolves it, rather than left as an empty component.
 func stripWindowsTrailingDotsAndSpaces(data string) string {
-	segments := strings.Split(data, "/")
-	for i, seg := range segments {
-		if isAllDots(seg) {
+	if !hasTrimmableComponent(data) {
+		return data
+	}
+
+	var buf strings.Builder
+	buf.Grow(len(data))
+	start := 0
+	wroteAny := false
+	for i := 0; i <= len(data); i++ {
+		if i != len(data) && data[i] != '/' {
 			continue
 		}
-		segments[i] = strings.TrimRight(seg, ". ")
+		seg := data[start:i]
+		start = i + 1
+
+		if !isAllDots(seg) {
+			trimmed := strings.TrimRight(seg, ". ")
+			if trimmed == "" {
+				// The component was entirely dots/spaces (but not so
+				// uniformly dots that isAllDots caught it, e.g. " "):
+				// Windows drops it rather than resolving to an empty
+				// component, which would otherwise surface as "//".
+				continue
+			}
+			seg = trimmed
+		}
+
+		if wroteAny {
+			buf.WriteByte('/')
+		}
+		buf.WriteString(seg)
+		wroteAny = true
 	}
-	return strings.Join(segments, "/")
+	return buf.String()
+}
+
+// hasTrimmableComponent reports whether any path component in data ends in
+// '.' or ' ' and isn't itself all dots, without allocating.
+func hasTrimmableComponent(data string) bool {
+	start := 0
+	for i := 0; i <= len(data); i++ {
+		if i != len(data) && data[i] != '/' {
+			continue
+		}
+		seg := data[start:i]
+		if !isAllDots(seg) {
+			if last := seg[len(seg)-1]; last == '.' || last == ' ' {
+				return true
+			}
+		}
+		start = i + 1
+	}
+	return false
 }
 
 func isAllDots(s string) bool {
