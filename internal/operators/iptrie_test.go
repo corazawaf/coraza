@@ -5,7 +5,6 @@ package operators
 
 import (
 	"fmt"
-	"net"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -47,6 +46,24 @@ func TestIPTrieCoraza(t *testing.T) {
 			args:      "1.1.1.1, 2.2.2.2, 3.3.3.3, 4.4.4.4, 5.5.5.5, 6.6.6.6, 7.7.7.7, 8.8.8.8, 10.0.0.0/16",
 			queryIP:   "10.0.5.99",
 			wantMatch: true,
+		},
+		{
+			name:      "IPv6 trie match (8+ IPv6 subnets)",
+			args:      "2001:db8:1::/48, 2001:db8:2::/48, 2001:db8:3::/48, 2001:db8:4::/48, 2001:db8:5::/48, 2001:db8:6::/48, 2001:db8:7::/48, 2001:db8:8::/48",
+			queryIP:   "2001:db8:5::abcd",
+			wantMatch: true,
+		},
+		{
+			name:      "IPv6 trie no match (8+ IPv6 subnets)",
+			args:      "2001:db8:1::/48, 2001:db8:2::/48, 2001:db8:3::/48, 2001:db8:4::/48, 2001:db8:5::/48, 2001:db8:6::/48, 2001:db8:7::/48, 2001:db8:8::/48",
+			queryIP:   "2001:db8:9::1",
+			wantMatch: false,
+		},
+		{
+			name:      "Invalid IP returns false",
+			args:      "10.0.0.0/8",
+			queryIP:   "not-an-ip",
+			wantMatch: false,
 		},
 	}
 

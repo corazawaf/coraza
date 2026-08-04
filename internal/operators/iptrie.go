@@ -40,6 +40,9 @@ func (t *IPTrie) InsertPrefix(prefix netip.Prefix) {
 		root = t.v4Root
 		b4 := addr.As4()
 		bytes = b4[:]
+		if bits > 32 {
+			bits = 32
+		}
 	} else if addr.Is6() {
 		root = t.v6Root
 		b16 := addr.As16()
@@ -135,10 +138,17 @@ func (t *IPTrie) ContainsIP(ip net.IP) bool {
 }
 
 func netipPrefixFromIPNet(ipNet net.IPNet) (netip.Prefix, bool) {
-	ones, _ := ipNet.Mask.Size()
+	ones, size := ipNet.Mask.Size()
+	if size == 0 {
+		return netip.Prefix{}, false
+	}
 	addr, ok := netip.AddrFromSlice(ipNet.IP)
 	if !ok {
 		return netip.Prefix{}, false
 	}
-	return netip.PrefixFrom(addr, ones), true
+	prefix := netip.PrefixFrom(addr, ones)
+	if !prefix.IsValid() {
+		return netip.Prefix{}, false
+	}
+	return prefix, true
 }
