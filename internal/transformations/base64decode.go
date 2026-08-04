@@ -64,6 +64,20 @@ func doBase64decode(src string, ext bool) string {
 			break
 		}
 
+		// The base64url alphabet (RFC 4648 §5) substitutes '-' and '_' for
+		// '+' and '/'. Accepting both here lets t:base64DecodeExt decode
+		// base64url tokens (e.g. JWT segments) instead of dropping those
+		// characters and misaligning everything after them, which would
+		// otherwise let an attacker hide a match target past that point.
+		if ext {
+			switch currChar {
+			case '-':
+				currChar = '+'
+			case '_':
+				currChar = '/'
+			}
+		}
+
 		decodedChar := byte(127)
 		if currChar <= 127 {
 			decodedChar = base64DecMap[currChar]

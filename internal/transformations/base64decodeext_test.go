@@ -78,6 +78,25 @@ var b64DecodeExtTests = []struct {
 		input:    "dz!BzV==",
 		expected: "w0s",
 	},
+	// base64url (RFC 4648 §5) substitutes '-'/'_' for '+'/'/', as used by
+	// JWT segments. Treated as out-of-alphabet bytes, both characters are
+	// skipped by the forgiving decoder, misaligning every quad after them.
+	// See https://github.com/coreruleset/coreruleset/pull/4663.
+	{
+		name:     "base64url '-' in place of '+'",
+		input:    "-w==",
+		expected: string([]byte{0xfb}),
+	},
+	{
+		name:     "base64url '_' in place of '/'",
+		input:    "_w==",
+		expected: string([]byte{0xff}),
+	},
+	{
+		name:     "base64url JWT header: '-'/'_' before the match target must not corrupt the decode",
+		input:    "eyJwIjoieHh-IiwiYWxnIjoibm9uZSIsInR5cCI6IkpXVCJ9",
+		expected: `{"p":"xx~","alg":"none","typ":"JWT"}`,
+	},
 }
 
 func TestBase64DecodeExt(t *testing.T) {
