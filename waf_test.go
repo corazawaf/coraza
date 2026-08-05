@@ -184,6 +184,72 @@ func TestPopulateAuditLog(t *testing.T) {
 	}
 }
 
+// TestTransactionIsAllowed verifies that an `allow` disruptive action is
+// observable at the transaction level through the public Transaction.IsAllowed()
+// accessor, even though allow never produces an Interruption. It also asserts
+// that DetectionOnly records the decision without enforcing it (rules after the
+// allow must still be evaluated).
+func TestTransactionIsAllowed(t *testing.T) {
+	// In the allow cases a tripwire rule (id:2) matches the same request in
+	// phase 1 after the allow (id:1). Under enforcement it is skipped; under
+	// DetectionOnly it must still run.
+	const allowRules = `
+		SecRule REMOTE_ADDR "@ipMatch 127.0.0.1" "id:1,phase:1,allow,nolog"
+		SecRule REMOTE_ADDR "@ipMatch 127.0.0.1" "id:2,phase:1,pass,nolog"
+	`
+	const noAllowRules = `
+		SecRule REMOTE_ADDR "@ipMatch 127.0.0.1" "id:2,phase:1,pass,nolog"
+	`
+
+	tests := []struct {
+		name           string
+		directives     string
+		wantAllowed    bool
+		wantTripwireIn bool // whether id:2 (evaluated after allow) is expected to have matched
+	}{
+		{name: "engine on skips after allow", directives: "SecRuleEngine On\n" + allowRules, wantAllowed: true, wantTripwireIn: false},
+		{name: "detection only records but does not skip", directives: "SecRuleEngine DetectionOnly\n" + allowRules, wantAllowed: true, wantTripwireIn: true},
+		{name: "no allow rule", directives: "SecRuleEngine On\n" + noAllowRules, wantAllowed: false, wantTripwireIn: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf, err := NewWAF(NewWAFConfig().WithDirectives(tt.directives))
+			if err != nil {
+				t.Fatal(err)
+			}
+			tx := waf.NewTransaction()
+			defer tx.Close()
+
+			tx.ProcessConnection("127.0.0.1", 0, "", 0)
+			tx.ProcessURI("/", "GET", "1.1")
+			tx.ProcessRequestHeaders()
+
+			type allower interface{ IsAllowed() bool }
+			txAllower, ok := tx.(allower)
+			if ok {
+				if got := txAllower.IsAllowed(); got != tt.wantAllowed {
+					t.Errorf("IsAllowed() = %t, want %t", got, tt.wantAllowed)
+				}
+			}
+			// allow must never manifest as an interruption.
+			if tx.IsInterrupted() {
+				t.Errorf("allow must not interrupt the transaction, but IsInterrupted()=true")
+			}
+
+			var tripwireMatched bool
+			for _, mr := range tx.MatchedRules() {
+				if mr.Rule().ID() == 2 {
+					tripwireMatched = true
+				}
+			}
+			if tripwireMatched != tt.wantTripwireIn {
+				t.Errorf("rule id:2 evaluated-after-allow = %t, want %t (DetectionOnly must not skip rules)", tripwireMatched, tt.wantTripwireIn)
+			}
+		})
+	}
+}
+
 func TestDetectionOnlyEnforcesProcessPartialBodyLimitActions(t *testing.T) {
 	waf, err := NewWAF(NewWAFConfig().WithDirectives(`
 		SecRuleEngine DetectionOnly

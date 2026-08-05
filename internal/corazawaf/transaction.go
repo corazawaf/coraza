@@ -74,6 +74,14 @@ type Transaction struct {
 	// TODO(4.x): Evaluate to make it private
 	AllowType corazatypes.AllowType
 
+	// allowedType records the allow decision for visibility, independently of
+	// enforcement. Unlike AllowType (which drives phase skipping and is only set
+	// when the engine is On), this is set whenever an allow action matches,
+	// including in DetectionOnly mode, and is never reset during phase
+	// processing. It backs the public IsAllowed() accessor. This mirrors how
+	// disruptive actions remain visible in DetectionOnly via Disruptive_.
+	allowedType corazatypes.AllowType
+
 	// Copies from the WAF instance that may be overwritten by the ctl action
 	AuditEngine               types.AuditEngineStatus
 	AuditLogParts             types.AuditLogParts
@@ -344,12 +352,24 @@ func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 // It complies with DetectionOnly definition which requires not executing disruptive actions.
 // Depending on the RuleEngine mode:
 // If On: it will cause the transaction to skip rules according to the allow type (phase, request, all).
-// If DetectionOnly: allow is not enforced.
+// If DetectionOnly: allow is not enforced (rules keep being evaluated), but the
+// decision is still recorded so IsAllowed() reports what would have happened.
 // TODO(4.x): evaluate to expose it in the interface.
 func (tx *Transaction) Allow(allowType corazatypes.AllowType) {
+	// Record the decision regardless of the engine mode. This is observability
+	// only and must not gate enforcement, so it is kept separate from AllowType.
+	tx.allowedType = allowType
 	if tx.RuleEngine == types.RuleEngineOn {
 		tx.AllowType = allowType
 	}
+}
+
+// IsAllowed returns true if an allow disruptive action matched during the
+// transaction, i.e. the transaction was (or, in DetectionOnly mode, would have
+// been) allowed through. Unlike deny/drop, allow never produces an Interruption,
+// so this is the way to observe it through the public API.
+func (tx *Transaction) IsAllowed() bool {
+	return tx.allowedType != corazatypes.AllowTypeUnset
 }
 
 func (tx *Transaction) DebugLogger() debuglog.Logger {
