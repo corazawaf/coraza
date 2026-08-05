@@ -85,10 +85,20 @@ func cssDecodeInplace(input string, pos int) string {
 
 					/* Move over. */
 					i += j
-				case input[i] == '\n':
+				case input[i] == '\n', input[i] == '\f':
 					/* No hexadecimal digits after backslash */
-					/* A newline character following backslash is ignored. */
+					/* A newline character following backslash is ignored.
+					 * CSS treats CR and FF as newlines as well, both are
+					 * turned into LF before the escape is read. */
 					i++
+				case input[i] == '\r':
+					/* CR is a newline too, and CRLF is a single one, so the
+					 * LF has to go with it rather than being copied out as a
+					 * normal character. */
+					i++
+					if i < inputLen && input[i] == '\n' {
+						i++
+					}
 				default:
 					/* The character after backslash is not a hexadecimal digit,
 					 * nor a newline. */

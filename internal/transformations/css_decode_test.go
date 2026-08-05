@@ -63,6 +63,41 @@ func TestCSSDecode(t *testing.T) {
 			input: "\\000000",
 			want:  "\uFFFD",
 		},
+		// A backslash before any CSS newline is a line continuation that
+		// produces nothing, so "aler\<newline>t(1)" has to fold back into
+		// "alert(1)" before a rule ever gets to look at it.
+		{
+			input: "aler\\\r\nt(1)",
+			want:  "alert(1)",
+		},
+		{
+			input: "aler\\\rt(1)",
+			want:  "alert(1)",
+		},
+		{
+			input: "aler\\\ft(1)",
+			want:  "alert(1)",
+		},
+		{
+			input: "aler\\\nt(1)",
+			want:  "alert(1)",
+		},
+		// A CR or FF that is not preceded by a backslash stays where it is.
+		{
+			input: "a\rb\fc\\x",
+			want:  "a\rb\fcx",
+		},
+		// Only the four CSS newlines are continuations. An escaped control
+		// character that is not one of them still comes out as itself, and a
+		// hex escape is not terminated by one either.
+		{
+			input: "a\\\x19b",
+			want:  "a\x19b",
+		},
+		{
+			input: "\\41\x19b",
+			want:  "A\x19b",
+		},
 	}
 
 	for _, tc := range tests {
