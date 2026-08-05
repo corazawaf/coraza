@@ -5,6 +5,7 @@ package transformations
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
@@ -19,10 +20,15 @@ func cssDecode(data string) (string, bool, error) {
 }
 
 func cssDecodeInplace(input string, pos int) string {
-	d := []byte(input)
-	inputLen := len(d)
+	inputLen := len(input)
+	// A zero-value escape (see below) expands from as little as 2 input
+	// bytes ("\0") to 3 output bytes (U+FFFD), so the output can't be
+	// written in place over the input's own backing array. Grow into a
+	// separate buffer instead; len(input) is still the right capacity
+	// guess for the overwhelmingly common case where output doesn't grow.
+	d := make([]byte, pos, inputLen)
+	copy(d, input[:pos])
 	i := pos
-	c := pos
 
 	for i < inputLen {
 		/* Is the character a backslash? */
@@ -39,63 +45,38 @@ func cssDecodeInplace(input string, pos int) string {
 
 				switch {
 				case j > 0:
-					/* We have at least one valid hexadecimal character. */
-					fullcheck := false
-
-					/* For now just use the last two bytes. */
-					switch j {
-					/* Number of hex characters */
-					case 1:
-						d[c] = xsingle2c(input[i])
-						c++
-
-					case 2, 3:
-						/* Use the last two from the end. */
-						d[c] = utils.X2c(input[i+j-2:])
-						c++
-					case 4:
-						/* Use the last two from the end, but request
-						 * a full width check.
-						 */
-						d[c] = utils.X2c(input[i+j-2:])
-						fullcheck = true
-
-					case 5:
-						/* Use the last two from the end, but request
-						 * a full width check if the number is greater
-						 * or equal to 0xFFFF.
-						 */
-						d[c] = utils.X2c(input[i+j-2:])
-						/* Do full check if first byte is 0 */
-						if input[i] == '0' {
-							fullcheck = true
-						} else {
-							c++
-						}
-
-					case 6:
-						/* Use the last two from the end, but request
-						 * a full width check if the number is greater
-						 * or equal to 0xFFFF.
-						 */
-						d[c] = utils.X2c(input[i+j-2:])
-
-						/* Do full check if first/second bytes are 0 */
-						if (input[i] == '0') && (input[i+1] == '0') {
-							fullcheck = true
-						} else {
-							c++
-						}
+					/* We have at least one valid hexadecimal character.
+					 * Resolve the full code point (per the CSS Syntax spec,
+					 * a hex escape always represents one code point, however
+					 * many digits it takes to write it) and encode it as
+					 * UTF-8 -- not a single truncated byte, which would
+					 * produce invalid UTF-8 for any non-ASCII target and
+					 * silently mis-decode 3+ digit escapes whose value
+					 * doesn't fit in the last two digits alone. */
+					var code rune
+					for k := 0; k < j; k++ {
+						code = code<<4 | rune(xsingle2c(input[i+k]))
 					}
 
-					/* Full width ASCII (0xff01 - 0xff5e) needs 0x20 added */
-					if fullcheck {
-						if (d[c] > 0x00) && (d[c] < 0x5f) && ((input[i+j-3] == 'f') || (input[i+j-3] == 'F')) && ((input[i+j-4] == 'f') || (input[i+j-4] == 'F')) {
-							d[c] += 0x20
-						}
-
-						c++
+					/* Per the CSS Syntax spec, a zero-value escaped code
+					 * point is invalid and must resolve to U+FFFD, same as
+					 * a surrogate or an out-of-range value (the latter two
+					 * are already handled for free by utf8.EncodeRune
+					 * below). */
+					if code == 0 {
+						code = utf8.RuneError
 					}
+
+					/* Full width ASCII (U+FF01 - U+FF5E) folds to plain
+					 * ASCII ('!' - '~'), matching ModSecurity's best-fit
+					 * behavior for this transform. */
+					if (code >= 0xff01) && (code <= 0xff5e) {
+						code -= 0xfee0
+					}
+
+					var buf [utf8.UTFMax]byte
+					n := utf8.EncodeRune(buf[:], code)
+					d = append(d, buf[:n]...)
 
 					/* We must ignore a single whitespace after a hex escape */
 					if (i+j < inputLen) && isspace(input[i+j]) {
@@ -112,9 +93,8 @@ func cssDecodeInplace(input string, pos int) string {
 					/* The character after backslash is not a hexadecimal digit,
 					 * nor a newline. */
 					/* Use one character after backslash as is. */
-					d[c] = input[i]
+					d = append(d, input[i])
 					i++
-					c++
 				}
 			} else {
 				/* No characters after backslash. */
@@ -125,14 +105,10 @@ func cssDecodeInplace(input string, pos int) string {
 		} else {
 			/* Character is not a backslash. */
 			/* Copy one normal character to output. */
-			d[c] = input[i]
-			c++
+			d = append(d, input[i])
 			i++
 		}
 	}
-
-	/* Terminate output string. */
-	d = d[:c]
 
 	return utils.WrapUnsafe(d)
 }
