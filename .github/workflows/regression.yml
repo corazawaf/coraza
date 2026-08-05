@@ -56,9 +56,9 @@ jobs:
       GOLANG_BASE_VERSION: "1.25.x"
     steps:
       - name: Checkout code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
@@ -67,28 +67,28 @@ jobs:
           BUILD_TAGS: ${{ matrix.build-flag }}
         run: go run mage.go coverage
       - name: "Codecov: General"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage.txt
           flags: default,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Examples"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage-examples.txt
           flags: examples+${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: FTW"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage-ftw.txt
           flags: ftw,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Tinygo"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         # only if coverage-tinygo.txt exists
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION && hashFiles('build/coverage-tinygo.txt') != '' }}
         with:
