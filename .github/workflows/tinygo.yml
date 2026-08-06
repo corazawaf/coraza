@@ -50,7 +50,7 @@ jobs:
           tinygo-version: ${{ matrix.tinygo-version }}
 
       - name: Cache TinyGo build
-        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ~/.cache/tinygo
