@@ -4,6 +4,8 @@
 
 Coraza is a Web Application Firewall (WAF) engine written in Go that implements Seclang directives and it is compatible with OWASP CRS. It provides protection against common web application attacks.
 
+> For detailed architecture documentation, codebase navigation, and how-to guides, see [AGENTS.md](../AGENTS.md) in the repository root.
+
 ## Code Style and Conventions
 
 ### General Go Guidelines
