@@ -29,6 +29,7 @@ import (
 	"github.com/coreruleset/go-ftw/v2/runner"
 	"github.com/coreruleset/go-ftw/v2/test"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/require"
 
 	coreruleset "github.com/corazawaf/coraza-coreruleset/v4"
 	crstests "github.com/corazawaf/coraza-coreruleset/v4/tests"
@@ -40,18 +41,14 @@ import (
 
 func BenchmarkCRSCompilation(b *testing.B) {
 	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
-	if err != nil {
-		b.Fatal(err)
-	}
+	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
 		waf, err := coraza.NewWAF(coraza.NewWAFConfig().
 			WithRootFS(coreruleset.FS).
 			WithDirectives(string(rec)).
 			WithDirectives("Include @crs-setup.conf.example").
 			WithDirectives("Include @owasp_crs/*.conf"))
-		if err != nil {
-			b.Fatal(err)
-		}
+		require.NoError(b, err)
 		if closer, ok := waf.(experimental.WAFCloser); ok {
 			closer.Close()
 		}
@@ -70,18 +67,15 @@ func BenchmarkCRSSimpleGET(b *testing.B) {
 		tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.ProcessRequestHeaders()
-		if _, err := tx.ProcessRequestBody(); err != nil {
-			b.Error(err)
-		}
+		_, err := tx.ProcessRequestBody()
+		require.NoError(b, err)
 		tx.AddResponseHeader("Content-Type", "application/json")
 		tx.ProcessResponseHeaders(200, "OK")
-		if _, err := tx.ProcessResponseBody(); err != nil {
-			b.Error(err)
-		}
+		_, err = tx.ProcessResponseBody()
+		require.NoError(b, err)
 		tx.ProcessLogging()
-		if err := tx.Close(); err != nil {
-			b.Error(err)
-		}
+		err = tx.Close()
+		require.NoError(b, err)
 	}
 }
 
@@ -99,21 +93,17 @@ func BenchmarkCRSSimplePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, _, err := tx.WriteRequestBody([]byte("parameters2=and&other2=Stuff")); err != nil {
-			b.Error(err)
-		}
-		if _, err := tx.ProcessRequestBody(); err != nil {
-			b.Error(err)
-		}
+		_, _, err := tx.WriteRequestBody([]byte("parameters2=and&other2=Stuff"))
+		require.NoError(b, err)
+		_, err = tx.ProcessRequestBody()
+		require.NoError(b, err)
 		tx.AddResponseHeader("Content-Type", "application/json")
 		tx.ProcessResponseHeaders(200, "OK")
-		if _, err := tx.ProcessResponseBody(); err != nil {
-			b.Error(err)
-		}
+		_, err = tx.ProcessResponseBody()
+		require.NoError(b, err)
 		tx.ProcessLogging()
-		if err := tx.Close(); err != nil {
-			b.Error(err)
-		}
+		err = tx.Close()
+		require.NoError(b, err)
 	}
 }
 
@@ -133,21 +123,17 @@ func BenchmarkCRSLargePOST(b *testing.B) {
 		tx.AddRequestHeader("Accept", "application/json")
 		tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 		tx.ProcessRequestHeaders()
-		if _, _, err := tx.WriteRequestBody(postPayload); err != nil {
-			b.Error(err)
-		}
-		if _, err := tx.ProcessRequestBody(); err != nil {
-			b.Error(err)
-		}
+		_, _, err := tx.WriteRequestBody(postPayload)
+		require.NoError(b, err)
+		_, err = tx.ProcessRequestBody()
+		require.NoError(b, err)
 		tx.AddResponseHeader("Content-Type", "application/json")
 		tx.ProcessResponseHeaders(200, "OK")
-		if _, err := tx.ProcessResponseBody(); err != nil {
-			b.Error(err)
-		}
+		_, err = tx.ProcessResponseBody()
+		require.NoError(b, err)
 		tx.ProcessLogging()
-		if err := tx.Close(); err != nil {
-			b.Error(err)
-		}
+		err = tx.Close()
+		require.NoError(b, err)
 	}
 }
 
@@ -200,18 +186,15 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 				tx.AddRequestHeader(h[0], h[1])
 			}
 			tx.ProcessRequestHeaders()
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Fatal(err)
-			}
+			_, err := tx.ProcessRequestBody()
+			require.NoError(b, err)
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
-			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Fatal(err)
-			}
+			_, err = tx.ProcessResponseBody()
+			require.NoError(b, err)
 			tx.ProcessLogging()
-			if err := tx.Close(); err != nil {
-				b.Fatal(err)
-			}
+			err = tx.Close()
+			require.NoError(b, err)
 		}
 	}
 
@@ -231,21 +214,17 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 				tx.AddRequestHeader(h[0], h[1])
 			}
 			tx.ProcessRequestHeaders()
-			if _, _, err := tx.WriteRequestBody(body); err != nil {
-				b.Fatal(err)
-			}
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Fatal(err)
-			}
+			_, _, err := tx.WriteRequestBody(body)
+			require.NoError(b, err)
+			_, err = tx.ProcessRequestBody()
+			require.NoError(b, err)
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
-			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Fatal(err)
-			}
+			_, err = tx.ProcessResponseBody()
+			require.NoError(b, err)
 			tx.ProcessLogging()
-			if err := tx.Close(); err != nil {
-				b.Fatal(err)
-			}
+			err = tx.Close()
+			require.NoError(b, err)
 		}
 	}
 
@@ -381,18 +360,15 @@ func BenchmarkCRSPrefilter(b *testing.B) {
 			tx.AddRequestHeader("User-Agent", chromeUA)
 			tx.AddRequestHeader("Accept", "application/json")
 			tx.ProcessRequestHeaders()
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Fatal(err)
-			}
+			_, err := tx.ProcessRequestBody()
+			require.NoError(b, err)
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
-			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Fatal(err)
-			}
+			_, err = tx.ProcessResponseBody()
+			require.NoError(b, err)
 			tx.ProcessLogging()
-			if err := tx.Close(); err != nil {
-				b.Fatal(err)
-			}
+			err = tx.Close()
+			require.NoError(b, err)
 		}
 	})
 }
@@ -438,18 +414,15 @@ func BenchmarkCRSTransformationCache(b *testing.B) {
 			tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
 			tx.AddRequestHeader("Accept", "application/json")
 			tx.ProcessRequestHeaders()
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Error(err)
-			}
+			_, err := tx.ProcessRequestBody()
+			require.NoError(b, err)
 			tx.AddResponseHeader("Content-Type", "application/json")
 			tx.ProcessResponseHeaders(200, "OK")
-			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Error(err)
-			}
+			_, err = tx.ProcessResponseBody()
+			require.NoError(b, err)
 			tx.ProcessLogging()
-			if err := tx.Close(); err != nil {
-				b.Error(err)
-			}
+			err = tx.Close()
+			require.NoError(b, err)
 		}
 	})
 
@@ -465,21 +438,17 @@ func BenchmarkCRSTransformationCache(b *testing.B) {
 			tx.AddRequestHeader("Accept", "text/html")
 			tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 			tx.ProcessRequestHeaders()
-			if _, _, err := tx.WriteRequestBody([]byte(mediumBody)); err != nil {
-				b.Error(err)
-			}
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Error(err)
-			}
+			_, _, err := tx.WriteRequestBody([]byte(mediumBody))
+			require.NoError(b, err)
+			_, err = tx.ProcessRequestBody()
+			require.NoError(b, err)
 			tx.AddResponseHeader("Content-Type", "text/html")
 			tx.ProcessResponseHeaders(200, "OK")
-			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Error(err)
-			}
+			_, err = tx.ProcessResponseBody()
+			require.NoError(b, err)
 			tx.ProcessLogging()
-			if err := tx.Close(); err != nil {
-				b.Error(err)
-			}
+			err = tx.Close()
+			require.NoError(b, err)
 		}
 	})
 
@@ -495,21 +464,17 @@ func BenchmarkCRSTransformationCache(b *testing.B) {
 			tx.AddRequestHeader("Accept", "text/html")
 			tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 			tx.ProcessRequestHeaders()
-			if _, _, err := tx.WriteRequestBody([]byte(largeBody)); err != nil {
-				b.Error(err)
-			}
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				b.Error(err)
-			}
+			_, _, err := tx.WriteRequestBody([]byte(largeBody))
+			require.NoError(b, err)
+			_, err = tx.ProcessRequestBody()
+			require.NoError(b, err)
 			tx.AddResponseHeader("Content-Type", "text/html")
 			tx.ProcessResponseHeaders(200, "OK")
-			if _, err := tx.ProcessResponseBody(); err != nil {
-				b.Error(err)
-			}
+			_, err = tx.ProcessResponseBody()
+			require.NoError(b, err)
 			tx.ProcessLogging()
-			if err := tx.Close(); err != nil {
-				b.Error(err)
-			}
+			err = tx.Close()
+			require.NoError(b, err)
 		}
 	})
 }
@@ -518,9 +483,7 @@ func TestFTW(t *testing.T) {
 	conf := coraza.NewWAFConfig()
 
 	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	customTestingConfig := `
 SecResponseBodyMimeType text/plain
@@ -569,26 +532,20 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 
 	errorPath := filepath.Join(t.TempDir(), "error.log")
 	errorFile, err := os.Create(errorPath)
-	if err != nil {
-		t.Fatalf("failed to create error log: %v", err)
-	}
+	require.NoError(t, err, "failed to create error log")
 	defer errorFile.Close()
 
 	errorWriter := bufio.NewWriter(errorFile)
 	conf = conf.WithErrorCallback(func(rule types.MatchedRule) {
 		msg := rule.ErrorLog() + "\n"
-		if _, err := io.WriteString(errorWriter, msg); err != nil {
-			t.Fatal(err)
-		}
-		if err := errorWriter.Flush(); err != nil {
-			t.Fatal(err)
-		}
+		_, err := io.WriteString(errorWriter, msg)
+		require.NoError(t, err)
+		err = errorWriter.Flush()
+		require.NoError(t, err)
 	})
 
 	waf, err := coraza.NewWAF(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if closer, ok := waf.(experimental.WAFCloser); ok {
 		defer closer.Close()
 	}
@@ -616,12 +573,8 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 		tests = append(tests, ftwt)
 		return nil
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(tests) == 0 {
-		t.Fatal("no tests found")
-	}
+	require.NoError(t, err)
+	require.NotEmpty(t, tests, "no tests found")
 
 	u, _ := url.Parse(s.URL)
 	host := u.Hostname()
@@ -629,27 +582,21 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	// TODO(anuraaga): Don't use global config for FTW for better support of programmatic.
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	cfg, err := config.NewConfigFromFile(".ftw.yml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	cfg.LogFile = errorPath
 	cfg.TestOverride.Overrides.DestAddr = &host
 	cfg.TestOverride.Overrides.Port = &port
 
 	// loadMultiphaseOverrides has different implementations depending on coraza.rule.multiphase_evaluation
 	// build tag. If enabled, it will include multiphase specific ignored tests.
-	if err := loadMultiphaseOverrides(cfg); err != nil {
-		t.Fatal(err)
-	}
+	err = loadMultiphaseOverrides(cfg)
+	require.NoError(t, err)
 	runnerCfg := config.NewRunnerConfiguration(cfg)
 	runnerCfg.ReadTimeout = 3 * time.Second // Defaults to 1s but looks to be not enough in the CI
-	if err := runnerCfg.LoadPlatformOverrides(".ftw-overrides.yml"); err != nil {
-		t.Fatal(err)
-	}
+	err = runnerCfg.LoadPlatformOverrides(".ftw-overrides.yml")
+	require.NoError(t, err)
 	res, err := runner.Run(runnerCfg, tests, output.NewOutput("quiet", os.Stdout))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	totalIgnored := len(res.Stats.Ignored)
 	if totalIgnored > 0 {
 		t.Logf("[info] %d ignored tests: %v", totalIgnored, res.Stats.Ignored)
@@ -707,9 +654,7 @@ func TestCRSCloseReleasesMemory(t *testing.T) {
 	// Build WAFs directly (not via crsWAF) so we control the lifecycle
 	// without t.Cleanup holding references that prevent GC.
 	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	conf := coraza.NewWAFConfig().
 		WithRootFS(coreruleset.FS).
 		WithDirectives(string(rec)).
@@ -719,9 +664,7 @@ func TestCRSCloseReleasesMemory(t *testing.T) {
 	wafs := make([]coraza.WAF, 5)
 	for i := range wafs {
 		waf, err := coraza.NewWAF(conf)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		wafs[i] = waf
 	}
 
@@ -747,9 +690,7 @@ func TestCRSCloseReleasesMemory(t *testing.T) {
 func crsWAF(t testing.TB) coraza.WAF {
 	t.Helper()
 	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	// TODO: SecDefaultAction should be removed as soon as we point to a CRS version that carries them by default in the crs-setup.conf.example (From CRS v4.28.0 and v4.25.1 (LTS))
 	customTestingConfig := `
 SecResponseBodyMimeType text/plain
@@ -781,9 +722,7 @@ SecAction "id:900005,\
 		WithDirectives("Include @owasp_crs/*.conf")
 
 	waf, err := coraza.NewWAF(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if closer, ok := waf.(experimental.WAFCloser); ok {
 		// Avoid registering per-iteration Cleanup callbacks in benchmarks, as that
 		// can retain WAF instances and skew memory/benchmark results. Benchmarks

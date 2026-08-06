@@ -6,6 +6,8 @@ package debuglog
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLevelString(t *testing.T) {
@@ -25,9 +27,7 @@ func TestLevelString(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("level %d", test.level), func(t *testing.T) {
-			if want, have := test.want, test.level.String(); want != have {
-				t.Errorf("unexpected error string, want %q, have %q", want, have)
-			}
+			require.Equal(t, test.want, test.level.String(), "unexpected error string")
 		})
 	}
 }
@@ -49,9 +49,7 @@ func TestLevelValid(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("level %d", test.level), func(t *testing.T) {
-			if want, have := test.isValid, test.level.Valid(); want != have {
-				t.Errorf("unexpected validity, want %t, have %t", want, have)
-			}
+			require.Equal(t, test.isValid, test.level.Valid(), "unexpected validity")
 		})
 	}
 }

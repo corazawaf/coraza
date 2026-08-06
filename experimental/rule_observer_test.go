@@ -6,6 +6,8 @@ package experimental_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/types"
@@ -55,27 +57,15 @@ func TestRuleObserver(t *testing.T) {
 			}
 
 			waf, err := coraza.NewWAF(cfg)
-			if err != nil {
-				t.Fatalf("unexpected error creating WAF: %v", err)
-			}
-			if waf == nil {
-				t.Fatal("waf is nil")
-			}
+			require.NoError(t, err)
+			require.NotNil(t, waf)
 
-			if len(observed) != tc.expectRules {
-				t.Fatalf("expected %d observed rules, got %d", tc.expectRules, len(observed))
-			}
+			require.Len(t, observed, tc.expectRules)
 
 			for _, rule := range observed {
-				if rule.ID() == 0 {
-					t.Fatal("expected rule ID to be set")
-				}
-				if rule.File() == "" {
-					t.Fatal("expected rule file to be set")
-				}
-				if rule.Line() == 0 {
-					t.Fatal("expected rule line to be set")
-				}
+				require.NotZero(t, rule.ID())
+				require.NotEmpty(t, rule.File())
+				require.NotZero(t, rule.Line())
 			}
 		})
 	}

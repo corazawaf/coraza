@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // makeTestResponse builds an http.Response with given body and headers
@@ -89,9 +90,8 @@ func TestVerifySSEStreamResponse_InvalidContentType(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, 100*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "text/event-stream") {
-		t.Fatalf("expected Content-Type error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "text/event-stream")
 }
 
 func TestVerifySSEStreamResponse_ContentLengthPresent(t *testing.T) {
@@ -104,9 +104,8 @@ func TestVerifySSEStreamResponse_ContentLengthPresent(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, 100*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "Content-Length") {
-		t.Fatalf("expected Content-Length error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Content-Length")
 }
 
 func TestVerifySSEStreamResponse_NegativeTotalDeadline(t *testing.T) {
@@ -116,9 +115,8 @@ func TestVerifySSEStreamResponse_NegativeTotalDeadline(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, 100*time.Millisecond, -100*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "totalDeadline") {
-		t.Fatalf("expected totalDeadline negative error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "totalDeadline")
 }
 
 func TestVerifySSEStreamResponse_ZeroTotalDeadline(t *testing.T) {
@@ -128,9 +126,8 @@ func TestVerifySSEStreamResponse_ZeroTotalDeadline(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, 0, 0)
-	if err == nil || !strings.Contains(err.Error(), "totalDeadline") {
-		t.Fatalf("expected totalDeadline zero error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "totalDeadline")
 }
 
 func TestVerifySSEStreamResponse_NegativeFirstChunkDeadline(t *testing.T) {
@@ -140,9 +137,8 @@ func TestVerifySSEStreamResponse_NegativeFirstChunkDeadline(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, -100*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "firstChunkDeadline") {
-		t.Fatalf("expected firstChunkDeadline negative error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "firstChunkDeadline")
 }
 
 func TestVerifySSEStreamResponse_TotalDeadlineTooSmall(t *testing.T) {
@@ -153,9 +149,8 @@ func TestVerifySSEStreamResponse_TotalDeadlineTooSmall(t *testing.T) {
 
 	// totalDeadline <= firstChunkDeadline
 	err := verifySSEStreamResponse(resp, 1, 500*time.Millisecond, 400*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "greater than") {
-		t.Fatalf("expected totalDeadline > firstChunkDeadline error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "greater than")
 }
 
 func TestVerifySSEStreamResponse_ReadError(t *testing.T) {
@@ -165,9 +160,8 @@ func TestVerifySSEStreamResponse_ReadError(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, 100*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "read error") {
-		t.Fatalf("expected read error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "read error")
 }
 
 func TestVerifySSEStreamResponse_FirstChunkTooLate(t *testing.T) {
@@ -178,9 +172,8 @@ func TestVerifySSEStreamResponse_FirstChunkTooLate(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, 100*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "first body chunk too late") {
-		t.Fatalf("expected first chunk too late error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "first body chunk too late")
 }
 
 func TestVerifySSEStreamResponse_NoEvents(t *testing.T) {
@@ -194,9 +187,8 @@ func TestVerifySSEStreamResponse_NoEvents(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 1, 100*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "no event received") {
-		t.Fatalf("expected no event received error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "no event received")
 }
 
 func TestVerifySSEStreamResponse_EventCountMismatch(t *testing.T) {
@@ -207,9 +199,8 @@ func TestVerifySSEStreamResponse_EventCountMismatch(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 3, 50*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "expected 3 events, got 2") {
-		t.Fatalf("expected event count mismatch error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "expected 3 events, got 2")
 }
 
 func TestVerifySSEStreamResponse_StreamEndedTooQuickly(t *testing.T) {
@@ -221,9 +212,8 @@ func TestVerifySSEStreamResponse_StreamEndedTooQuickly(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 3, 100*time.Millisecond, 500*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "ended too quickly") {
-		t.Fatalf("expected ended too quickly error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ended too quickly")
 }
 
 func TestVerifySSEStreamResponse_TotalDeadlineExceeded(t *testing.T) {
@@ -234,9 +224,8 @@ func TestVerifySSEStreamResponse_TotalDeadlineExceeded(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 5, 50*time.Millisecond, 150*time.Millisecond)
-	if err == nil || !strings.Contains(err.Error(), "did not complete within total deadline") {
-		t.Fatalf("expected total deadline exceeded error, got: %v", err)
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "did not complete within total deadline")
 }
 
 func TestVerifySSEStreamResponse_Success(t *testing.T) {
@@ -249,9 +238,7 @@ func TestVerifySSEStreamResponse_Success(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 5, 50*time.Millisecond, 1*time.Second)
-	if err != nil {
-		t.Fatalf("expected success, got error: %v", err)
-	}
+	require.NoError(t, err)
 }
 
 func TestVerifySSEStreamResponse_SuccessWithVariousHeaders(t *testing.T) {
@@ -263,7 +250,5 @@ func TestVerifySSEStreamResponse_SuccessWithVariousHeaders(t *testing.T) {
 	)
 
 	err := verifySSEStreamResponse(resp, 3, 50*time.Millisecond, 500*time.Millisecond)
-	if err != nil {
-		t.Fatalf("expected success with varied content-type, got error: %v", err)
-	}
+	require.NoError(t, err)
 }

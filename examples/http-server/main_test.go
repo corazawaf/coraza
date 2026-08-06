@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	txhttp "github.com/corazawaf/coraza/v3/http"
+	"github.com/stretchr/testify/require"
 )
 
 func setupTestServer(t *testing.T) *httptest.Server {
@@ -107,9 +108,7 @@ func TestHttpServer(t *testing.T) {
 			} else {
 				statusCode = doPostRequest(t, testServer.URL+tt.path, tt.body)
 			}
-			if want, have := tt.expStatus, statusCode; want != have {
-				t.Errorf("Unexpected status code, want: %d, have: %d", want, have)
-			}
+			require.Equal(t, tt.expStatus, statusCode, "Unexpected status code")
 		})
 	}
 }
@@ -147,9 +146,7 @@ func TestHttpServerConcurrent(t *testing.T) {
 					} else {
 						statusCode = doPostRequest(t, testServer.URL+tt.path, tt.body)
 					}
-					if want, have := tt.expStatus, statusCode; want != have {
-						t.Errorf("Unexpected status code, want: %d, have: %d", want, have)
-					}
+					require.Equal(t, tt.expStatus, statusCode, "Unexpected status code")
 				})
 			}
 		}

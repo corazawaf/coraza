@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestSetHTTPSchemeIfMissing(t *testing.T) {
@@ -29,83 +31,65 @@ func TestSetHTTPSchemeIfMissing(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			url := setHTTPSchemeIfMissing(test.rawURL)
-			if want, have := test.expectedURL, url; want != have {
-				t.Errorf("unexpected URL, want %q, have %q", want, have)
-			}
+			require.Equal(t, test.expectedURL, url)
 		})
 	}
 }
 
 func Test_expectStatusCode(t *testing.T) {
 	ok := expectStatusCode(http.StatusOK)
-	if err := ok(http.StatusOK); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if err := ok(http.StatusForbidden); err == nil {
-		t.Fatalf("expected an error when status code mismatches")
-	}
+	err := ok(http.StatusOK)
+	require.NoError(t, err)
+	err = ok(http.StatusForbidden)
+	require.Error(t, err)
 }
 
 func Test_expectNulledBodyStatusCode(t *testing.T) {
 	// nulledBody=true → expect expectedNulledBodyCode
 	nulled := expectNulledBodyStatusCode(true, 403, 200)
-	if err := nulled(200); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if err := nulled(403); err == nil {
-		t.Fatalf("expected error when nulledBody=true and code != expectedNulledBodyCode")
-	}
+	err := nulled(200)
+	require.NoError(t, err)
+	err = nulled(403)
+	require.Error(t, err)
 
 	// nulledBody=false → expect expectedEmptyBodyCode
 	nonNulled := expectNulledBodyStatusCode(false, 403, 200)
-	if err := nonNulled(403); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if err := nonNulled(200); err == nil {
-		t.Fatalf("expected error when nulledBody=false and code != expectedEmptyBodyCode")
-	}
+	err = nonNulled(403)
+	require.NoError(t, err)
+	err = nonNulled(200)
+	require.Error(t, err)
 }
 
 func Test_expectEmptyOrNulledBody(t *testing.T) {
 	// nulled body: non-empty, all zeros
 	zeros := make([]byte, 8)
-	if err := expectEmptyOrNulledBody(true)(len(zeros), zeros); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
+	err := expectEmptyOrNulledBody(true)(len(zeros), zeros)
+	require.NoError(t, err)
 	// failures for nulled body case
-	if err := expectEmptyOrNulledBody(true)(0, nil); err == nil {
-		t.Fatalf("expected error (content-length 0)")
-	}
-	if err := expectEmptyOrNulledBody(true)(0, []byte{}); err == nil {
-		t.Fatalf("expected error (empty body)")
-	}
+	err = expectEmptyOrNulledBody(true)(0, nil)
+	require.Error(t, err)
+	err = expectEmptyOrNulledBody(true)(0, []byte{})
+	require.Error(t, err)
 	nonZero := append([]byte{0, 0, 0}, byte('x'))
-	if err := expectEmptyOrNulledBody(true)(len(nonZero), nonZero); err == nil {
-		t.Fatalf("expected error (non-zero byte present)")
-	}
+	err = expectEmptyOrNulledBody(true)(len(nonZero), nonZero)
+	require.Error(t, err)
 
 	// empty body case
-	if err := expectEmptyOrNulledBody(false)(0, nil); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if err := expectEmptyOrNulledBody(false)(0, []byte{}); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if err := expectEmptyOrNulledBody(false)(1, []byte{'a'}); err == nil {
-		t.Fatalf("expected error (non-empty)")
-	}
+	err = expectEmptyOrNulledBody(false)(0, nil)
+	require.NoError(t, err)
+	err = expectEmptyOrNulledBody(false)(0, []byte{})
+	require.NoError(t, err)
+	err = expectEmptyOrNulledBody(false)(1, []byte{'a'})
+	require.Error(t, err)
 }
 
 func Test_expectEmptyBody(t *testing.T) {
-	if err := expectEmptyBody()(0, nil); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if err := expectEmptyBody()(0, []byte{}); err != nil {
-		t.Fatalf("unexpected err: %v", err)
-	}
-	if err := expectEmptyBody()(1, []byte{'a'}); err == nil {
-		t.Fatalf("expected error (non-empty)")
-	}
+	err := expectEmptyBody()(0, nil)
+	require.NoError(t, err)
+	err = expectEmptyBody()(0, []byte{})
+	require.NoError(t, err)
+	err = expectEmptyBody()(1, []byte{'a'})
+	require.Error(t, err)
 }
 
 func Test_runHealthChecks(t *testing.T) {
@@ -125,9 +109,8 @@ func Test_runHealthChecks(t *testing.T) {
 		{name: "proxy", url: ts.URL + "/proxy", expectedCode: 200},
 		{name: "config", url: ts.URL + "/config", expectedCode: 424},
 	}
-	if err := runHealthChecks(healthChecks); err != nil {
-		t.Fatalf("runHealthChecks failed: %v", err)
-	}
+	err := runHealthChecks(healthChecks)
+	require.NoError(t, err)
 }
 
 func Test_runTests(t *testing.T) {
@@ -142,7 +125,7 @@ func Test_runTests(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			_, err := w.Write([]byte{0, 0, 0, 0})
 			if err != nil {
-				t.Fatalf("unexpected error while writing nulled body: %v", err)
+				t.Fatalf("unexpected error while writing nulled body: %v", err) // Control flow in test handler
 			}
 		case "/sse":
 			// Stream 2 events
@@ -189,7 +172,6 @@ func Test_runTests(t *testing.T) {
 			},
 		},
 	}
-	if err := runTests(tests); err != nil {
-		t.Fatalf("runTests failed: %v", err)
-	}
+	err := runTests(tests)
+	require.NoError(t, err)
 }

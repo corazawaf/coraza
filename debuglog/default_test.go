@@ -9,6 +9,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoggerLogLevels(t *testing.T) {
@@ -46,18 +48,14 @@ func TestLoggerLogLevels(t *testing.T) {
 				l := Default().WithOutput(io.Discard).WithLevel(Level(settedLevel))
 				event := tCase.logFunction(l)()
 				if settedLevel >= tCase.expectedLowestPrintedLevel {
-					if _, ok := event.(noopEvent); ok {
-						t.Fatalf("Missing expected log. Level: %s, Function: %s", Level(settedLevel).String(), name)
-					}
+					_, ok := event.(noopEvent)
+					require.False(t, ok, "Missing expected log. Level: %s, Function: %s", Level(settedLevel).String(), name)
 
-					if !event.IsEnabled() {
-						t.Fatalf("Unexpected event, wanted to be enabled")
-					}
+					require.True(t, event.IsEnabled(), "Unexpected event, wanted to be enabled")
 				}
 				if settedLevel < tCase.expectedLowestPrintedLevel {
-					if _, ok := event.(noopEvent); !ok {
-						t.Fatalf("Unexpected log. Level: %d, Function: %s", settedLevel, name)
-					}
+					_, ok := event.(noopEvent)
+					require.True(t, ok, "Unexpected log. Level: %d, Function: %s", settedLevel, name)
 				}
 			}
 		})
@@ -68,18 +66,14 @@ func TestMsg(t *testing.T) {
 	t.Run("empty error", func(t *testing.T) {
 		l := Default().WithOutput(io.Discard).WithLevel(LevelInfo)
 		fields := l.Info().Err(nil).(*defaultEvent).fields
-		if want, have := 0, len(fields); want != have {
-			t.Fatalf("unexpected number of fields, want %d, have %d", want, have)
-		}
+		require.Empty(t, fields, "unexpected number of fields")
 	})
 
 	t.Run("empty message", func(t *testing.T) {
 		buf := bytes.Buffer{}
 		l := Default().WithOutput(&buf).WithLevel(LevelInfo)
 		l.Info().Msg("")
-		if want, have := 0, buf.Len(); want != have {
-			t.Fatalf("unexpected message length, want %d, have %d", want, have)
-		}
+		require.Equal(t, 0, buf.Len(), "unexpected message length")
 	})
 
 	t.Run("message", func(t *testing.T) {
@@ -98,9 +92,7 @@ func TestMsg(t *testing.T) {
 		expected := "[INFO] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false error=\"my error\"\n"
 
 		// [20:] Skips the timestamp.
-		if want, have := expected, buf.String()[20:]; want != have {
-			t.Fatalf("unexpected message, want %q, have %q", want, have)
-		}
+		require.Equal(t, expected, buf.String()[20:], "unexpected message")
 	})
 }
 
@@ -120,9 +112,8 @@ func TestLogMessagePrefixes(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			buf.Reset()
 			tCase.logPrintEvent.Msg("message")
-			if wantToContain, have := strings.ToUpper(name), buf.String(); !strings.Contains(have, wantToContain) {
-				t.Errorf("unexpected log entry: want to contain %q, have %q", wantToContain, have)
-			}
+			wantToContain := strings.ToUpper(name)
+			require.Contains(t, buf.String(), wantToContain, "unexpected log entry")
 		})
 	}
 }
@@ -146,9 +137,7 @@ func TestWithLogger(t *testing.T) {
 	expected := "[INFO] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false g=\"w\"\n"
 
 	// [20:] Skips the timestamp.
-	if want, have := expected, buf.String()[20:]; want != have {
-		t.Fatalf("unexpected message, want %q, have %q", want, have)
-	}
+	require.Equal(t, expected, buf.String()[20:], "unexpected message")
 
 	// Check that the original log hasn't been modified.
 	buf2 := bytes.Buffer{}
@@ -160,9 +149,7 @@ func TestWithLogger(t *testing.T) {
 	expected = "[INFO] my message g=\"w\"\n"
 
 	// [20:] Skips the timestamp.
-	if want, have := expected, buf2.String()[20:]; want != have {
-		t.Fatalf("unexpected message, want %q, have %q", want, have)
-	}
+	require.Equal(t, expected, buf2.String()[20:], "unexpected message")
 }
 
 func TestWithLoggerAccumulative(t *testing.T) {
@@ -177,7 +164,5 @@ func TestWithLoggerAccumulative(t *testing.T) {
 	expected := "[INFO] my message a=true b=-1 g=\"w\"\n"
 
 	// [20:] Skips the timestamp.
-	if want, have := expected, buf.String()[20:]; want != have {
-		t.Fatalf("unexpected message, want %q, have %q", want, have)
-	}
+	require.Equal(t, expected, buf.String()[20:], "unexpected message")
 }

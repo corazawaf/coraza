@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/anuraaga/go-modsecurity"
 )
 
@@ -33,67 +35,48 @@ func BenchmarkModSecurityCRSCompilation(b *testing.B) {
 		filepath.Join(crspath, "crs-setup.conf.example"),
 	}
 	r, err := filepath.Glob(filepath.Join(crspath, "rules", "*.conf"))
-	if err != nil {
-		b.Error(err)
-	}
+	require.NoError(b, err)
 	files = append(files, r...)
 	for i := 0; i < b.N; i++ {
 		ms, err := modsecurity.NewModsecurity()
-		if err != nil {
-			b.Error(err)
-		}
+		require.NoError(b, err)
 		ms.SetServerLogCallback(func(msg string) {
 			fmt.Println(msg)
 		})
 		rs := ms.NewRuleSet()
 		for _, f := range files {
-			if err := rs.AddFile(f); err != nil {
-				b.Error(err)
-			}
+			err = rs.AddFile(f)
+			require.NoError(b, err)
 		}
 	}
 }
 
 func BenchmarkModSecurityCRSSimpleGET(b *testing.B) {
 	ms, rs, err := crsMS()
-	if err != nil {
-		b.Error(err)
-	}
+	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
 		tx, err := rs.NewTransaction("127.0.0.1", 8080, "127.0.0.1", 8080)
-		if err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessUri("/some_path/with?parameters=and&other=Stuff", "GET", "1.1"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddRequestHeader("Host", "localhost"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddRequestHeader("Accept", "application/json"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessRequestHeaders(); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessRequestBody(); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddResponseHeader("Content-Type", "application/json"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessResponseHeaders(200, "1.1"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessResponseBody(); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessLogging(); err != nil {
-			b.Error(err)
-		}
+		require.NoError(b, err)
+		err = tx.ProcessUri("/some_path/with?parameters=and&other=Stuff", "GET", "1.1")
+		require.NoError(b, err)
+		err = tx.AddRequestHeader("Host", "localhost")
+		require.NoError(b, err)
+		err = tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
+		require.NoError(b, err)
+		err = tx.AddRequestHeader("Accept", "application/json")
+		require.NoError(b, err)
+		err = tx.ProcessRequestHeaders()
+		require.NoError(b, err)
+		err = tx.ProcessRequestBody()
+		require.NoError(b, err)
+		err = tx.AddResponseHeader("Content-Type", "application/json")
+		require.NoError(b, err)
+		err = tx.ProcessResponseHeaders(200, "1.1")
+		require.NoError(b, err)
+		err = tx.ProcessResponseBody()
+		require.NoError(b, err)
+		err = tx.ProcessLogging()
+		require.NoError(b, err)
 		tx.Cleanup()
 	}
 	runtime.KeepAlive(ms)
@@ -101,55 +84,38 @@ func BenchmarkModSecurityCRSSimpleGET(b *testing.B) {
 
 func BenchmarkModSecurityCRSSimplePOST(b *testing.B) {
 	ms, rs, err := crsMS()
-	if err != nil {
-		b.Error(err)
-	}
+	require.NoError(b, err)
 	for i := 0; i < b.N; i++ {
 		tx, err := rs.NewTransaction("127.0.0.1", 8080, "127.0.0.1", 8080)
-		if err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessUri("/some_path/with?parameters=and&other=Stuff", "POST", "1.1"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddRequestHeader("Host", "localhost"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddRequestHeader("Accept", "application/json"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded"); err != nil {
-			b.Error(err)
-		}
+		require.NoError(b, err)
+		err = tx.ProcessUri("/some_path/with?parameters=and&other=Stuff", "POST", "1.1")
+		require.NoError(b, err)
+		err = tx.AddRequestHeader("Host", "localhost")
+		require.NoError(b, err)
+		err = tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36")
+		require.NoError(b, err)
+		err = tx.AddRequestHeader("Accept", "application/json")
+		require.NoError(b, err)
+		err = tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+		require.NoError(b, err)
 		body := []byte("parameters2=and&other2=Stuff")
 
-		if err := tx.AddRequestHeader("Content-Length", strconv.Itoa(len(body))); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessRequestHeaders(); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ReadRequestBodyFrom(body); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessRequestBody(); err != nil {
-			b.Error(err)
-		}
-		if err := tx.AddResponseHeader("Content-Type", "application/json"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessResponseHeaders(200, "1.1"); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessResponseBody(); err != nil {
-			b.Error(err)
-		}
-		if err := tx.ProcessLogging(); err != nil {
-			b.Error(err)
-		}
+		err = tx.AddRequestHeader("Content-Length", strconv.Itoa(len(body)))
+		require.NoError(b, err)
+		err = tx.ProcessRequestHeaders()
+		require.NoError(b, err)
+		err = tx.ReadRequestBodyFrom(body)
+		require.NoError(b, err)
+		err = tx.ProcessRequestBody()
+		require.NoError(b, err)
+		err = tx.AddResponseHeader("Content-Type", "application/json")
+		require.NoError(b, err)
+		err = tx.ProcessResponseHeaders(200, "1.1")
+		require.NoError(b, err)
+		err = tx.ProcessResponseBody()
+		require.NoError(b, err)
+		err = tx.ProcessLogging()
+		require.NoError(b, err)
 		tx.Cleanup()
 	}
 	runtime.KeepAlive(ms)
@@ -174,7 +140,8 @@ func crsMS() (*modsecurity.Modsecurity, *modsecurity.RuleSet, error) {
 	})
 	rs := ms.NewRuleSet()
 	for _, f := range files {
-		if err := rs.AddFile(f); err != nil {
+		err = rs.AddFile(f)
+		if err != nil {
 			return nil, nil, err
 		}
 	}

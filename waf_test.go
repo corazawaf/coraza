@@ -11,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/stretchr/testify/require"
 )
 
 // wafWithRules mirrors experimental.WAFWithRules for testing without import cycle.
@@ -57,17 +58,10 @@ func TestRequestBodyLimit(t *testing.T) {
 
 			_, err := NewWAF(cfg)
 			if tCase.expectedErr == nil {
-				if err != nil {
-					t.Fatalf("unexpected error: %s", err.Error())
-				}
+				require.NoError(t, err)
 			} else {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-
-				if want, have := tCase.expectedErr, err; want.Error() != have.Error() {
-					t.Fatalf("unexpected error: want %q, have %q", want, have)
-				}
+				require.Error(t, err)
+				require.EqualError(t, err, tCase.expectedErr.Error())
 			}
 		})
 	}
@@ -98,17 +92,10 @@ func TestResponseBodyLimit(t *testing.T) {
 
 			_, err := NewWAF(cfg)
 			if tCase.expectedErr == nil {
-				if err != nil {
-					t.Fatalf("unexpected error: %s", err.Error())
-				}
+				require.NoError(t, err)
 			} else {
-				if err == nil {
-					t.Fatal("expected error")
-				}
-
-				if want, have := tCase.expectedErr, err; want.Error() != have.Error() {
-					t.Fatalf("unexpected error: want %q, have %q", want, have)
-				}
+				require.Error(t, err)
+				require.EqualError(t, err, tCase.expectedErr.Error())
 			}
 		})
 	}
@@ -140,9 +127,7 @@ func TestPopulateAuditLog(t *testing.T) {
 				},
 			},
 			check: func(t *testing.T, waf *corazawaf.WAF) {
-				if waf.AuditEngine != types.AuditEngineRelevantOnly {
-					t.Fatal("expected AuditLogRelevantOnly to be true")
-				}
+				require.Equal(t, types.AuditEngineRelevantOnly, waf.AuditEngine, "expected AuditLogRelevantOnly to be true")
 			},
 		},
 		"with parts": {
@@ -155,12 +140,10 @@ func TestPopulateAuditLog(t *testing.T) {
 				},
 			},
 			check: func(t *testing.T, waf *corazawaf.WAF) {
-				if want, have := []types.AuditLogPart{
+				require.Equal(t, types.AuditLogParts([]types.AuditLogPart{
 					types.AuditLogPartRequestHeaders,
 					types.AuditLogPartResponseBody,
-				}, waf.AuditLogParts; len(want) != len(have) {
-					t.Fatalf("unexpected AuditLogParts: want %v, have %v", want, have)
-				}
+				}), waf.AuditLogParts, "unexpected AuditLogParts")
 			},
 		},
 		"with audit log writer": {
@@ -168,9 +151,7 @@ func TestPopulateAuditLog(t *testing.T) {
 				auditLog: &auditLogConfig{writer: writer},
 			},
 			check: func(t *testing.T, waf *corazawaf.WAF) {
-				if reflect.DeepEqual(waf.AuditLogWriter(), &writer) {
-					t.Fatal("expected AuditLogWriter to be set")
-				}
+				require.False(t, reflect.DeepEqual(waf.AuditLogWriter(), &writer), "expected AuditLogWriter to be set")
 			},
 		},
 	}
@@ -192,45 +173,27 @@ func TestDetectionOnlyEnforcesProcessPartialBodyLimitActions(t *testing.T) {
 		SecResponseBodyAccess On
 		SecResponseBodyLimitAction Reject
 	`))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	w := waf.(wafWrapper).waf
-	if w.RequestBodyLimitAction != types.BodyLimitActionProcessPartial {
-		t.Fatalf("expected RequestBodyLimitAction to be ProcessPartial in DetectionOnly mode, got %v", w.RequestBodyLimitAction)
-	}
-	if w.ResponseBodyLimitAction != types.BodyLimitActionProcessPartial {
-		t.Fatalf("expected ResponseBodyLimitAction to be ProcessPartial in DetectionOnly mode, got %v", w.ResponseBodyLimitAction)
-	}
+	require.Equal(t, types.BodyLimitActionProcessPartial, w.RequestBodyLimitAction, "expected RequestBodyLimitAction to be ProcessPartial in DetectionOnly mode")
+	require.Equal(t, types.BodyLimitActionProcessPartial, w.ResponseBodyLimitAction, "expected ResponseBodyLimitAction to be ProcessPartial in DetectionOnly mode")
 }
 
 func TestRulesCount(t *testing.T) {
 	waf, err := NewWAF(NewWAFConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	rules, ok := waf.(wafWithRules)
-	if !ok {
-		t.Fatal("WAF does not implement WAFWithRules")
-	}
-	if rules.RulesCount() != 0 {
-		t.Fatalf("expected 0 rules, got %d", rules.RulesCount())
-	}
+	require.True(t, ok, "WAF does not implement WAFWithRules")
+	require.Equal(t, 0, rules.RulesCount(), "expected 0 rules")
 
 	waf, err = NewWAF(NewWAFConfig().
 		WithDirectives(`SecRule REMOTE_ADDR "127.0.0.1" "id:1,phase:1,deny,status:403"`).
 		WithDirectives(`SecRule REQUEST_URI "/test" "id:2,phase:1,deny,status:403"`))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	rules, ok = waf.(wafWithRules)
-	if !ok {
-		t.Fatal("WAF does not implement WAFWithRules")
-	}
-	if rules.RulesCount() != 2 {
-		t.Fatalf("expected 2 rules, got %d", rules.RulesCount())
-	}
+	require.True(t, ok, "WAF does not implement WAFWithRules")
+	require.Equal(t, 2, rules.RulesCount(), "expected 2 rules")
 }

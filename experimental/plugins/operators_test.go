@@ -6,6 +6,8 @@ package plugins_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/corazawaf/coraza/v3/experimental/plugins"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/operators"
@@ -19,8 +21,6 @@ func TestGetOperator(t *testing.T) {
 
 		plugins.RegisterOperator("custom_operator", operator)
 		_, err := operators.Get("custom_operator", plugintypes.OperatorOptions{})
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 	})
 }

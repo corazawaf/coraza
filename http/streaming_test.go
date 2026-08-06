@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/stretchr/testify/require"
 )
 
 // We use a spy to verify Flush() is actually called on the underlying writer.
@@ -74,9 +75,7 @@ func readFirstN(t *testing.T, r io.Reader, n int, timeout time.Duration) ([]byte
 // and Flush reaches the client immediately, enabling finalized responses.
 func TestStreamingEngineOff(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`SecRuleEngine Off`))
-	if err != nil {
-		t.Fatalf("failed to create WAF: %v", err)
-	}
+	require.NoError(t, err)
 
 	var spy *flushSpy
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -95,36 +94,23 @@ func TestStreamingEngineOff(t *testing.T) {
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
-	if err != nil {
-		t.Fatalf("unexpected error performing request: %v", err)
-	}
+	require.NoError(t, err)
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("unexpected status code: %d", res.StatusCode)
-	}
+	require.Equal(t, http.StatusOK, res.StatusCode)
 
 	// Expect to receive the first chunk promptly after Flush.
 	// Since 200ms < 500ms (server sleep), success means we got data BEFORE sleep ended.
 	b, ok := readFirstN(t, res.Body, len("Hello "), 200*time.Millisecond)
-	if !ok {
-		t.Fatalf("did not receive first chunk in time; flush likely did not propagate")
-	}
-	if string(b) != "Hello " {
-		t.Fatalf("unexpected first chunk: %q", string(b))
-	}
+	require.True(t, ok)
+	require.Equal(t, "Hello ", string(b))
 	// Verify Flush was actually propagated
-	if spy == nil || !spy.flushed {
-		t.Fatalf("Flush() was not propagated to the underlying response writer")
-	}
+	require.NotNil(t, spy)
+	require.True(t, spy.flushed)
 	// Read the remainder of the body without timing assertions.
 	rest, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("failed reading remaining body: %v", err)
-	}
-	if string(rest) != "world!" {
-		t.Fatalf("unexpected remaining body: %q", string(rest))
-	}
+	require.NoError(t, err)
+	require.Equal(t, "world!", string(rest))
 }
 
 // Test that with SecRuleEngine On and with response body access enabled,
@@ -137,9 +123,7 @@ SecResponseBodyAccess On
 SecResponseBodyMimeType application/json`)
 
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
-	if err != nil {
-		t.Fatalf("failed to create WAF: %v", err)
-	}
+	require.NoError(t, err)
 
 	var spy *flushSpy
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -158,14 +142,10 @@ SecResponseBodyMimeType application/json`)
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
-	if err != nil {
-		t.Fatalf("unexpected error performing request: %v", err)
-	}
+	require.NoError(t, err)
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("unexpected status code: %d", res.StatusCode)
-	}
+	require.Equal(t, http.StatusOK, res.StatusCode)
 
 	// We expect to receive the first chunk promptly after Flush.
 	// Since 200ms < 500ms (server sleep), success means we got data BEFORE sleep ended.
@@ -174,23 +154,16 @@ SecResponseBodyMimeType application/json`)
 		// This is the current buggy behavior: flush is swallowed by the interceptor.
 		t.Fatalf("did not receive first chunk in time; finalized is hindered when SecRuleEngine is On")
 	}
-	if string(b) != "Hello " {
-		t.Fatalf("unexpected first chunk: %q", string(b))
-	}
+	require.Equal(t, "Hello ", string(b))
 
 	// Verify Flush was actually propagated
-	if spy == nil || !spy.flushed {
-		t.Fatalf("Flush() was not propagated to the underlying response writer")
-	}
+	require.NotNil(t, spy)
+	require.True(t, spy.flushed)
 
 	// Read the remainder of the body without timing assertions.
 	rest, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("failed reading remaining body: %v", err)
-	}
-	if string(rest) != "world!" {
-		t.Fatalf("unexpected remaining body: %q", string(rest))
-	}
+	require.NoError(t, err)
+	require.Equal(t, "world!", string(rest))
 }
 
 // Test that with SecRuleEngine On but without response body access enabled,
@@ -201,9 +174,7 @@ SecRuleEngine On
 SecResponseBodyAccess Off`)
 
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
-	if err != nil {
-		t.Fatalf("failed to create WAF: %v", err)
-	}
+	require.NoError(t, err)
 
 	var spy *flushSpy
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -222,14 +193,10 @@ SecResponseBodyAccess Off`)
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
-	if err != nil {
-		t.Fatalf("unexpected error performing request: %v", err)
-	}
+	require.NoError(t, err)
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("unexpected status code: %d", res.StatusCode)
-	}
+	require.Equal(t, http.StatusOK, res.StatusCode)
 
 	// We expect to receive the first chunk promptly after Flush.
 	// Since 200ms < 500ms (server sleep), success means we got data BEFORE sleep ended.
@@ -238,23 +205,16 @@ SecResponseBodyAccess Off`)
 		// This is the current buggy behavior: flush is swallowed by the interceptor.
 		t.Fatalf("did not receive first chunk in time; finalized is hindered when SecRuleEngine is On")
 	}
-	if string(b) != "Hello " {
-		t.Fatalf("unexpected first chunk: %q", string(b))
-	}
+	require.Equal(t, "Hello ", string(b))
 
 	// Verify Flush was actually propagated
-	if spy == nil || !spy.flushed {
-		t.Fatalf("Flush() was not propagated to the underlying response writer")
-	}
+	require.NotNil(t, spy)
+	require.True(t, spy.flushed)
 
 	// Read the remainder of the body without timing assertions.
 	rest, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("failed reading remaining body: %v", err)
-	}
-	if string(rest) != "world!" {
-		t.Fatalf("unexpected remaining body: %q", string(rest))
-	}
+	require.NoError(t, err)
+	require.Equal(t, "world!", string(rest))
 }
 
 // Test that with SecRuleEngine On and without response body access enabled,
@@ -266,9 +226,7 @@ SecRule RESPONSE_HEADERS:trigger "@streq trigger" "id:1,phase:3,t:lowercase,deny
 SecResponseBodyAccess Off`)
 
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
-	if err != nil {
-		t.Fatalf("failed to create WAF: %v", err)
-	}
+	require.NoError(t, err)
 
 	var spy *flushSpy
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -290,9 +248,7 @@ SecResponseBodyAccess Off`)
 
 	res, err := http.Get(ts.URL)
 
-	if err != nil {
-		t.Fatalf("unexpected error performing request: %v", err)
-	}
+	require.NoError(t, err)
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusForbidden {
@@ -306,12 +262,8 @@ SecResponseBodyAccess Off`)
 
 	// Read the remainder of the body without timing assertions.
 	rest, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("failed reading remaining body: %v", err)
-	}
-	if string(rest) != "" {
-		t.Fatalf("unexpected remaining body: %q", string(rest))
-	}
+	require.NoError(t, err)
+	require.Empty(t, string(rest), "unexpected remaining body")
 }
 
 // TestStreamingEngineOnNoResponseBodyAccess_HTTP10 verifies that when SecRuleEngine is On but
@@ -331,15 +283,11 @@ SecRuleEngine On
 SecResponseBodyAccess Off`)
 
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(directives))
-	if err != nil {
-		t.Fatalf("failed to create WAF: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Create a listener on a random port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("failed to create listener: %v", err)
-	}
+	require.NoError(t, err)
 	defer listener.Close()
 
 	// Base address for the server
@@ -370,9 +318,7 @@ SecResponseBodyAccess Off`)
 
 	// Connect client
 	conn, err := net.Dial("tcp", address)
-	if err != nil {
-		t.Fatalf("failed to connect to server: %v", err)
-	}
+	require.NoError(t, err)
 	defer conn.Close()
 
 	// Send HTTP/1.0 GET request
@@ -381,14 +327,10 @@ SecResponseBodyAccess Off`)
 	// Read initial response
 	// It's crucial to set a timeout shorter than the delay in the server's handler
 	err = conn.SetReadDeadline(time.Now().Add(20 * time.Millisecond))
-	if err != nil {
-		t.Fatalf("failed to set read timeout: %v", err)
-	}
+	require.NoError(t, err)
 	buf := make([]byte, 1024)
 	n, err := conn.Read(buf)
-	if err != nil {
-		t.Fatalf("failed to read response: %v", err)
-	}
+	require.NoError(t, err)
 
 	responseText := string(buf[:n])
 	// Verify HTTP/1.0 response
@@ -405,9 +347,7 @@ SecResponseBodyAccess Off`)
 	time.Sleep(600 * time.Millisecond)
 	// Reset timeout for the second read
 	err = conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
-	if err != nil {
-		t.Fatalf("failed to set read timeout: %v", err)
-	}
+	require.NoError(t, err)
 	n, err = conn.Read(buf)
 	if err != nil && err != io.EOF {
 		t.Fatalf("error reading second part: %v", err)
