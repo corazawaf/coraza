@@ -216,6 +216,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	if r.operator == nil {
 		logger.Debug().Msg("Forcing rule to match")
 		md := &corazarules.MatchData{}
+		md.Match_ = r.auditLogMatch(md)
 		if r.ParentID_ != noID || r.MultiMatch {
 			// In order to support Msg and LogData for inner rules, we need to expand them now
 			if r.Msg != nil {
@@ -295,6 +296,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 							Value_:      carg,
 							ChainLevel_: chainLevel,
 						}
+						mr.Match_ = r.auditLogMatch(mr)
 						// Set the txn variables for expansions before usage
 						r.matchVariable(tx, mr)
 
@@ -708,6 +710,42 @@ func (r *Rule) SetOperator(operator plugintypes.Operator, functionName string, p
 		Data:     params,
 		Negation: len(functionName) > 0 && functionName[0] == '!',
 	}
+}
+
+// auditLogMatch formats a rule match using the libmodsecurity v3 detail syntax.
+func (r *Rule) auditLogMatch(md types.MatchData) string {
+	if r.operator == nil || r.operator.Function == "" {
+		return "Matched."
+	}
+
+	operator := strings.TrimPrefix(r.operator.Function, "!")
+	operator = strings.TrimPrefix(operator, "@")
+	if operator == "" {
+		return "Matched."
+	}
+	operator = strings.ToUpper(operator[:1]) + operator[1:]
+
+	var match strings.Builder
+	match.WriteString("Matched \"Operator `")
+	match.WriteString(operator)
+	match.WriteString("'")
+
+	if r.operator.Data != "" {
+		match.WriteString(" with parameter `")
+		match.WriteString(r.operator.Data)
+		match.WriteString("'")
+	}
+
+	match.WriteString(" against variable `")
+	match.WriteString(md.Variable().Name())
+	if key := md.Key(); key != "" {
+		match.WriteByte(':')
+		match.WriteString(key)
+	}
+	match.WriteString("' (Value: `")
+	match.WriteString(md.Value())
+	match.WriteString("' )\"")
+	return match.String()
 }
 
 func (r *Rule) executeOperator(data string, tx *Transaction) (result bool) {
