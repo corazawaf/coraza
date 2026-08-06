@@ -20,7 +20,11 @@ import (
 // the untransformed argument, so the rule simply stops matching.
 var errMD5NotAvailableFIPS = errors.New("md5 transformation is unavailable in FIPS 140-3 mode")
 
-var emptyMD5 string
+// The MD5 digest of an empty input, hardcoded rather than computed via md5.Sum(nil): that call
+// panics under GODEBUG=fips140=only, even lazily, since crypto/md5's checkSum() panics
+// unconditionally regardless of input length. The value is fixed by the algorithm, so there is
+// nothing to compute.
+const emptyMD5 = "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e"
 
 func md5T(data string) (string, bool, error) {
 	if fips140.Enabled() {
@@ -39,13 +43,4 @@ func md5T(data string) (string, bool, error) {
 	// The occurrence of an invariant transformation is so unlikely that we can assume the transformation returns a changed value
 	// https://crypto.stackexchange.com/questions/68674/md5-existence-of-invariant-fixed-point
 	return strings.WrapUnsafe(h.Sum(nil)), true, nil
-}
-
-func init() {
-	if fips140.Enabled() {
-		// md5.Sum panics under GODEBUG=fips140=only. emptyMD5 is left unset, md5T never reads it.
-		return
-	}
-	buf := md5.Sum(nil)
-	emptyMD5 = string(buf[:])
 }
