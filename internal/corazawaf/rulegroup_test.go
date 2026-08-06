@@ -97,3 +97,145 @@ func TestRuleGroupDeleteByID(t *testing.T) {
 		t.Fatal("Unexpected remaining rule in the rulegroup")
 	}
 }
+
+func TestRuleGroupAddDuplicateID(t *testing.T) {
+	rg := NewRuleGroup()
+	if err := rg.Add(newTestRule(1)); err != nil {
+		t.Fatalf("Failed to add rule to rulegroup: %s", err.Error())
+	}
+	if err := rg.Add(newTestRule(1)); err == nil {
+		t.Fatal("Expected error adding a rule with a duplicated id")
+	}
+	if rg.Count() != 1 {
+		t.Fatal("Unexpected rules in the rulegroup")
+	}
+}
+
+// assertFindByID checks that FindByID resolves each present id to the right
+// rule and returns nil for each absent id.
+func assertFindByID(t *testing.T, rg *RuleGroup, present, absent []int) {
+	t.Helper()
+	for _, id := range present {
+		r := rg.FindByID(id)
+		if r == nil {
+			t.Errorf("FindByID(%d): expected rule, got nil", id)
+		} else if r.ID_ != id {
+			t.Errorf("FindByID(%d): got rule with id %d", id, r.ID_)
+		}
+	}
+	for _, id := range absent {
+		if r := rg.FindByID(id); r != nil {
+			t.Errorf("FindByID(%d): expected nil, got rule with id %d", id, r.ID_)
+		}
+	}
+}
+
+func newTestRuleGroup(t *testing.T, ids ...int) RuleGroup {
+	t.Helper()
+	rg := NewRuleGroup()
+	for _, id := range ids {
+		if err := rg.Add(newTestRule(id)); err != nil {
+			t.Fatalf("Failed to add rule to rulegroup: %s", err.Error())
+		}
+	}
+	return rg
+}
+
+func TestRuleGroupFindByIDAfterDelete(t *testing.T) {
+	t.Run("DeleteByID front", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2, 3, 4, 5)
+		rg.DeleteByID(1)
+		assertFindByID(t, &rg, []int{2, 3, 4, 5}, []int{1})
+	})
+
+	t.Run("DeleteByID middle", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2, 3, 4, 5)
+		rg.DeleteByID(3)
+		assertFindByID(t, &rg, []int{1, 2, 4, 5}, []int{3})
+	})
+
+	t.Run("DeleteByID back", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2, 3, 4, 5)
+		rg.DeleteByID(5)
+		assertFindByID(t, &rg, []int{1, 2, 3, 4}, []int{5})
+	})
+
+	t.Run("DeleteByID missing id", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2, 3)
+		rg.DeleteByID(42)
+		assertFindByID(t, &rg, []int{1, 2, 3}, []int{42})
+	})
+
+	t.Run("DeleteByRange", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2, 3, 4, 5)
+		rg.DeleteByRange(2, 4)
+		assertFindByID(t, &rg, []int{1, 5}, []int{2, 3, 4})
+	})
+
+	t.Run("DeleteByMsg", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2, 3)
+		other := newTestRule(4)
+		other.Msg, _ = macro.NewMacro("other-Msg")
+		if err := rg.Add(other); err != nil {
+			t.Fatalf("Failed to add rule to rulegroup: %s", err.Error())
+		}
+		rg.DeleteByMsg("test-Msg")
+		assertFindByID(t, &rg, []int{4}, []int{1, 2, 3})
+	})
+
+	t.Run("DeleteByTag", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2, 3)
+		other := newTestRule(4)
+		other.Tags_ = []string{"Other-Tag"}
+		if err := rg.Add(other); err != nil {
+			t.Fatalf("Failed to add rule to rulegroup: %s", err.Error())
+		}
+		rg.DeleteByTag("Test-Tag")
+		assertFindByID(t, &rg, []int{4}, []int{1, 2, 3})
+	})
+}
+
+func TestRuleGroupFindByIDZero(t *testing.T) {
+	rg := newTestRuleGroup(t, 1)
+	mark := newTestRule(0)
+	mark.SecMark_ = "test-mark"
+	if err := rg.Add(mark); err != nil {
+		t.Fatalf("Failed to add rule to rulegroup: %s", err.Error())
+	}
+	// id 0 must keep resolving via linear scan even when the index exists
+	r := rg.FindByID(0)
+	if r == nil || r.SecMark_ != "test-mark" {
+		t.Error("FindByID(0): expected the ID-less rule to be found")
+	}
+}
+
+func TestRuleGroupDiscardPendingChain(t *testing.T) {
+	t.Run("last rule without chain is kept", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1, 2)
+		rg.DiscardPendingChain()
+		if rg.Count() != 2 {
+			t.Fatal("Unexpected rules in the rulegroup")
+		}
+		assertFindByID(t, &rg, []int{1, 2}, nil)
+	})
+
+	t.Run("pending chain is dropped and its id reusable", func(t *testing.T) {
+		rg := newTestRuleGroup(t, 1)
+		chained := newTestRule(2)
+		chained.HasChain = true
+		if err := rg.Add(chained); err != nil {
+			t.Fatalf("Failed to add rule to rulegroup: %s", err.Error())
+		}
+		rg.DiscardPendingChain()
+		if rg.Count() != 1 {
+			t.Fatal("Unexpected rules in the rulegroup")
+		}
+		assertFindByID(t, &rg, []int{1}, []int{2})
+
+		// re-adding the discarded id must not report a duplicate
+		if err := rg.Add(newTestRule(2)); err != nil {
+			t.Fatalf("Failed to re-add rule after discard: %s", err.Error())
+		}
+		assertFindByID(t, &rg, []int{1, 2}, nil)
+	})
+}

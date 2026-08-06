@@ -19,6 +19,7 @@ import (
 // after compilation
 type RuleGroup struct {
 	rules    []Rule
+	idIndex  map[int]int // rule ID_ mapped to index in rules, nil until first rule is given an ID
 	observer func(rule types.RuleMetadata)
 }
 
@@ -63,6 +64,21 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 
 	rg.rules = append(rg.rules, *rule)
 
+	if rule.ID_ != 0 {
+		// We initialize the idIndex on the first rule that has ID_ field
+		// this way the change surface doesn't include the `NewRuleGroup` function, no allocation for
+		// rule groups without ID_ fields
+		if rg.idIndex == nil {
+			rg.idIndex = make(map[int]int)
+		}
+		// We store all rules' index keyed by their ID_
+		// duplicates are rejected above so we are confident in uniqueness of ID_
+		// first-write-wins is already the behavior prior to the change.
+		if _, ok := rg.idIndex[rule.ID_]; !ok {
+			rg.idIndex[rule.ID_] = len(rg.rules) - 1
+		}
+	}
+
 	if rg.observer != nil {
 		rg.observer(rule)
 	}
@@ -82,6 +98,15 @@ func (rg *RuleGroup) GetRules() []Rule {
 
 // FindByID return a Rule with the requested Id
 func (rg *RuleGroup) FindByID(id int) *Rule {
+	if rg.idIndex != nil && id != 0 {
+		if i, ok := rg.idIndex[id]; ok {
+			return &rg.rules[i]
+		}
+		return nil
+	}
+
+	// fallback for id 0 (rules without an ID are never indexed) or a group
+	// that never indexed anything, e.g. SecMarks
 	for i, r := range rg.rules {
 		if r.ID_ == id {
 			return &rg.rules[i]
@@ -96,16 +121,41 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 func (rg *RuleGroup) DiscardPendingChain() {
 	last := len(rg.rules) - 1
 	if last >= 0 && rg.rules[last].HasChain {
+		// If the rule being dropped has an ID and index map is being kept, we verify
+		// correctness and drop the entry
+		if id := rg.rules[last].ID_; id != 0 && rg.idIndex != nil {
+			if idx, ok := rg.idIndex[id]; ok && idx == last {
+				delete(rg.idIndex, id)
+			}
+		}
 		rg.rules = rg.rules[:last]
 	}
 }
 
 // DeleteByID removes a rule by its ID
 func (rg *RuleGroup) DeleteByID(id int) {
-	for i, r := range rg.rules {
-		if r.ID_ == id {
-			rg.rules = append(rg.rules[:i], rg.rules[i+1:]...)
+	i, ok := rg.idIndex[id]
+	if !ok {
+		// nil idIndex or unindexed id: linear fallback keeps same behavior
+		for j, r := range rg.rules {
+			if r.ID_ == id {
+				i, ok = j, true
+				break
+			}
+		}
+
+		if !ok {
 			return
+		}
+	}
+	rg.rules = append(rg.rules[:i], rg.rules[i+1:]...)
+	if rg.idIndex != nil {
+		delete(rg.idIndex, id)
+		// rules in range [i:] shifted down by one, we restore indices
+		for j := i; j < len(rg.rules); j++ {
+			if ruleId := rg.rules[j].ID_; ruleId != 0 {
+				rg.idIndex[ruleId] = j
+			}
 		}
 	}
 }
@@ -119,6 +169,7 @@ func (rg *RuleGroup) DeleteByRange(start, end int) {
 		}
 	}
 	rg.rules = kept
+	rg.rebuildIndex()
 }
 
 // DeleteByMsg deletes rules with the given message.
@@ -130,6 +181,7 @@ func (rg *RuleGroup) DeleteByMsg(msg string) {
 		}
 	}
 	rg.rules = kept
+	rg.rebuildIndex()
 }
 
 // DeleteByTag deletes rules with the given tag.
@@ -141,11 +193,27 @@ func (rg *RuleGroup) DeleteByTag(tag string) {
 		}
 	}
 	rg.rules = kept
+	rg.rebuildIndex()
 }
 
 // Count returns the count of rules
 func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
+}
+
+// rebuildIndex reconstructs rg.idIndex, used when deletion doesn't happen by ID
+func (rg *RuleGroup) rebuildIndex() {
+	if rg.idIndex == nil {
+		return
+	}
+	clear(rg.idIndex)
+	for i := range rg.rules {
+		if id := rg.rules[i].ID_; id != 0 {
+			if _, ok := rg.idIndex[id]; !ok {
+				rg.idIndex[id] = i
+			}
+		}
+	}
 }
 
 // Eval rules for the specified phase, between 1 and 5
