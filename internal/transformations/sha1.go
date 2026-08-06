@@ -10,7 +10,11 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-var emptySHA1 string
+// The SHA-1 digest of an empty input, hardcoded rather than computed via
+// sha1.Sum(nil): that call panics under GODEBUG=fips140=only, even lazily,
+// since crypto/sha1's checkSum() panics unconditionally regardless of input
+// length. The value is fixed by the algorithm, so there is nothing to compute.
+const emptySHA1 = "\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09"
 
 func sha1T(data string) (string, bool, error) {
 	if len(data) == 0 {
@@ -23,9 +27,4 @@ func sha1T(data string) (string, bool, error) {
 	}
 	// The occurrence of an invariant transformation is so unlikely that we can assume the transformation returns a changed value
 	return strings.WrapUnsafe(h.Sum(nil)), true, nil
-}
-
-func init() {
-	buf := sha1.Sum(nil)
-	emptySHA1 = string(buf[:])
 }
