@@ -111,6 +111,14 @@ WAF is destroyed, or use this tag to opt out of memoization entirely.
 * `coraza.rule.mandatory_rule_id_check` - enables strict rule id check where `id` action is required for all SecRule/SecAction.
 * `coraza.rule.rx_prefilter` - sets the default value of the `SecRxPreFilter` directive to `On`. Optimizes `@rx` operator, by skipping the full regex when an input can not match. This build tag is meant only for testing purposes, rely on `SecRxPreFilter` directive for runtime configuration and broader documentation on this feature.
 
+### FIPS mode
+
+Coraza supports running under Go's [FIPS 140-3 mode](https://go.dev/doc/security/fips140) enabled.
+Detection of FIPS mode is performed at runtime, so no special build tag is required. The `crypto/fips140` package is used to check if FIPS mode is enabled, and Coraza will adjust its behavior accordingly as follows: MD5 and SHA-1 are not FIPS-approved, so the `t:md5` and `t:sha1` transformations are unavailable
+in this mode. They remain **registered**, so rule sets that reference them, including the CRS, still load unchanged.
+The restriction applies at evaluation time instead, emitting an error and resulting in a no-op.
+Review any rule of yours that depends on `t:md5` or `t:sha1` before deploying in FIPS mode.
+
 ## E2E Testing
 
 [`http/e2e/`](./http/e2e) provides an utility to run e2e tests.
