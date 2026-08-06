@@ -6,23 +6,18 @@ package transformations
 import (
 	"crypto/md5"
 	"io"
-	"sync"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-var (
-	emptyMD5     string
-	emptyMD5Once sync.Once
-)
+// The MD5 digest of an empty input, hardcoded rather than computed via
+// md5.Sum(nil): that call panics under GODEBUG=fips140=only, even lazily,
+// since crypto/md5's checkSum() panics unconditionally regardless of input
+// length. The value is fixed by the algorithm, so there is nothing to compute.
+const emptyMD5 = "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e"
 
 func md5T(data string) (string, bool, error) {
 	if len(data) == 0 {
-		// Computed lazily to avoid calling MD5 in an init, which panics under GODEBUG=fips140=only.
-		emptyMD5Once.Do(func() {
-			sum := md5.Sum(nil)
-			emptyMD5 = string(sum[:])
-		})
 		return emptyMD5, true, nil
 	}
 

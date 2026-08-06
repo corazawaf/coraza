@@ -6,23 +6,18 @@ package transformations
 import (
 	"crypto/sha1"
 	"io"
-	"sync"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-var (
-	emptySHA1     string
-	emptySHA1Once sync.Once
-)
+// The SHA-1 digest of an empty input, hardcoded rather than computed via
+// sha1.Sum(nil): that call panics under GODEBUG=fips140=only, even lazily,
+// since crypto/sha1's checkSum() panics unconditionally regardless of input
+// length. The value is fixed by the algorithm, so there is nothing to compute.
+const emptySHA1 = "\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09"
 
 func sha1T(data string) (string, bool, error) {
 	if len(data) == 0 {
-		// Computed lazily to avoid calling SHA-1 in an init, which panics under GODEBUG=fips140=only.
-		emptySHA1Once.Do(func() {
-			sum := sha1.Sum(nil)
-			emptySHA1 = string(sum[:])
-		})
 		return emptySHA1, true, nil
 	}
 	h := sha1.New()
