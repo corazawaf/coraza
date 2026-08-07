@@ -5,6 +5,8 @@ package operators
 
 import (
 	"fmt"
+	"net"
+	"net/netip"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
