@@ -9,6 +9,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -487,6 +488,13 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	if tCase.http2 {
 		ts.EnableHTTP2 = true
 		ts.StartTLS()
+		// Go 1.25's crypto/tls still offers X25519 under GODEBUG=fips140=only, where crypto/ecdh
+		// refuses it and the handshake fails before Coraza sees the request. Go 1.26 filters
+		// non-approved curves out of the defaults automatically (crypto/tls.Config.curvePreferences).
+		// Pin a FIPS-approved curve so this test exercises the middleware on both.
+		if tr, ok := ts.Client().Transport.(*http.Transport); ok && tr.TLSClientConfig != nil {
+			tr.TLSClientConfig.CurvePreferences = []tls.CurveID{tls.CurveP256}
+		}
 	} else {
 		ts.Start()
 	}
