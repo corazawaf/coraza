@@ -107,8 +107,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      GODEBUG: ${{ matrix.godebug }}
     steps:
       - name: Checkout code
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
@@ -117,9 +115,16 @@ jobs:
         with:
           go-version: 1.25.x
           cache: true
+      # Warm the module cache before enabling FIPS: GODEBUG applies to the go command itself, and
+      # on Go 1.25 it cannot reach proxy.golang.org under fips140=only (the TLS handshake
+      # negotiates X25519, which crypto/ecdh refuses). The test steps then need no network.
+      - name: Download dependencies
+        run: |
+          go mod download
+          go -C testing/coreruleset mod download
       - name: Tests
-        run: go test ./...
+        run: GODEBUG=${{ matrix.godebug }} go test ./...
       - name: FTW tests
-        run: go test ./testing/coreruleset
+        run: GODEBUG=${{ matrix.godebug }} go test ./testing/coreruleset
       - name: FTW tests (multiphase evaluation)
-        run: go test -tags=coraza.rule.multiphase_evaluation ./testing/coreruleset
+        run: GODEBUG=${{ matrix.godebug }} go test -tags=coraza.rule.multiphase_evaluation ./testing/coreruleset
