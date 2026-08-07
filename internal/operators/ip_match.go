@@ -33,6 +33,7 @@ import (
 // ```
 type ipMatch struct {
 	subnets []net.IPNet
+	trie    *IPTrie
 }
 
 var _ plugintypes.Operator = (*ipMatch)(nil)
@@ -41,6 +42,7 @@ func newIPMatch(options plugintypes.OperatorOptions) (plugintypes.Operator, erro
 	data := options.Arguments
 
 	var subnets []net.IPNet
+	trie := NewIPTrie()
 	for _, sb := range strings.Split(data, ",") {
 		sb = strings.TrimSpace(sb)
 		if sb == "" {
@@ -58,12 +60,23 @@ func newIPMatch(options plugintypes.OperatorOptions) (plugintypes.Operator, erro
 			continue
 		}
 		subnets = append(subnets, *subnet)
+		trie.InsertIPNet(*subnet)
 	}
-	return &ipMatch{subnets: subnets}, nil
+	var triePtr *IPTrie
+	if len(subnets) >= 8 {
+		triePtr = trie
+	}
+	return &ipMatch{subnets: subnets, trie: triePtr}, nil
 }
 
 func (o *ipMatch) Evaluate(tx plugintypes.TransactionState, value string) bool {
 	ip := net.ParseIP(value)
+	if len(ip) == 0 {
+		return false
+	}
+	if o.trie != nil {
+		return o.trie.ContainsIP(ip)
+	}
 	for _, subnet := range o.subnets {
 		if subnet.Contains(ip) {
 			return true
