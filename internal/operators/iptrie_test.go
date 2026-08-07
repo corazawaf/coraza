@@ -65,6 +65,36 @@ func TestIPTrieCoraza(t *testing.T) {
 			queryIP:   "not-an-ip",
 			wantMatch: false,
 		},
+		{
+			name:      "Empty query string returns false",
+			args:      "10.0.0.0/8",
+			queryIP:   "",
+			wantMatch: false,
+		},
+		{
+			name:      "Comma-separated list with spaces and empty tokens",
+			args:      "10.0.0.1, , 192.168.1.1, invalid_cidr",
+			queryIP:   "192.168.1.1",
+			wantMatch: true,
+		},
+		{
+			name:      "IPv6 without prefix auto-appends /128",
+			args:      "2001:db8::1",
+			queryIP:   "2001:db8::1",
+			wantMatch: true,
+		},
+		{
+			name:      "IPv4 /0 match all",
+			args:      "0.0.0.0/0",
+			queryIP:   "8.8.8.8",
+			wantMatch: true,
+		},
+		{
+			name:      "IPv6 /0 match all",
+			args:      "::/0",
+			queryIP:   "2001:db8::1234",
+			wantMatch: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -80,6 +110,35 @@ func TestIPTrieCoraza(t *testing.T) {
 		})
 	}
 }
+
+func TestIPTrieDirectMethodsCoverage(t *testing.T) {
+	trie := NewIPTrie()
+
+	// 1. Test InsertIPNet with invalid IPNet
+	badIPNet := net.IPNet{IP: net.IP{1, 2}, Mask: net.CIDRMask(8, 32)}
+	if trie.InsertIPNet(badIPNet) {
+		t.Errorf("InsertIPNet with invalid IP slice should return false")
+	}
+
+	// 2. Test ContainsIP with empty IP
+	if trie.ContainsIP(net.IP{}) {
+		t.Errorf("ContainsIP(empty) should return false")
+	}
+
+	// 3. Test ContainsIP with invalid slice length
+	if trie.ContainsIP(net.IP{1, 2}) {
+		t.Errorf("ContainsIP(invalid slice) should return false")
+	}
+
+	// 4. Test ContainsAddr with zero netip.Addr
+	if trie.ContainsAddr(netip.Addr{}) {
+		t.Errorf("ContainsAddr(zero Addr) should return false")
+	}
+
+	// 5. Test InsertPrefix with zero netip.Addr
+	trie.InsertPrefix(netip.Prefix{})
+}
+
 
 func benchmarkCorazaIPMatch(b *testing.B, numCIDRs int) {
 	subnets := ""
