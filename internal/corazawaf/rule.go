@@ -201,16 +201,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, r.LogID())
-	if r.Msg != nil {
-		// Expand the message using the current TX variables so that %{rule.msg} in setvar actions
-		// returns the fully expanded message, matching ModSecurity behavior.
-		ruleCol.SetIndex("msg", 0, r.Msg.Expand(tx))
-	}
 	ruleCol.SetIndex("rev", 0, r.Rev_)
-	if r.LogData != nil {
-		// Same expansion for logdata, matching ModSecurity behavior for %{rule.logdata}.
-		ruleCol.SetIndex("logdata", 0, r.LogData.Expand(tx))
-	}
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
@@ -220,9 +211,11 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			// In order to support Msg and LogData for inner rules, we need to expand them now
 			if r.Msg != nil {
 				md.Message_ = r.Msg.Expand(tx)
+				ruleCol.SetIndex("msg", 0, md.Message_)
 			}
 			if r.LogData != nil {
 				md.Data_ = r.LogData.Expand(tx)
+				ruleCol.SetIndex("logdata", 0, md.Data_)
 			}
 		}
 		matchedValues = append(matchedValues, md)
@@ -306,9 +299,13 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 						if r.ParentID_ != noID || !r.HasChain {
 							if r.Msg != nil {
 								mr.Message_ = r.Msg.Expand(tx)
+								// Update rule collection so that %{rule.msg} in setvar actions returns the expanded message.
+								ruleCol.SetIndex("msg", 0, mr.Message_)
 							}
 							if r.LogData != nil {
 								mr.Data_ = r.LogData.Expand(tx)
+								// Update rule collection so that %{rule.logdata} in setvar actions returns the expanded logdata.
+								ruleCol.SetIndex("logdata", 0, mr.Data_)
 							}
 						}
 
@@ -335,9 +332,11 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 							// Msg and LogData have to be expanded again because actions execution might have changed them
 							if r.Msg != nil {
 								mr.Message_ = r.Msg.Expand(tx)
+								ruleCol.SetIndex("msg", 0, mr.Message_)
 							}
 							if r.LogData != nil {
 								mr.Data_ = r.LogData.Expand(tx)
+								ruleCol.SetIndex("logdata", 0, mr.Data_)
 							}
 						}
 
@@ -380,10 +379,14 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		// matches and to rely on MATCHED_* variables updated by the chain, not just by the first rule.
 		if r.HasChain || r.operator == nil {
 			if r.Msg != nil {
-				matchedValues[0].(*corazarules.MatchData).Message_ = r.Msg.Expand(tx)
+				msg := r.Msg.Expand(tx)
+				matchedValues[0].(*corazarules.MatchData).Message_ = msg
+				ruleCol.SetIndex("msg", 0, msg)
 			}
 			if r.LogData != nil {
-				matchedValues[0].(*corazarules.MatchData).Data_ = r.LogData.Expand(tx)
+				logdata := r.LogData.Expand(tx)
+				matchedValues[0].(*corazarules.MatchData).Data_ = logdata
+				ruleCol.SetIndex("logdata", 0, logdata)
 			}
 		}
 
