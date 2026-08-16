@@ -85,6 +85,31 @@ func TestCJSDecode(t *testing.T) {
 			input: "\\u{1234567}",
 			want:  "u{1234567}",
 		},
+		{
+			// Hex digits are case-insensitive, including in a leading-zero
+			// form that still has to fold.
+			input: "\\u{0FF5e}",
+			want:  "~",
+		},
+		{
+			// Empty braces: no hex digits, so not a valid extended escape.
+			// Falls through to generic escape handling, dropping the
+			// backslash and leaving the braces literal.
+			input: "\\u{}",
+			want:  "u{}",
+		},
+		{
+			// A well-formed escape for U+0000 decodes to a NUL byte rather
+			// than being treated as malformed.
+			input: "\\u{0}",
+			want:  "\x00",
+		},
+		{
+			// Extended and classic 4-digit escapes must decode in the same
+			// pass without the extended form consuming the one after it.
+			input: "\\u{41}\\u0042",
+			want:  "AB",
+		},
 	}
 
 	for _, tc := range tests {

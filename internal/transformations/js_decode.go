@@ -33,16 +33,23 @@ func doJsDecode(input string, pos int) (string, bool) {
 		if input[i] == '\\' {
 			/* Character is an escape. */
 
+			/* Measured once here rather than in the case guard below, which
+			 * would otherwise have to repeat the scan to recover the length. */
+			extLen := 0
+			if (i+2 < inputLen) && (input[i+1] == 'u') && (input[i+2] == '{') {
+				extLen = jsExtendedUnicodeEscapeLen(input, i+3)
+			}
+
 			switch {
 
-			case (i+2 < inputLen) && (input[i+1] == 'u') && (input[i+2] == '{') && jsExtendedUnicodeEscapeLen(input, i+3) > 0:
+			case extLen > 0:
 				/* \u{H...H} - ES2015+ extended Unicode code point escape
 				 * (1-6 hex digits). Handled the same way as \uHHHH below:
 				 * lower byte of the value, with the same full-width-ASCII
 				 * fold -- checked against the fully resolved value, not a
 				 * fixed digit count, so a leading-zero encoding (e.g.
 				 * \u{0ff01}) folds the same as \u{ff01}. */
-				j := jsExtendedUnicodeEscapeLen(input, i+3)
+				j := extLen
 
 				var code rune
 				for k := 0; k < j; k++ {
