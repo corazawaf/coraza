@@ -99,6 +99,9 @@ func cssDecodeInplace(input string, pos int) string {
 
 					/* We must ignore a single whitespace after a hex escape */
 					if (i+j < inputLen) && isspace(input[i+j]) {
+						if input[i+j] == '\r' && i+j+1 < inputLen && input[i+j+1] == '\n' {
+							j++
+						}
 						j++
 					}
 

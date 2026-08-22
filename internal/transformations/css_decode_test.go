@@ -57,6 +57,12 @@ func TestCSSDecode(t *testing.T) {
 			input: "\\41\x19b",
 			want:  "A\x19b",
 		},
+		// CRLF is one CSS newline, so the pair is the single whitespace
+		// ignored after a hex escape.
+		{
+			input: "aler\\74\r\n(1)",
+			want:  "alert(1)",
+		},
 	}
 
 	for _, tc := range tests {
