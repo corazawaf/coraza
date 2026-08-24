@@ -51,6 +51,16 @@ The complexity concern was surfaced by @jptosso for a future refactor:
 
 ## Technical Discussion
 
+How exhaustive the `CanBeSelected` switch should be was argued on the review:
+
+> "I don't think adding everything here makes sense. Just return true on those
+> who can, and use the default otherwise."
+> — @fzipi ([review](https://github.com/corazawaf/coraza/pull/1143#discussion_r1749377590))
+
+> "Although for performance it makes sense, I believe this is easier to maintain
+> and more readable"
+> — @jptosso ([review](https://github.com/corazawaf/coraza/pull/1143#discussion_r1765367950))
+
 Three areas changed together:
 
 - **Parser check.** `CanBeSelected` is consulted during rule parsing so

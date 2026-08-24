@@ -6,7 +6,7 @@
 - **PR:** [#1536](https://github.com/corazawaf/coraza/pull/1536)
 - **Issue(s):** No linked issue
 - **Deciders:** @app/copilot-swe-agent (author)
-- **Category:** Feature (new experimental parser) + Refactor (binary-size hygiene)
+- **Category:** Feature (new experimental parser behind a build tag)
 
 ## Context and Problem
 
