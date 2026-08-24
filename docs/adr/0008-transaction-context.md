@@ -50,6 +50,9 @@ constructor — the final shape complies:
 > be consistent with it."
 > — @anuraaga ([review](https://github.com/corazawaf/coraza/pull/963#discussion_r1467685179))
 
+He accepted the two-method shape once consistency with the WAF config was
+settled:
+
 > "I personally find two methods to be ok, lean towards consistency with the
 > waf config. If you're interested in changing that to options pattern as
 > well for a potential major then that'd be ok too"
