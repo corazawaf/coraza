@@ -76,9 +76,14 @@ eager path enough to ship.
 
 **Perf optimisation.** @jcchavezs suggested a lookup table over `strconv.Itoa`:
 
-> "I was advocating for having a map in memory e.g. `var hourConversion
-> map[int]string = map[int]string{1: \"1\", 2: \"2\", ...}` instead of doing
-> the `strconv.Itoa`."
+> "Sorry if I wasn't clear enough. I was advocating for having a map in
+> memory e.g.
+>
+> ```go
+> var hourConversion map[int]string = map[int]string{1: "1", 2: "2", ...}
+> ```
+>
+> instead of doing the `strconv.Itoa`."
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1223#discussion_r1846662447))
 
 Landed in follow-up #1242.

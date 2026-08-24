@@ -40,7 +40,7 @@ binary search was explicitly deferred.
 
 @M4tteoP pointed at the existing precedent to justify the shape:
 
-> "This is something we are also already doing for other ID ranges: …
+> "This is something we are also already doing for other ID ranges:
 > [`rulegroup.go#L83`](https://github.com/corazawaf/coraza/blob/d6a6959df1a3f0b481929fee62ea058c0a811e6b/internal/corazawaf/rulegroup.go#L83)
 > Just to address also that one if we come up with a better solution"
 > — @M4tteoP ([comment](https://github.com/corazawaf/coraza/pull/1020#issuecomment-2021610897))
@@ -49,7 +49,7 @@ binary search was explicitly deferred.
 
 Code-level review asked for refactor extraction + defensive parsing:
 
-> "I'd extract this into a function and then reuse it in the else block
+> "I'd extract this into a function and then reuse if in the else block
 > `start == end`"
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1020#discussion_r1531101959))
 

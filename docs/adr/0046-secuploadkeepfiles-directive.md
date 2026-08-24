@@ -33,12 +33,15 @@ Chosen: **implement all three states** — `On`, `Off` (default),
 `RelevantOnly`. File operations are already guarded by
 `environment.HasAccessToFS`, so the directive is safe on Wasm builds.
 
-> "Also, ModSec requires `SecUploadKeepFiles` directive to work with
-> `SecUploadDir`: 'This directive requires the storage directory to be
-> defined (using SecUploadDir).' Should we distinguish the dir where we
-> save persisted files from the tmp dir where we save the tmp ones? If so,
-> we should take care of `SecUploadDir` and enforce the same requirement
-> of ModSec"
+> "Also, ModSec [requires](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-(v3.x)#secuploadkeepfiles)
+> `SecUploadKeepFiles` directive to work with `SecUploadDir`:
+>
+> > This directive requires the storage directory to be defined (using
+> > `SecUploadDir`).
+>
+> Should we distinguish the dir where we save persisted files from the tmp
+> dir where we save the tmp ones? If so, we should take care of
+> `SecUploadDir` and enforce the same requirement of ModSec"
 > — @M4tteoP ([comment](https://github.com/corazawaf/coraza/pull/1557#issuecomment-4067770063))
 
 > "Makes sense. Added in 25b636d0"

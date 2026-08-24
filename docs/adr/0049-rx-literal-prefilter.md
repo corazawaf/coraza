@@ -65,10 +65,20 @@ edge cases:
 
 ## Technical Discussion
 
-Runtime vs. build-time activation was the unresolved question. It was
-deferred to a separate PR ([ADR-0050](0050-secrxprefilter-directive.md))
-because build-tag gating made testing harder for embedders wanting
-per-instance opt-in without a rebuild.
+Runtime vs. build-time activation was the unresolved question, and it was
+split out rather than settled here:
+
+> "I would move this to be a different PR so we can skip the build flag."
+> — @fzipi ([review](https://github.com/corazawaf/coraza/pull/1534#discussion_r2901889272))
+
+That follow-up became [ADR-0050](0050-secrxprefilter-directive.md): build-tag
+gating made testing harder for embedders wanting per-instance opt-in without a
+rebuild.
+
+The chosen literal-length threshold was also queried, without a cited source:
+
+> "I wonder about this number, do we have any reference?"
+> — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1534#discussion_r2923591762))
 
 ## Participants
 

@@ -43,10 +43,14 @@ the whole thing under `experimental`:
 @jcchavezs articulated the final shape and the v4-safety rationale:
 
 > "I like the idea too but I was thinking we should move this to
-> experimental. We could 1. Do not add the method in the interface but the
-> type only 2. create a function in `experimental` called
+> experimental. We could
+> 1. Do not add the method in the interface but the type only
+> 2. create a function in
+> https://github.com/corazawaf/coraza/tree/main/experimental called
 > `WAFConfigWithRuleObserver` which does the interface assertion and calles
-> the type method."
+> the type method.
+>
+> What do you think @heaven ?"
 > — @jcchavezs ([comment](https://github.com/corazawaf/coraza/pull/1478#issuecomment-3787116970))
 
 > "To avoid future breaking changes, we usually land new features that are

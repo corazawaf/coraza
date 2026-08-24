@@ -82,9 +82,12 @@ The Copilot reviewer drove five substantive structural changes:
 
 @ppomes extended tests to cover `SecAction` without explicit `id:`:
 
-> "Added tests at both levels: `TestRuleGroupMergeSecAction` … and
-> `TestMergeRulesSecAction` … verifies both SecAction rules are merged and
-> never deduplicated"
+> "Done — added tests at both levels:
+> - `TestRuleGroupMergeSecAction` in rulegroup_test.go: uses ID=0 directly,
+>   verifies both are kept after merge
+> - `TestMergeRulesSecAction` in waf_test.go: uses `SecAction` without `id:`
+>   (which gets ID=0 internally), verifies both SecAction rules are merged
+>   and never deduplicated"
 > — @ppomes ([review](https://github.com/corazawaf/coraza/pull/1492#discussion_r2835771992))
 
 @fzipi flagged the ID=0 semantic during review ("wait, my bad: `SecMarker`

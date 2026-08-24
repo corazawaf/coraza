@@ -55,11 +55,14 @@ validation with the Caddy integration:
 builds are extremely slow on TinyGo's regex engine. @fzipi captured the
 exact arithmetic:
 
-> "**`TestCacheBoundedWithClose`** — 100 cycles × 300 patterns =
-> **30,000 `regexp.Compile` calls** under TinyGo (each `Release` clears the
-> cache, so every cycle recompiles all 300 patterns). … TinyGo's regex
-> engine is dramatically slower than Go's, so these scale tests were not a
-> good fit for the default CI matrix"
+> "- **`TestCacheBoundedWithClose`** — 100 cycles × 300 patterns =
+>   **30,000 `regexp.Compile` calls** under TinyGo (each `Release` clears
+>   the cache, so every cycle recompiles all 300 patterns).
+> […]
+>
+> TinyGo's regex engine is dramatically slower than Go's, so these scale
+> tests are taking hours instead of seconds. The `-short` flag is passed in
+> CI but these tests don't check `testing.Short()`."
 > — @fzipi ([comment](https://github.com/corazawaf/coraza/pull/1540#issuecomment-4064049379))
 
 The tests were reshaped to fit TinyGo timing before the PR merged.

@@ -71,11 +71,17 @@ Long, substantive back-and-forth on whether this is a breaking change.
 
 **anuraaga echoed Go's compatibility posture:**
 
-> "With go's promise of compatibility, it's common to auto-update on minors
-> and expect no change. Just for reference, the recent blog about … For this
-> PR it's still better to add a config option to opt-in to the correct
-> behavior and change that in a major version release to prevent rule
-> breakage."
+> "But agree if rules deployed that worked stop working and possibly crash
+> users, it's best to be behind a flag of some sort, that can be made the
+> default after a major. With go's promise of compatibility, it's common to
+> auto-update on minors and expect no change. Just for reference, the recent
+> blog about `rand` was quite profound for me on how far it's necessary to
+> go to... be go."
+> — @anuraaga ([review](https://github.com/corazawaf/coraza/pull/1059#discussion_r1592558837))
+
+> "For this PR it's still better to add a config option to opt-in to the
+> correct behavior and change that in a major version release to prevent
+> rule breakage."
 > — @anuraaga ([review](https://github.com/corazawaf/coraza/pull/1059#discussion_r1594816563))
 
 **M4tteoP demonstrated a concrete breakage:**

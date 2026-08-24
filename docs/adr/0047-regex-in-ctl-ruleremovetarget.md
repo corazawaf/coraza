@@ -67,10 +67,13 @@ SecRule REQUEST_URI "@beginsWith /api/jobs" \
 > "@copilot Wouldn't this benefit from memoization?"
 > — @fzipi ([review](https://github.com/corazawaf/coraza/pull/1561#discussion_r2957185229))
 
-> "Yes, great suggestion. Added a public `Memoizer()` getter on `*Rule`,
-> updated `parseCtl` to accept a `plugintypes.Memoizer` parameter; when
-> non-nil, it calls `memoizer.Do(rxPattern, ...)` so identical patterns
-> across rules share a single compiled `*regexp.Regexp`"
+> "Yes, great suggestion. In commit `16d2cdd`:
+>
+> - Added a public `Memoizer()` getter on `*Rule`
+> - Updated `parseCtl` to accept a `plugintypes.Memoizer` parameter; when
+>   non-nil, it calls `memoizer.Do(rxPattern, ...)` so identical patterns
+>   across rules share a single compiled `*regexp.Regexp`
+> […]"
 > — @Copilot ([review](https://github.com/corazawaf/coraza/pull/1561#discussion_r2957227192))
 
 **POST JSON body test coverage.** @fzipi asked for a test that exercises

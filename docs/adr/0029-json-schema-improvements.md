@@ -58,18 +58,23 @@ intended ModSecurity direction:
 
 **Unified operator proposal.** @M4tteoP sketched a shared operator shape:
 
-> "```
-> SecXmlExternalEntity On
-> SecRule XML \"@validateSchema /path/to/xml.xsd\"
+> "Based on docs, ModSec syntax for XML schema validation is:
+>
 > ```
+> SecXmlExternalEntity On
+> SecRule XML "@validateSchema /path/to/xml.xsd"
+> ```
+>
 > So, in the context of JSON it could become:
+>
 > ```
 > SecJsonExternalEntity On
-> SecRule JSON \"@validateSchema /path/to/schema.json\"
+> SecRule JSON "@validateSchema /path/to/schema.json"
 > ```
+>
 > The operator `@validateSchema` can be flexible enough to deal with both
 > json and XML based on the variable or/and the extension of the provided
-> schema."
+> shcema."
 > — @M4tteoP ([comment](https://github.com/corazawaf/coraza/pull/1384#issuecomment-3067129756))
 
 ## Participants

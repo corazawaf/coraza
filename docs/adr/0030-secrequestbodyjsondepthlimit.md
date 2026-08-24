@@ -37,12 +37,15 @@ overhead explicitly and found it acceptable (~33% of the full JSON pipeline
 in the worst case), citing the upstream library's own recommendation:
 
 > "It is not very expensive. Of course, it is _more_ expensive than not
-> doing vlaidation (adds roughly 33% more time in my benchmarks). The
-> upstream library says that '_If you are consuming JSON from an
-> unpredictable source then you may want to validate prior to using
-> GJSON._' I agree, for the case of a WAF. Or we can forget about
-> validation, and see if someone can bypass us. 🤷 If we do, we should
-> document clearly this decision."
+> doing vlaidation (adds roughly 33% more time in my benchmarks).
+>
+> The upstream library [says](https://github.com/tidwall/gjson?tab=readme-ov-file#validate-json)
+> that _If you are consuming JSON from an unpredictable source then you may
+> want to validate prior to using GJSON._ I agree, for the case of a WAF.
+>
+> Or we can forget about validation, and see if someone can bypass us. 🤷 If
+> we do, we should document clearly this decision that we prefer speed over
+> security here."
 > — @fzipi ([review](https://github.com/corazawaf/coraza/pull/1110#discussion_r1685809270))
 
 @jcchavezs challenged the expense and the unbounded config:

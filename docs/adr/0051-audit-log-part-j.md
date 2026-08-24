@@ -65,9 +65,16 @@ the data automatically.
 
 **Version tag on docs:**
 
-> "Also `internal/seclang/directives.go directiveSecAuditLogParts`
-> documentation should be updated: 'not implemented yet.' → 'Available
-> from Coraza v3.7.0' or similar"
+> "Also internal/seclang/directives.go directiveSecAuditLogParts
+> documentation should be updated:
+>
+> ```
+> // - J: This part contains information about the files uploaded using `multipart/form-data` encoding; not implemented yet.
+> ```
+>
+> might make sense to specify the Coraza version from when this is
+> avaiable. `not implemented yet.` -> `Available from Coraza v3.7.0` or
+> similar"
 > — @M4tteoP ([review](https://github.com/corazawaf/coraza/pull/1591#discussion_r3033700886))
 
 Applied.
