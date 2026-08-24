@@ -1,0 +1,37 @@
+name: ADR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/adr/**"
+      - "magefile_adr.go"
+      - ".github/workflows/adr.yml"
+  pull_request:
+    paths:
+      - "docs/adr/**"
+      - "magefile_adr.go"
+      - ".github/workflows/adr.yml"
+
+permissions: {}
+
+concurrency:
+  group: adr-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  adr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        with:
+          persist-credentials: false
+      - name: Install Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: 1.25.x
+          cache: true
+      - run: go run mage.go adr
