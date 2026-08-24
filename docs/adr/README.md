@@ -73,5 +73,9 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0004](0004-matchedrule-log-method.md) | [#848](https://github.com/corazawaf/coraza/pull/848) | 2023-07-25 | v3.0.3 | F | `MatchedRule.Log()` method |
 | [0005](0005-auditlogformatter-interface.md) | [#850](https://github.com/corazawaf/coraza/pull/850) | 2023-08-06 | v3.0.3 | R | `AuditLogFormatter` interface |
 | [0006](0006-regex-ahocorasick-memoize.md) | [#836](https://github.com/corazawaf/coraza/pull/836) | 2023-08-06 | v3.0.3 | ⚡ | Regex & Aho-Corasick memoize cache |
+| [0007](0007-uppercase-transformation.md) | [#935](https://github.com/corazawaf/coraza/pull/935) | 2023-12-18 | v3.1.0 | P | `uppercase` transformation |
+| [0008](0008-transaction-context.md) | [#963](https://github.com/corazawaf/coraza/pull/963) | 2024-01-31 | v3.1.0 | F | Transaction `context.Context` plumbing |
+| [0009](0009-structured-logging.md) | [#971](https://github.com/corazawaf/coraza/pull/971) | 2024-02-01 | v3.1.0 | R | Structured `debuglog` facade |
+| [0010](0010-raw-body-processor.md) | [#983](https://github.com/corazawaf/coraza/pull/983) | 2024-02-06 | v3.1.0 | F | `raw` request body processor |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
