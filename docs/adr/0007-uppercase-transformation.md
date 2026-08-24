@@ -40,9 +40,12 @@ consistency:
 > `internal/transformations/testadata`?"
 > — @jptosso ([comment](https://github.com/corazawaf/coraza/pull/935#issuecomment-1849541214))
 
-> "Thanks for your contribution! LGTM. Unless @anuraaga has other opinions,
-> it's good to merge." — @fzipi
-> ([comment](https://github.com/corazawaf/coraza/pull/935#issuecomment-1847219766))
+The approval that followed added no further conditions:
+
+> "Thanks for your contribution!
+>
+> LGTM. Unless @anuraaga has other opinions, it's good to merge."
+> — @fzipi ([comment](https://github.com/corazawaf/coraza/pull/935#issuecomment-1847219766))
 
 No architectural debate.
 

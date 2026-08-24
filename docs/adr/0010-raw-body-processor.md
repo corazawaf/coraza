@@ -45,8 +45,12 @@ SecRule REQBODY_PROCESSOR "!@rx (?:URLENCODED|MULTIPART|XML|JSON)"
 Discussion focused on allocation hygiene and interface cleanup. @anuraaga
 suggested a `strings.Builder` + `io.Copy` path for lower allocation pressure:
 
-> "`var buf strings.Builder; if _, err := io.Copy(&buf, reader); err != nil { … }`
-> — Generally can't be sure of eliding heap allocations but worth trying"
+> ```suggestion
+> 	var buf strings.Builder
+> 	if _, err := io.Copy(&buf, reader); err != nil {
+> ```
+>
+> Generally can't be sure of eliding heap allocations but worth trying
 > — @anuraaga ([review](https://github.com/corazawaf/coraza/pull/983#discussion_r1479118293))
 
 @jcchavezs pushed for `b.Len()` over a manual length tracker and unused
@@ -58,7 +62,10 @@ parameter cleanup:
 > "nit: you can remove the param names as they aren't used."
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/983#discussion_r1478401110))
 
-Both were applied.
+The parameter cleanup was applied. The length suggestion was taken in spirit
+rather than literally: `internal/bodyprocessors/raw.go` keeps the builder's
+output as a string and reports `strconv.Itoa(len(b))` rather than calling
+`buf.Len()`.
 
 ## Participants
 
