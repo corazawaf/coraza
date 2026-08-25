@@ -78,8 +78,11 @@ check is not duplicated across the three writer call sites.
 
 ## Consequences
 
-- **Positive:** Public argument intake is bounded by default; `ARGS_GET` and
-  `ARGS_POST` cannot grow unboundedly from attacker-supplied inputs.
+- **Positive:** Argument intake through `AddGetRequestArgument` /
+  `AddPostRequestArgument` / `AddPathRequestArgument` is bounded by default, so
+  query strings and form fields arriving through those helpers cannot grow
+  `ARGS_GET` or `ARGS_POST` without limit. The guarantee stops at the helpers:
+  body processors write to the collections directly and are not covered.
 - **Negative / follow-up:** Body-processor-internal writes are still unbounded
   until a bounded `Map` collection lands. This was explicitly deferred.
 

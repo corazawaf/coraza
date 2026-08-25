@@ -40,9 +40,11 @@ housekeeping rather than design, and follow-up work was explicitly deferred.
 > "Can we move this TODO to a proper issue so someone might implement it?"
 > — @fzipi ([review comment](https://github.com/corazawaf/coraza/pull/811#discussion_r1226569095))
 
-> "There is a work in progress around it: …" — @M4tteoP, pointing at the
-> in-progress response-arg discussion on OWASP Slack
-> ([review comment](https://github.com/corazawaf/coraza/pull/811#discussion_r1227294607))
+The answer pointed at a discussion held on OWASP Slack rather than on the PR:
+
+> "There is a work in progress around it:
+> https://owasp.slack.com/archives/C02BXH135AT/p1686540685548419 🚀"
+> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza/pull/811#discussion_r1227294607))
 
 No substantive architectural debate took place on the PR thread itself; the
 design was discussed out-of-band (OWASP Slack) and the code change was merged

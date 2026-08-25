@@ -58,6 +58,8 @@ revisit in v4". That revisit eventually landed in v3.5.0 as
 > and 204 are also valid status codes."
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/826#discussion_r1241901929))
 
+A second review comment covered connection reuse:
+
 > "Please drain the body before closing it using something like
 > `io.Copy(io.Discard, res.Body)` to be able to reuse the connection."
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/826#discussion_r1241902417))
