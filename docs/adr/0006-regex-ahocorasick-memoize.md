@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2023-08-06
-- **Version:** v3.0.3 (opt-in, behind `coraza.memoize_builders` build tag)
+- **Version:** v3.0.3 (opt-in, behind the `memoize_builders` build tag)
 - **PR:** [#836](https://github.com/corazawaf/coraza/pull/836)
 - **Issue(s):** [coraza-caddy#76](https://github.com/corazawaf/coraza-caddy/issues/76)
 - **Deciders:** @jcchavezs, @anuraaga, @jptosso, @M4tteoP
@@ -34,13 +34,17 @@ hundreds of times, wasting CPU at boot and RSS forever after.
 Chosen: **process-global cache, opt-in via build tag, exposed via
 `experimental`**, because the cache is inherently global (many WAFs share one
 process) and adding `WAF.Close()` was considered too large an API move for v3.
-The global `Close()` helper lives in `experimental` so anyone worried about
-leaks can clear on reload.
+
+Exporting a reset helper was asked for on the thread but did not ship in
+v3.0.3: the cache is process-global and entries live until the process exits.
+Per-WAF cleanup arrived later with `WAF.Close()` (ADR-0043).
 
 > "We should include a flush or reset function so we can delete everything
 > after a web server reload. That function must be exported. I would include
 > it in `experimental/coraza`"
 > — @jptosso ([comment](https://github.com/corazawaf/coraza/pull/836#issuecomment-1622448598))
+
+He then set out why the cache's lifetime is not the WAF's:
 
 > "Waf close is not coming in v3 as we cannot break the api, we should just
 > export all helpers in experimental until we can merge them. But closing
@@ -87,10 +91,10 @@ in v3.5.0 once per-WAF tracking was available
 
 - **Positive:** Large multi-WAF deployments (Caddy, proxy-wasm ambient
   authorities) drop boot-time compile cost dramatically.
-- **Negative / follow-up:** The global cache is process-lifetime — embedders
-  reloading rulesets in-place must call the experimental reset. A cleaner
-  per-WAF lifecycle awaits `WAF.Close()` (ADR-0043) and the default-on
-  decision (ADR-0042).
+- **Negative / follow-up:** The global cache is process-lifetime, with no
+  exported way to clear it in v3.0.3 — embedders reloading rulesets in-place
+  keep the old entries until the process exits. A per-WAF lifecycle arrived
+  with `WAF.Close()` (ADR-0043), alongside the default-on decision (ADR-0042).
 
 ## References
 
