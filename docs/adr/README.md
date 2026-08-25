@@ -67,6 +67,11 @@ Superseding does not delete the old record. Set its status and let the history s
 
 | ADR | PR | Merged | Version | Cat. | Title |
 |-----|----|--------|---------|------|-------|
-| _no records yet_ | | | | | |
+| [0001](0001-response-args-collection.md) | [#811](https://github.com/corazawaf/coraza/pull/811) | 2023-06-12 | v3.0.1 | P | RESPONSE_ARGS collection |
+| [0002](0002-secargumentslimit-directive.md) | [#812](https://github.com/corazawaf/coraza/pull/812) | 2023-06-14 | v3.0.2 | P | SecArgumentsLimit directive |
+| [0003](0003-https-audit-log-writer.md) | [#826](https://github.com/corazawaf/coraza/pull/826) | 2023-07-11 | v3.0.3 | F | HTTPS audit log writer |
+| [0004](0004-matchedrule-log-method.md) | [#848](https://github.com/corazawaf/coraza/pull/848) | 2023-07-25 | v3.0.3 | F | `MatchedRule.Log()` method |
+| [0005](0005-auditlogformatter-interface.md) | [#850](https://github.com/corazawaf/coraza/pull/850) | 2023-08-06 | v3.0.3 | R | `AuditLogFormatter` interface |
+| [0006](0006-regex-ahocorasick-memoize.md) | [#836](https://github.com/corazawaf/coraza/pull/836) | 2023-08-06 | v3.0.3 | ⚡ | Regex & Aho-Corasick memoize cache |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
