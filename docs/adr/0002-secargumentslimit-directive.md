@@ -78,11 +78,12 @@ check is not duplicated across the three writer call sites.
 
 ## Consequences
 
-- **Positive:** Argument intake through `AddGetRequestArgument` /
-  `AddPostRequestArgument` / `AddPathRequestArgument` is bounded by default, so
-  query strings and form fields arriving through those helpers cannot grow
-  `ARGS_GET` or `ARGS_POST` without limit. The guarantee stops at the helpers:
-  body processors write to the collections directly and are not covered.
+- **Positive:** Argument intake through the three request helpers is bounded by
+  default, each capping its own collection: `AddGetRequestArgument` bounds
+  `ARGS_GET` (query string), `AddPostRequestArgument` bounds `ARGS_POST` (POST
+  body arguments), and `AddPathRequestArgument` bounds `ARGS_PATH` (URL path
+  components). The guarantee stops at the helpers: body processors write to the
+  collections directly and are not covered.
 - **Negative / follow-up:** Body-processor-internal writes are still unbounded
   until a bounded `Map` collection lands. This was explicitly deferred.
 
