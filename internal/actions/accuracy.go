@@ -29,7 +29,7 @@ type accuracyFn struct{}
 func (a *accuracyFn) Init(r plugintypes.RuleMetadata, data string) error {
 	acc, err := strconv.Atoi(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid accuracy %q: %w", data, err)
 	}
 	if acc < 1 || acc > 9 {
 		return fmt.Errorf("invalid argument, %d should be between 1 and 9", acc)
