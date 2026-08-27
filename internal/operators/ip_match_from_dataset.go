@@ -24,7 +24,7 @@ import (
 // true if the input IP address matches any IP or range in the dataset, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Match against pre-loaded IP dataset
 // SecRule REMOTE_ADDR "@ipMatchFromDataset blocked_ips" "id:168,deny,log"
 //

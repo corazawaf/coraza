@@ -45,7 +45,7 @@ type directive = func(options *DirectiveOptions) error
 // Include loads a file or a list of files from the filesystem using golang Glob syntax.
 //
 // Example:
-// ```apache
+// ```seclang
 // Include /path/coreruleset/rules/*.conf
 // ```
 //
@@ -67,7 +67,7 @@ var errEmptyOptions = errors.New("expected options")
 // Appends component signature to the Coraza signature.
 //
 // Example:
-// ```apache
+// ```seclang
 // SecComponentSignature "OWASP_CRS/4.18.0"
 // ```
 func directiveSecComponentSignature(options *DirectiveOptions) error {
@@ -87,7 +87,7 @@ func directiveSecComponentSignature(options *DirectiveOptions) error {
 // allow you to choose the best way to implement a skip-over. Here is an example used from the
 // Core Rule Set:
 //
-// ```apache
+// ```seclang
 //
 //	SecMarker BEGIN_HOST_CHECK
 //
@@ -137,7 +137,7 @@ func directiveSecMarker(options *DirectiveOptions) error {
 // `initcol` action. The syntax of the parameter is identical to that of the third parameter of `SecRule`.
 //
 // Example:
-// ```apache
+// ```seclang
 // SecAction "nolog,phase:1,initcol:RESOURCE=%{REQUEST_FILENAME}"
 // ```
 func directiveSecAction(options *DirectiveOptions) error {
@@ -177,7 +177,7 @@ func directiveSecAction(options *DirectiveOptions) error {
 // those in the default list.) Refer to `SecDefaultAction` for more information.
 //
 // Example:
-// ```apache
+// ```seclang
 // SecRule ARGS "@rx attack" "phase:1,log,deny,id:1"
 // ```
 func directiveSecRule(options *DirectiveOptions) error {
@@ -472,7 +472,7 @@ func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
 // Use SecResponseBodyMimeTypesClear to clear previously configured MIME types and start over.
 //
 // Example:
-// ```apache
+// ```seclang
 // SecResponseBodyMimeType text/plain text/html text/xml
 // ```
 func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
@@ -708,7 +708,7 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 // ---
 //
 // Example:
-// ```apache
+// ```seclang
 // SecAuditLog "/path/to/audit.log"
 // ```
 //
@@ -740,7 +740,7 @@ func directiveSecAuditLog(options *DirectiveOptions) error {
 //     in one of formats: "ADDRESS:PORT" (TCP), "udp://ADDRESS:PORT", or "unixgram:///var/run/syslog".
 //
 // Example:
-// ```apache
+// ```seclang
 // SecAuditLogType Serial
 // ```
 func directiveSecAuditLogType(options *DirectiveOptions) error {
@@ -782,7 +782,7 @@ func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 // specify a file system location with adequate disk space.
 //
 // Example:
-// ```apache
+// ```seclang
 // SecAuditLogStorageDir /tmp/auditlogs/
 // ```
 func directiveSecAuditLogStorageDir(options *DirectiveOptions) error {
@@ -804,7 +804,7 @@ func directiveSecAuditLogStorageDir(options *DirectiveOptions) error {
 // to the owner.
 //
 // Example:
-// ```apache
+// ```seclang
 // SecAuditLogDirMode 02750
 // ```
 func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
@@ -828,7 +828,7 @@ func directiveSecAuditLogDirMode(options *DirectiveOptions) error {
 // Default: 0600
 // ---
 // Example:
-// ```apache
+// ```seclang
 // SecAuditLogFileMode 00640
 // ```
 func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
@@ -854,7 +854,7 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 // expression.
 //
 // Example:
-// ```
+// ```seclang
 // SecAuditLogRelevantStatus "^(?:5|40[1235])"
 // ```
 // This example would log all 5xx and 4xx level status codes,
@@ -888,7 +888,7 @@ func directiveSecAuditLogRelevantStatus(options *DirectiveOptions) error {
 // Default: ABCFHZ
 // ---
 // Example:
-// ```apache
+// ```seclang
 // SecAuditLogParts ABCFHZ
 // ```
 //
@@ -943,7 +943,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // in response to some transaction data), use the `ctl` action.
 //
 // The following example demonstrates how `SecAuditEngine` is used:
-// ```apache
+// ```seclang
 // SecAuditEngine RelevantOnly
 // SecAuditLog logs/audit/audit.log
 // SecAuditLogParts ABCFHZ
@@ -1207,7 +1207,7 @@ func hasDisruptiveActions(actions []ruleAction) bool {
 // Only the actions that can appear only once are overwritten.
 // The actions that are allowed to appear multiple times in a list, will be appended to the end of the list.
 // The following example demonstrates how `SecRuleUpdateActionById` is used:
-// ```apache
+// ```seclang
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
@@ -1409,7 +1409,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 // Exceeding the limit will not be included.
 // With JSON body processing, there is nothing to do when exceed the limit.
 // Example:
-// ```apache
+// ```seclang
 // SecArgumentsLimit 1000
 // ```
 func directiveSecArgumentsLimit(options *DirectiveOptions) error {

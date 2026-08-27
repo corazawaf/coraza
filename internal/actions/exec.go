@@ -22,7 +22,7 @@ import (
 // > if it doesn’t, Coraza will assume that the script failed, and will record the failure.
 //
 // Example:
-// ```
+// ```seclang
 // # Run external program on rule match
 // SecRule REQUEST_URI "^/cgi-bin/script\.pl" "phase:2,id:112,t:none,t:lowercase,t:normalizePath,block,\ exec:/usr/local/apache/bin/test.sh"
 //

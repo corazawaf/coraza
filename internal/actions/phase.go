@@ -25,7 +25,7 @@ import (
 // > but it misses malicious data because you specified the wrong phase.
 //
 // Example:
-// ```
+// ```seclang
 // # Initialize IP address tracking in phase 1
 // SecAction phase:1,nolog,pass,id:126,initcol:IP=%{REMOTE_ADDR}
 //
