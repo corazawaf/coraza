@@ -100,7 +100,7 @@ func directiveSecComponentSignature(options *DirectiveOptions) error {
 //		setvar:tx.protocol_violation_score=+%{tx.notice_anomaly_score},\
 //		setvar:tx.%{rule.id}-PROTOCOL_VIOLATION/MISSING_HEADER-%{matched_var_name}=%{matched_var}"
 //	SecRule REQUEST_HEADERS:Host "^$" \
-//		"id:'960008',phase:2,rev:'2.1.1',t:none,block,msg:'Request Missing a Host Header',\
+//		"id:'960009',phase:2,rev:'2.1.1',t:none,block,msg:'Request Missing a Host Header',\
 //		tag:'PROTOCOL_VIOLATION/MISSING_HEADER_HOST',tag:'WASCTC/WASC-21',\
 //		tag:'OWASP_TOP_10/A7',tag:'PCI/6.5.10',severity:'5',\
 //		setvar:'tx.msg=%{rule.msg}',setvar:tx.anomaly_score=+%{tx.notice_anomaly_score},\
@@ -226,6 +226,11 @@ func directiveSecRule(options *DirectiveOptions) error {
 // - On: buffer response bodies (but only if the response MIME type matches the list
 // configured with `SecResponseBodyMimeType`).
 // - Off: do not buffer response bodies.
+//
+// Example:
+// ```seclang
+// SecResponseBodyAccess On
+// ```
 func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -247,6 +252,11 @@ func directiveSecResponseBodyAccess(options *DirectiveOptions) error {
 // - Reject: Anything over this limit will be rejected with status code 413 (Request Entity Too Large).
 // - ProcessPartial: The first N bytes of the request body will be processed.
 // There is a hard limit of 1 GiB.
+//
+// Example:
+// ```seclang
+// SecRequestBodyLimit 134217728
+// ```
 func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -269,6 +279,11 @@ func directiveSecRequestBodyLimit(options *DirectiveOptions) error {
 // blocking possible. The possible values are:
 // - On: buffer request bodies
 // - Off: do not buffer request bodies
+//
+// Example:
+// ```seclang
+// SecRequestBodyAccess On
+// ```
 func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -287,6 +302,11 @@ func directiveSecRequestBodyAccess(options *DirectiveOptions) error {
 // Syntax: SecRequestBodyJsonDepthLimit [LIMIT]
 // ---
 // Anything over the limit will generate a REQBODY_ERROR in the JSON body processor.
+//
+// Example:
+// ```seclang
+// SecRequestBodyJsonDepthLimit 1024
+// ```
 func directiveSecRequestBodyJsonDepthLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -314,16 +334,41 @@ func directiveSecRequestBodyJsonDepthLimit(options *DirectiveOptions) error {
 // - Off: do not process rules
 // - DetectionOnly: process rules but never executes any disruptive actions
 // (block, deny, drop, allow, proxy and redirect)
+//
+// Example:
+// ```seclang
+// SecRuleEngine DetectionOnly
+// ```
 func directiveSecRuleEngine(options *DirectiveOptions) error {
 	engine, err := types.ParseRuleEngineStatus(options.Opts)
 	options.WAF.RuleEngine = engine
 	return err
 }
 
+// Description: Shared handler for ModSecurity directives that Coraza parses and discards, so
+// existing configurations continue to load.
+// Syntax: SecTmpDir /path/to/dir
+// ---
+// **Note:** This handler backs `SecArgumentSeparator`, `SecCookieFormat`,
+// `SecRuleUpdateTargetByMsg`, `SecRuleScript`, `SecRulePerfTime`, `SecUnicodeMap` and
+// `SecTmpDir`. All are accepted and ignored.
+//
+// Example:
+// ```seclang
+// SecTmpDir /tmp
+// ```
 func directiveUnsupported(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Sets an identifier for the web application being protected. The value is exposed
+// to rules and audit logs.
+// Syntax: SecWebAppID "NAME"
+// ---
+// Example:
+// ```seclang
+// SecWebAppID "my_application"
+// ```
 func directiveSecWebAppID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -333,6 +378,14 @@ func directiveSecWebAppID(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Sets the server signature Coraza reports. Surrounding quotes, if present, are
+// removed.
+// Syntax: SecServerSignature "SIGNATURE"
+// ---
+// Example:
+// ```seclang
+// SecServerSignature "Apache/2.2.15"
+// ```
 func directiveSecServerSignature(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -457,6 +510,11 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 // Description: Clears the list of MIME types considered for response body buffering,
 // allowing you to start populating the list from scratch.
 // Syntax: SecResponseBodyMimeTypesClear
+//
+// Example:
+// ```seclang
+// SecResponseBodyMimeTypesClear
+// ```
 func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
 	if len(options.Opts) > 0 {
 		return errors.New("unexpected options")
@@ -504,6 +562,11 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 //
 // Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
 // ProcessPartial to minimize disruptions when initially deploying Coraza.
+//
+// Example:
+// ```seclang
+// SecResponseBodyLimitAction ProcessPartial
+// ```
 func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -525,6 +588,11 @@ func directiveSecResponseBodyLimitAction(options *DirectiveOptions) error {
 // - ProcessPartial: The first N bytes of the response body will be processed.
 // This setting will not affect the responses with MIME types that are not selected for
 // buffering. There is a hard limit of 1 GiB.
+//
+// Example:
+// ```seclang
+// SecResponseBodyLimit 524288
+// ```
 func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -548,6 +616,11 @@ func directiveSecResponseBodyLimit(options *DirectiveOptions) error {
 //
 // Note: When SecRuleEngine is set to DetectionOnly, this directive is set to
 // ProcessPartial to minimize disruptions when initially deploying Coraza.
+//
+// Example:
+// ```seclang
+// SecRequestBodyLimitAction Reject
+// ```
 func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 	switch strings.ToLower(options.Opts) {
 	case "reject":
@@ -566,6 +639,11 @@ func directiveSecRequestBodyLimitAction(options *DirectiveOptions) error {
 // ---
 // When a `multipart/form-data` request is being processed, once the in-memory limit is reached,
 // the request body will start to be streamed into a temporary file on disk.
+//
+// Example:
+// ```seclang
+// SecRequestBodyInMemoryLimit 131072
+// ```
 func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -579,6 +657,14 @@ func directiveSecRequestBodyInMemoryLimit(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Controls what happens when rules cannot be retrieved from a remote source: Abort
+// fails the configuration load, Warn continues.
+// Syntax: SecRemoteRulesFailAction Abort|Warn
+// ---
+// Example:
+// ```seclang
+// SecRemoteRulesFailAction Abort
+// ```
 func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -595,14 +681,42 @@ func directiveSecRemoteRulesFailAction(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Loads rules from a remote URL.
+// Syntax: SecRemoteRules [KEY] URL
+// ---
+// **Note:** Coraza rejects this directive: fetching rules over the network is not implemented, so
+// a configuration using it fails to load with an error rather than being ignored.
+//
+// Example:
+// ```seclang
+// SecRemoteRules https://example.com/rules.conf
+// ```
 func directiveSecRemoteRules(options *DirectiveOptions) error {
 	return fmt.Errorf("not implemented")
 }
 
+// Description: Would limit the number of connections in the write state per IP address.
+// Syntax: SecConnWriteStateLimit [NUMBER]
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecConnWriteStateLimit 50
+// ```
 func directiveSecConnWriteStateLimit(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Sets an identifier for this Coraza instance, useful when several sensors write to
+// a shared log.
+// Syntax: SecSensorID "ID"
+// ---
+// Example:
+// ```seclang
+// SecSensorID "sensor-01"
+// ```
 func directiveSecSensorID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -612,42 +726,145 @@ func directiveSecSensorID(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would limit the number of connections in the read state per IP address.
+// Syntax: SecConnReadStateLimit [NUMBER]
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecConnReadStateLimit 50
+// ```
 func directiveSecConnReadStateLimit(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would set the PCRE match recursion limit.
+// Syntax: SecPcreMatchLimitRecursion [NUMBER]
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect. Coraza matches with RE2, which does not recurse while matching.
+//
+// Example:
+// ```seclang
+// SecPcreMatchLimitRecursion 1500
+// ```
 func directiveSecPcreMatchLimitRecursion(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would set the PCRE match limit.
+// Syntax: SecPcreMatchLimit [NUMBER]
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect. Coraza matches with RE2, which runs in linear time and has no backtracking
+// limit to configure.
+//
+// Example:
+// ```seclang
+// SecPcreMatchLimit 1500
+// ```
 func directiveSecPcreMatchLimit(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would set the API key used by the @rbl operator for Project Honey Pot lookups.
+// Syntax: SecHttpBlKey "KEY"
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecHttpBlKey "my_api_key"
+// ```
 func directiveSecHTTPBlKey(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would set the path to the Google Safe Browsing database used by @gsbLookup.
+// Syntax: SecGsbLookupDb /path/to/db
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecGsbLookupDb /path/to/GsbMalware.dat
+// ```
 func directiveSecGsbLookupDb(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would select, by phrase match, which response elements the hashing engine signs.
+// Syntax: SecHashMethodPm TYPE PHRASES
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecHashMethodPm HashHref "example.com"
+// ```
 func directiveSecHashMethodPm(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would select, by regular expression, which response elements the hashing engine
+// signs.
+// Syntax: SecHashMethodRx TYPE REGEX
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecHashMethodRx HashHref "^/admin"
+// ```
 func directiveSecHashMethodRx(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would set the parameter name carrying the hash added by the response hashing
+// engine.
+// Syntax: SecHashParam "NAME"
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecHashParam "hmac"
+// ```
 func directiveSecHashParam(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would set the key used by the response hashing engine.
+// Syntax: SecHashKey [KEY] [KeyOnly|SessionID|RemoteIP]
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecHashKey "my_secret_key" KeyOnly
+// ```
 func directiveSecHashKey(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would enable the response hashing engine used to sign links and form fields.
+// Syntax: SecHashEngine On|Off
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecHashEngine On
+// ```
 func directiveSecHashEngine(options *DirectiveOptions) error {
 	return nil
 }
@@ -669,6 +886,11 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 //
 // Important: Every `SecDefaultAction` directive must specify a disruptive action and a processing
 // phase and cannot contain metadata actions.
+//
+// Example:
+// ```seclang
+// SecDefaultAction "phase:2,log,auditlog,pass"
+// ```
 func directiveSecDefaultAction(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -679,6 +901,16 @@ func directiveSecDefaultAction(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would enable per-connection tracking.
+// Syntax: SecConnEngine On|Off|DetectOnly
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecConnEngine Off
+// ```
 func directiveSecConnEngine(options *DirectiveOptions) error {
 	/*
 		switch opts{
@@ -697,6 +929,16 @@ func directiveSecConnEngine(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Would set how long persistent collection records are retained, in seconds.
+// Syntax: SecCollectionTimeout [SECONDS]
+// ---
+// **Note:** Coraza accepts this directive for compatibility with ModSecurity configurations, but
+// it has no effect.
+//
+// Example:
+// ```seclang
+// SecCollectionTimeout 600
+// ```
 func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 	// w.CollectionTimeout, _ = strconv.Atoi(opts)
 	return nil
@@ -706,7 +948,6 @@ func directiveSecCollectionTimeout(options *DirectiveOptions) error {
 // or the concurrent logging index file (concurrent logging format).
 // Syntax: SecAuditLog [ABSOLUTE_PATH_TO_LOG_FILE]
 // ---
-//
 // Example:
 // ```seclang
 // SecAuditLog "/path/to/audit.log"
@@ -761,6 +1002,11 @@ func directiveSecAuditLogType(options *DirectiveOptions) error {
 // the native AuditLogs format, JSON, or OCSF (Open CyberSecurity Schema Framework).
 // Syntax: SecAuditLogFormat JSON|JsonLegacy|Native|OCSF
 // Default: Native
+//
+// Example:
+// ```seclang
+// SecAuditLogFormat JSON
+// ```
 func directiveSecAuditLogFormat(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -949,7 +1195,7 @@ func directiveSecAuditLogParts(options *DirectiveOptions) error {
 // SecAuditLogParts ABCFHZ
 // SecAuditLogType concurrent
 // SecAuditLogStorageDir logs/audit
-// SecAuditLogRelevantStatus ^(?:5|4(?!04))
+// SecAuditLogRelevantStatus ^(?:5|4(?:0[0-35-9]|[1-9][0-9]))
 // ```
 func directiveSecAuditEngine(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
@@ -961,6 +1207,13 @@ func directiveSecAuditEngine(options *DirectiveOptions) error {
 	return err
 }
 
+// Description: Sets the directory where persistent collection data is stored.
+// Syntax: SecDataDir /path/to/dir
+// ---
+// Example:
+// ```seclang
+// SecDataDir /tmp/coraza/data
+// ```
 func directiveSecDataDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -983,6 +1236,11 @@ func directiveSecDataDir(options *DirectiveOptions) error {
 //   - Off: Do not keep uploaded files.
 //   - RelevantOnly: Keep only uploaded files that matched at least one rule that would be
 //     logged (excluding rules with the `nolog` action).
+//
+// Example:
+// ```seclang
+// SecUploadKeepFiles RelevantOnly
+// ```
 func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1001,6 +1259,14 @@ func directiveSecUploadKeepFiles(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Sets the file mode applied to files stored by SecUploadDir. The value is parsed as
+// octal.
+// Syntax: SecUploadFileMode OCTAL_MODE
+// ---
+// Example:
+// ```seclang
+// SecUploadFileMode 0600
+// ```
 func directiveSecUploadFileMode(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1014,6 +1280,14 @@ func directiveSecUploadFileMode(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Sets the maximum number of uploaded files handled per request. The value is parsed
+// but not yet enforced; see corazawaf/coraza#1686 for the surrounding discussion.
+// Syntax: SecUploadFileLimit [NUMBER]
+// ---
+// Example:
+// ```seclang
+// SecUploadFileLimit 10
+// ```
 func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1029,6 +1303,11 @@ func directiveSecUploadFileLimit(options *DirectiveOptions) error {
 // Default: ""
 // ---
 // This directive is required when enabling SecUploadKeepFiles.
+//
+// Example:
+// ```seclang
+// SecUploadDir /tmp/coraza/uploads
+// ```
 func directiveSecUploadDir(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1061,6 +1340,11 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GiB.
 //
 // Note: not implemented yet
+//
+// Example:
+// ```seclang
+// SecRequestBodyNoFilesLimit 131072
+// ```
 func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1076,6 +1360,11 @@ func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 // ---
 // Logs will be written to this file. Make sure the process user has write access to the
 // directory.
+//
+// Example:
+// ```seclang
+// SecDebugLog /var/log/coraza/debug.log
+// ```
 func directiveSecDebugLog(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1101,6 +1390,11 @@ func directiveSecDebugLog(options *DirectiveOptions) error {
 // - 9:   Trace (most verbose)
 //
 // Levels outside the 0-9 range will default to level 3 (Info)
+//
+// Example:
+// ```seclang
+// SecDebugLogLevel 3
+// ```
 func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 	lvl, err := strconv.ParseInt(options.Opts, 10, 8)
 	if err != nil {
@@ -1114,6 +1408,11 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 // ---
 // This directive will append variables to the specified rule with the targets provided in the second parameter.
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+//
+// Example:
+// ```seclang
+// SecRuleUpdateTargetById 7 "!REQUEST_HEADERS:/xyz/"
+// ```
 func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1336,6 +1635,11 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
 //
 // Note: OWASP CRS provides a list of [supported tags](https://coreruleset.org/docs/3-about-rules/metadata/#tags-about-rule-classification).
+//
+// Example:
+// ```seclang
+// SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:query"
+// ```
 func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 	tagAndvars := strings.Fields(options.Opts)
 	if len(tagAndvars) != 2 {
@@ -1361,6 +1665,15 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Continues loading a rule set when a rule fails to compile, instead of aborting.
+// Enabling it logs a warning: a faulty rule that does not load cannot protect anything, so this
+// is a migration aid rather than a setting to run with.
+// Syntax: SecIgnoreRuleCompilationErrors On|Off
+// ---
+// Example:
+// ```seclang
+// SecIgnoreRuleCompilationErrors Off
+// ```
 func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 	b, err := parseBoolean(options.Opts)
 	if err != nil {
@@ -1375,6 +1688,18 @@ func directiveSecIgnoreRuleCompilationErrors(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Defines a named, inline dataset that operators such as @pmFromDataset and
+// @ipMatchFromDataset can reference. The records are given as a backtick-quoted block, one per
+// line.
+// Syntax: SecDataset NAME `\n...\n`
+// ---
+// Example:
+// ```seclang
+// SecDataset test `
+// 123
+// 456
+// `
+// ```
 func directiveSecDataset(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1433,11 +1758,11 @@ func directiveSecArgumentsLimit(options *DirectiveOptions) error {
 // checks run before the full regex, allowing the engine to skip the regex entirely when
 // an input clearly cannot match.
 //
+// **Warning:** This is an experimental feature.
+//
 // Example:
 // ```seclang
 // SecRxPreFilter On
-//
-// > **Warning**: This is an experimental feature.
 // ```
 func directiveSecRxPreFilter(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
