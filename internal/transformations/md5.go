@@ -13,11 +13,13 @@ import (
 )
 
 // errMD5NotAvailableFIPS is returned on every evaluation of a rule using t:md5 when the binary
-// runs in FIPS 140-3 mode (GODEBUG=fips140=on or =only), where MD5 is not an approved algorithm.
+// runs in FIPS 140-3 mode (GODEBUG=fips140=on, =debug or =only). See the equivalent comment in
+// sha1.go for how this interacts with rule evaluation.
 //
-// The transformation stays registered so that rule sets referencing t:md5 still load. The error
-// surfaces at evaluation time: the rule engine logs a warning and evaluates the operator against
-// the untransformed argument, so the rule simply stops matching.
+// TODO: soften this to GODEBUG=fips140=only once Go 1.25 is no longer supported. Only that mode
+// actually makes crypto/md5 unusable (its checkSum() panics); fips140=on and fips140=debug
+// leave it working. Distinguishing them needs crypto/fips140.Enforced(), which is Go 1.26+, so
+// until the floor moves the stricter policy stands: any FIPS mode disables the transformation.
 var errMD5NotAvailableFIPS = errors.New("md5 transformation is unavailable in FIPS 140-3 mode")
 
 // The MD5 digest of an empty input, hardcoded rather than computed via md5.Sum(nil): that call

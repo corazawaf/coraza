@@ -13,11 +13,23 @@ import (
 )
 
 // errSHA1NotAvailableFIPS is returned on every evaluation of a rule using t:sha1 when the binary
-// runs in FIPS 140-3 mode (GODEBUG=fips140=on or =only), where SHA-1 is not an approved algorithm.
+// runs in FIPS 140-3 mode (GODEBUG=fips140=on, =debug or =only).
+//
+// TODO: soften this to GODEBUG=fips140=only once Go 1.25 is no longer supported. Only that mode
+// actually makes crypto/sha1 unusable (its checkSum() panics); fips140=on and fips140=debug
+// leave it working. Distinguishing them needs crypto/fips140.Enforced(), which is Go 1.26+, so
+// until the floor moves the stricter policy stands: any FIPS mode disables the transformation.
+//
+// Note that SHA-1 itself is approved under FIPS 180-4 and permitted for non-signature use until
+// 2030 (NIST SP 800-131A), and t:sha1 here is a normalization/keying function rather than a
+// security service, so this is Coraza policy rather than something FIPS 140-3 requires.
 //
 // The transformation stays registered so that rule sets referencing t:sha1 still load, including the
-// CRS. The error surfaces at evaluation time: the rule engine logs a warning and evaluates the operator
-// against the untransformed argument, so the rule simply stops matching.
+// CRS. The error surfaces at evaluation time instead: the rule engine logs a warning and keeps the
+// untransformed argument. The rule is NOT
+// skipped and the transformation chain is NOT aborted, so any subsequent transformation runs on the
+// raw value and the operator is evaluated against the result. Review rules that depend on t:sha1
+// before deploying in FIPS mode.
 var errSHA1NotAvailableFIPS = errors.New("sha1 transformation is unavailable in FIPS 140-3 mode")
 
 // The SHA-1 digest of an empty input, hardcoded rather than computed via sha1.Sum(nil): that call

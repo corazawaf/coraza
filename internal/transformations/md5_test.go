@@ -19,13 +19,26 @@ var md5Vectors = []struct {
 	{"transformation", "3935f8feee087b4547de27296ec777b9"},
 }
 
+// TestMD5 asserts the digest outside FIPS mode and, inside it (any GODEBUG=fips140 setting),
+// that md5T reports an error on every input.
 func TestMD5(t *testing.T) {
-	if fips140.Enabled() {
-		return
-	}
 	for _, tc := range md5Vectors {
 		t.Run(tc.input, func(t *testing.T) {
 			out, changed, err := md5T(tc.input)
+
+			if fips140.Enabled() {
+				if !errors.Is(err, errMD5NotAvailableFIPS) {
+					t.Fatalf("want %v, got %v", errMD5NotAvailableFIPS, err)
+				}
+				if changed {
+					t.Error("expected the transformation to report an unchanged value")
+				}
+				if out != tc.input {
+					t.Errorf("expected the input to be passed through untransformed, got %q", out)
+				}
+				return
+			}
+
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -34,28 +47,6 @@ func TestMD5(t *testing.T) {
 			}
 			if got := hex.EncodeToString([]byte(out)); got != tc.wantDigest {
 				t.Errorf("want %s, got %s", tc.wantDigest, got)
-			}
-		})
-	}
-}
-
-// TestMD5FIPSGuard asserts that in FIPS 140-3 mode md5 is unavailable and reports an error on
-// every input, including the empty-string fast path, rather than silently returning a digest.
-func TestMD5FIPSGuard(t *testing.T) {
-	if !fips140.Enabled() {
-		return
-	}
-	for _, tc := range md5Vectors {
-		t.Run(tc.input, func(t *testing.T) {
-			out, changed, err := md5T(tc.input)
-			if !errors.Is(err, errMD5NotAvailableFIPS) {
-				t.Fatalf("want %v, got %v", errMD5NotAvailableFIPS, err)
-			}
-			if changed {
-				t.Error("expected the transformation to report an unchanged value")
-			}
-			if out != tc.input {
-				t.Errorf("expected the input to be passed through untransformed, got %q", out)
 			}
 		})
 	}

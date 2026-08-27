@@ -6,13 +6,13 @@
 package operators
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"io/fs"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
@@ -48,13 +48,10 @@ type validateSchema struct {
 var _ plugintypes.Operator = (*validateSchema)(nil)
 
 // schemaCacheKey derives a memoizer key from the schema contents.
-// FNV-1a is used (not a crypto hash) since this is only for cache deduplication, and MD5 is
-// unavailable when running under GODEBUG=fips140=only.
-// The "schema:" prefix avoids collisions with other key types in the shared global memoizer (e.g. regexes).
+// SHA-256 is FIPS-approved and replaces the MD5 previously used here.
 func schemaCacheKey(b []byte) string {
-	h := fnv.New64a()
-	h.Write(b)
-	return "schema:" + strconv.FormatUint(h.Sum64(), 16)
+	sum := sha256.Sum256(b)
+	return "schema:" + hex.EncodeToString(sum[:])
 }
 
 // NewValidateSchema creates a new validateSchema operator

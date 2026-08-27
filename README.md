@@ -114,10 +114,17 @@ WAF is destroyed, or use this tag to opt out of memoization entirely.
 ### FIPS mode
 
 Coraza supports running under Go's [FIPS 140-3 mode](https://go.dev/doc/security/fips140) enabled.
-Detection of FIPS mode is performed at runtime, so no special build tag is required. The `crypto/fips140` package is used to check if FIPS mode is enabled, and Coraza will adjust its behavior accordingly as follows: MD5 and SHA-1 are not FIPS-approved, so the `t:md5` and `t:sha1` transformations are unavailable
-in this mode. They remain **registered**, so rule sets that reference them, including the CRS, still load unchanged.
-The restriction applies at evaluation time instead, emitting an error and resulting in a no-op.
-Review any rule of yours that depends on `t:md5` or `t:sha1` before deploying in FIPS mode.
+Detection of FIPS mode is performed at runtime, so no build tag is required and default builds are unchanged.
+
+`t:md5` and `t:sha1` are unavailable whenever FIPS mode is on, that is under all of
+`GODEBUG=fips140=on`, `=debug` and `=only`. Coraza applies the restriction uniformly so that
+behaviour does not vary across FIPS modes.
+Both transformations stay **registered**, so rule sets referencing them, including the CRS, still
+load unchanged. The restriction applies at evaluation time: the transformation errors, the engine
+logs a warning and keeps the untransformed value. The chain is **not** aborted and
+the rule is **not** skipped. For example, `t:sha1,t:hexEncode` becomes effectively `t:hexEncode` over
+the raw input and the rule may match *differently* rather than simply not matching.
+Review any rule depending on these before deploying in FIPS mode.
 
 ## E2E Testing
 

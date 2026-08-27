@@ -104,6 +104,9 @@ jobs:
         # "only" additionally makes the standard library's non-approved algorithms error or
         # panic, which is what catches an unguarded md5.Sum/sha1.Sum at package-init time.
         godebug: ["fips140=on", "fips140=only"]
+        # 1.26 changed FIPS-relevant behavior in crypto/tls (non-approved curves are filtered out
+        # of the defaults), so both the oldest supported and the current release are exercised.
+        go-version: [1.25.x, 1.26.x]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -113,11 +116,13 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: 1.25.x
+          go-version: ${{ matrix.go-version }}
           cache: true
       # Warm the module cache before enabling FIPS: GODEBUG applies to the go command itself, and
       # on Go 1.25 it cannot reach proxy.golang.org under fips140=only (the TLS handshake
       # negotiates X25519, which crypto/ecdh refuses). The test steps then need no network.
+      # TODO: drop this warm-up step and the CurvePreferences pin in http/middleware_test.go once
+      # Go 1.25 is no longer supported.
       - name: Download dependencies
         run: |
           go mod download
