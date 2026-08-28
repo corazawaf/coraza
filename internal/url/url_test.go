@@ -10,7 +10,7 @@ import (
 var parseQueryInput = `var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;`
 
 func TestUrlPayloads(t *testing.T) {
-	q := ParseQuery(parseQueryInput, '&')
+	q, _ := ParseQuery(parseQueryInput, '&')
 	if len(q["var"]) == 0 {
 		t.Error("var is empty")
 	}
@@ -36,7 +36,7 @@ var queryUnescapePayloads = map[string]string{
 
 func TestQueryUnescape(t *testing.T) {
 	for k, v := range queryUnescapePayloads {
-		if out := queryUnescape(k); out != v {
+		if out, _ := queryUnescape(k); out != v {
 			t.Errorf("Error parsing %q, got %q and expected %q", k, out, v)
 		}
 	}

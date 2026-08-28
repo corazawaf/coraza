@@ -183,6 +183,16 @@ var requestBodyWriters = map[string]func(tx *Transaction, body string) (*types.I
 	},
 }
 
+func TestProcessURISetsURLencodedErrorForMalformedQuery(t *testing.T) {
+	tx := NewWAF().NewTransaction()
+	defer tx.Close()
+
+	tx.ProcessURI("/?a=%ZZ", "GET", "HTTP/1.1")
+	if got := tx.variables.urlencodedError.Get(); got != "1" {
+		t.Fatalf("expected URLENCODED_ERROR to be 1, got %q", got)
+	}
+}
+
 func TestWriteRequestBody(t *testing.T) {
 	const (
 		urlencodedBody    = "some=result&second=data"

@@ -759,7 +759,14 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 
 // ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET
 func (tx *Transaction) ExtractGetArguments(uri string) {
-	data := urlutil.ParseQuery(uri, '&')
+	data, urlencodedError := urlutil.ParseQuery(uri, '&')
+	if urlencodedError {
+		tx.variables.urlencodedError.Set("1")
+	}
+	tx.addGetArguments(data)
+}
+
+func (tx *Transaction) addGetArguments(data map[string][]string) {
 	for k, vs := range data {
 		for _, v := range vs {
 			tx.AddGetRequestArgument(k, v)
@@ -830,11 +837,18 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	if in := strings.Index(uri, "#"); in != -1 {
 		uri = uri[:in]
 	}
+	rawQuery := ""
+	if i := strings.IndexByte(uri, '?'); i != -1 {
+		rawQuery = uri[i+1:]
+	}
+	getArguments, urlencodedError := urlutil.ParseQuery(rawQuery, '&')
+	if urlencodedError {
+		tx.variables.urlencodedError.Set("1")
+	}
 	path := ""
 	parsedURL, err := url.ParseRequestURI(uri)
 	query := ""
 	if err != nil {
-		tx.variables.urlencodedError.Set(err.Error())
 		path = uri
 		tx.variables.requestURI.Set(uri)
 		/*
@@ -850,7 +864,7 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 			tx.Variables.RequestUri.Set(uri)
 		*/
 	} else {
-		tx.ExtractGetArguments(parsedURL.RawQuery)
+		tx.addGetArguments(getArguments)
 		tx.variables.requestURI.Set(parsedURL.String())
 		path = parsedURL.Path
 		query = parsedURL.RawQuery
