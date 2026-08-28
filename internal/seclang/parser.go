@@ -40,7 +40,8 @@ func (p *Parser) FromFile(profilePath string) error {
 	originalDir := p.currentDir
 
 	var files []string
-	if strings.Contains(profilePath, "*") {
+	isGlob := strings.Contains(profilePath, "*")
+	if isGlob {
 		var err error
 		files, err = fs.Glob(p.root, profilePath)
 		if err != nil {
@@ -56,7 +57,13 @@ func (p *Parser) FromFile(profilePath string) error {
 
 	for _, profilePath := range files {
 		profilePath = strings.TrimSpace(profilePath)
-		if !strings.HasPrefix(profilePath, "/") {
+		// Glob results are already resolvable against p.root, in the same frame
+		// of reference fs.Glob used to match them, so they must not be
+		// re-anchored to currentDir. Doing so pointed the read at a path the
+		// glob never matched, and on Windows it also rewrote the forward
+		// slashes io/fs mandates into OS separators, which no fs.FS can
+		// resolve.
+		if !isGlob && !strings.HasPrefix(profilePath, "/") {
 			profilePath = filepath.Join(p.currentDir, profilePath)
 		}
 		p.currentFile = profilePath
