@@ -6,7 +6,7 @@
 package operators
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -47,10 +47,11 @@ type validateSchema struct {
 
 var _ plugintypes.Operator = (*validateSchema)(nil)
 
-func md5Hash(b []byte) string {
-	hasher := md5.New()
-	hasher.Write(b)
-	return hex.EncodeToString(hasher.Sum(nil))
+// schemaCacheKey derives a memoizer key from the schema contents.
+// SHA-256 is FIPS-approved and replaces the MD5 previously used here.
+func schemaCacheKey(b []byte) string {
+	sum := sha256.Sum256(b)
+	return "schema:" + hex.EncodeToString(sum[:])
 }
 
 // NewValidateSchema creates a new validateSchema operator
@@ -77,7 +78,7 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 		return nil, fmt.Errorf("reading schema from root FS: %v", err)
 	}
 
-	key := md5Hash(schemaData)
+	key := schemaCacheKey(schemaData)
 	schema, err := memoizeDo(options.Memoizer, key, func() (any, error) {
 		// Preliminarily validate that the schema is valid JSON
 		var jsonSchema any
