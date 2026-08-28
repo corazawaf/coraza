@@ -138,7 +138,7 @@ func directiveSecMarker(options *DirectiveOptions) error {
 //
 // Example:
 // ```seclang
-// SecAction "nolog,phase:1,initcol:RESOURCE=%{REQUEST_FILENAME}"
+// SecAction "id:100,nolog,phase:1,initcol:RESOURCE=%{REQUEST_FILENAME}"
 // ```
 func directiveSecAction(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
