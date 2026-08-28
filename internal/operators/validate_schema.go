@@ -34,7 +34,7 @@ import (
 // true if JSON validation fails (violation), false if JSON is valid or no data to validate
 //
 // Example:
-// ```
+// ```seclang
 // # Validate request body against API schema
 // SecRule REQUEST_BODY "@validateSchema /schemas/api-request.json" "id:197,deny,log,phase:2"
 //

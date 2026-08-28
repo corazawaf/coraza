@@ -25,7 +25,7 @@ import (
 // true if any pattern from the dataset is found in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Match against pre-loaded dataset
 // SecRule REQUEST_URI "@pmFromDataset blocked_paths" "id:174,deny,log"
 //
