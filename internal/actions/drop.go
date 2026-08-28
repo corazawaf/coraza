@@ -19,7 +19,7 @@ import (
 // This action causes error message to appear in the log `(9)Bad file descriptor: core_output_filter: writing data to the network`
 //
 // Example:
-// ```
+// ```seclang
 // # The following example initiates an IP collection for tracking Basic Authentication attempts.
 // # If the client exceed the threshold of more than 25 attempts in 2 minutes, it will `DROP` the subsequent connections.
 // SecAction phase:1,id:109,initcol:ip=%{REMOTE_ADDR},nolog

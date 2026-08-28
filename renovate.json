@@ -4,6 +4,6 @@
     "github>corazawaf/renovate-config"
   ],
   "postUpdateOptions": [
-    "gomodTidyAll"
+    "gomodTidy"
   ]
 }

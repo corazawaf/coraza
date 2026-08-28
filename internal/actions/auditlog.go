@@ -14,7 +14,7 @@ import (
 // Marks the transaction for logging in the audit log.
 //
 // Example:
-// ```
+// ```seclang
 // # The action is explicit if the log is specified.
 // SecRule REMOTE_ADDR "^192\.168\.1\.100$" "auditlog,phase:1,id:100,allow"
 // ```

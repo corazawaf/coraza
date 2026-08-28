@@ -35,7 +35,7 @@ import (
 // - The metadata actions (e.g., `id`, `rev`, `msg`) can be used only in the chain starter.
 //
 // Example:
-// ```
+// ```seclang
 // # Refuse to accept POST requests that do not contain a Content-Length header.
 // # Noted that the rule should be preceded by a rule that verifies only valid request methods are used.
 //

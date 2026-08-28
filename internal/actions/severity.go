@@ -31,7 +31,7 @@ import (
 // > The use of the numerical values is deprecated as of version 2.5.0 and may be removed in one of the subsequent major updates.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule REQUEST_METHOD "^PUT$" "id:340002,rev:1,severity:CRITICAL,msg:'Restricted HTTP function'"
 // ```
 type severityFn struct{}
