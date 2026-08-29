@@ -36,10 +36,10 @@ old lowercasing.
 Chosen: **add parallel case-sensitive map type as a new type alongside the
 existing one.** The switch-the-default change is deferred to v4.
 
-> "LGTM, what is the plan here? Merge this in Coraza 3.x and then hold #1042
-> (The breaking change) as part of v4 milestones"
-> — @M4tteoP (implied by author confirmation in PR thread; captured in
-> [case-sensitive args follow-up](https://github.com/corazawaf/coraza/pull/1059))
+The breaking half — switching the default — was held for v4 and tracked
+separately in [#1042](https://github.com/corazawaf/coraza/issues/1042), with
+the follow-up landing in [#1059](https://github.com/corazawaf/coraza/pull/1059).
+The author set out the incremental approach on the thread:
 
 > "I'll be pushing smaller changes until we figure it out. I don't think this
 > will break the api for a major release though."

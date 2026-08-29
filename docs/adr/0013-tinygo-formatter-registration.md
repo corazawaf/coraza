@@ -38,6 +38,8 @@ explicitly dropped in review.
 > for the wasm formatter."
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1027#discussion_r1540206047))
 
+The author agreed and dropped the suffix:
+
 > "Yep, not really needed, removed, thanks"
 > — @M4tteoP ([review](https://github.com/corazawaf/coraza/pull/1027#discussion_r1540212934))
 

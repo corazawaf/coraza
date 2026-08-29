@@ -79,6 +79,8 @@ Long, substantive back-and-forth on whether this is a breaking change.
 > go to... be go."
 > — @anuraaga ([review](https://github.com/corazawaf/coraza/pull/1059#discussion_r1592558837))
 
+He drew the practical conclusion for this change:
+
 > "For this PR it's still better to add a config option to opt-in to the
 > correct behavior and change that in a major version release to prevent
 > rule breakage."
@@ -93,7 +95,7 @@ Long, substantive back-and-forth on whether this is a breaking change.
 
 The build-tag path won. @fzipi asked for help wiring it:
 
-> "Can someone then, with more knownledge than me, add that magnificent
+> "Can someone then, with more knownledge [sic] than me, add that magnificent
 > build tag and we can get over this?"
 > — @fzipi ([review](https://github.com/corazawaf/coraza/pull/1059#discussion_r1596029956))
 
