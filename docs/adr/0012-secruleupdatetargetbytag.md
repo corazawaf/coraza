@@ -53,6 +53,8 @@ Code-level review asked for refactor extraction + defensive parsing:
 > `start == end`"
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1020#discussion_r1531101959))
 
+He also asked for the negative case to be handled:
+
 > "What if start < 0?"
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1020#discussion_r1531103184))
 

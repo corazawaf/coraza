@@ -42,6 +42,8 @@ feature, not a performance question.
 > one."
 > — @jcchavezs ([comment](https://github.com/corazawaf/coraza/pull/1046#issuecomment-2071606901))
 
+The compatibility argument settled it:
+
 > "We don't need another reason, it's for compatibility. We just forgot to
 > implement this in the past."
 > — @jptosso ([comment](https://github.com/corazawaf/coraza/pull/1046#issuecomment-2071629112))
