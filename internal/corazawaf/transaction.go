@@ -759,8 +759,8 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 
 // ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET
 func (tx *Transaction) ExtractGetArguments(uri string) {
-	data, urlencodedError := urlutil.ParseQuery(uri, '&')
-	if urlencodedError {
+	data, err := urlutil.ParseQuery(uri, '&')
+	if err != nil {
 		tx.variables.urlencodedError.Set("1")
 	}
 	tx.addGetArguments(data)
@@ -841,8 +841,8 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	if i := strings.IndexByte(uri, '?'); i != -1 {
 		rawQuery = uri[i+1:]
 	}
-	getArguments, urlencodedError := urlutil.ParseQuery(rawQuery, '&')
-	if urlencodedError {
+	getArguments, queryErr := urlutil.ParseQuery(rawQuery, '&')
+	if queryErr != nil {
 		tx.variables.urlencodedError.Set("1")
 	}
 	path := ""

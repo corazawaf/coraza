@@ -4,19 +4,24 @@
 package url
 
 import (
+	"errors"
 	"strings"
 )
 
+// ErrInvalidURLEncoding is returned when a query contains malformed percent encoding.
+var ErrInvalidURLEncoding = errors.New("invalid URL encoding")
+
 // ParseQuery parses the URL-encoded query string and returns the corresponding map.
-// The boolean is true when the query contains malformed percent encoding.
 // It takes separators as parameter, for example: & or ; or &;.
-func ParseQuery(query string, separator byte) (map[string][]string, bool) {
+// Parsing is non-strict: malformed percent encoding is kept as-is and
+// ErrInvalidURLEncoding is returned alongside the fully populated map.
+func ParseQuery(query string, separator byte) (map[string][]string, error) {
 	return doParseQuery(query, separator, true)
 }
 
-func doParseQuery(query string, separator byte, urlUnescape bool) (map[string][]string, bool) {
+func doParseQuery(query string, separator byte, urlUnescape bool) (map[string][]string, error) {
 	m := make(map[string][]string)
-	var urlencodedError bool
+	var err error
 	for query != "" {
 		key := query
 		if i := strings.IndexByte(key, separator); i >= 0 {
@@ -32,23 +37,30 @@ func doParseQuery(query string, separator byte, urlUnescape bool) (map[string][]
 			key, value = key[:i], key[i+1:]
 		}
 		if urlUnescape {
-			var keyError, valueError bool
-			key, keyError = queryUnescape(key)
-			value, valueError = queryUnescape(value)
-			urlencodedError = urlencodedError || keyError || valueError
+			var keyErr, valueErr error
+			key, keyErr = queryUnescape(key)
+			value, valueErr = queryUnescape(value)
+			if err == nil {
+				if keyErr != nil {
+					err = keyErr
+				} else {
+					err = valueErr
+				}
+			}
 		}
 		m[key] = append(m[key], value)
 	}
-	return m, urlencodedError
+	return m, err
 }
 
 // queryUnescape is a non-strict version of net/url.QueryUnescape.
-// The boolean is true when the input contains malformed percent encoding.
-func queryUnescape(input string) (string, bool) {
+// Malformed percent sequences are written as-is and reported through
+// ErrInvalidURLEncoding.
+func queryUnescape(input string) (string, error) {
 	ilen := len(input)
 	res := strings.Builder{}
 	res.Grow(ilen)
-	var urlencodedError bool
+	var err error
 	for i := 0; i < ilen; i++ {
 		ci := input[i]
 		if ci == '+' {
@@ -57,19 +69,19 @@ func queryUnescape(input string) (string, bool) {
 		}
 		if ci == '%' {
 			if i+2 >= ilen {
-				urlencodedError = true
+				err = ErrInvalidURLEncoding
 				res.WriteByte(ci)
 				continue
 			}
 			hi, ok := hexDigitToByte(input[i+1])
 			if !ok {
-				urlencodedError = true
+				err = ErrInvalidURLEncoding
 				res.WriteByte(ci)
 				continue
 			}
 			lo, ok := hexDigitToByte(input[i+2])
 			if !ok {
-				urlencodedError = true
+				err = ErrInvalidURLEncoding
 				res.WriteByte(ci)
 				continue
 			}
@@ -79,7 +91,7 @@ func queryUnescape(input string) (string, bool) {
 		}
 		res.WriteByte(ci)
 	}
-	return res.String(), urlencodedError
+	return res.String(), err
 }
 
 func hexDigitToByte(digit byte) (byte, bool) {
