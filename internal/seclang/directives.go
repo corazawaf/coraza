@@ -1452,10 +1452,14 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 				return fmt.Errorf("invalid range: %s", idOrRange)
 			}
 
-			for _, rule := range options.WAF.Rules.GetRules() {
-				if rule.ID_ >= start && rule.ID_ <= end {
+			// Indexed, not ranged: GetRules returns []Rule by value, so &rule
+			// would point at the loop copy and every target added below would
+			// be discarded when the iteration ends.
+			rules := options.WAF.Rules.GetRules()
+			for i := range rules {
+				if rules[i].ID_ >= start && rules[i].ID_ <= end {
 					rp := RuleParser{
-						rule: &rule,
+						rule: &rules[i],
 						options: RuleOptions{
 							WAF: options.WAF,
 						},
@@ -1646,11 +1650,13 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 		return errors.New("syntax error: SecRuleUpdateTargetByTag tag \"VARIABLES\"")
 	}
 
-	for _, rule := range options.WAF.Rules.GetRules() {
+	// Indexed, not ranged: see the note in directiveSecRuleUpdateTargetByID.
+	rules := options.WAF.Rules.GetRules()
+	for i := range rules {
 		inputTag := strings.Trim(tagAndvars[0], "\"")
-		if utils.InSlice(inputTag, rule.Tags_) {
+		if utils.InSlice(inputTag, rules[i].Tags_) {
 			rp := RuleParser{
-				rule: &rule,
+				rule: &rules[i],
 				options: RuleOptions{
 					WAF: options.WAF,
 				},
