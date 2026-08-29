@@ -8,7 +8,8 @@ import (
 )
 
 // ParseQuery parses the URL-encoded query string and returns the corresponding map.
-// It takes separators as parameter, for example: & or ; or &;
+// The boolean is true when the query contains malformed percent encoding.
+// It takes separators as parameter, for example: & or ; or &;.
 func ParseQuery(query string, separator byte) (map[string][]string, bool) {
 	return doParseQuery(query, separator, true)
 }
@@ -42,6 +43,7 @@ func doParseQuery(query string, separator byte, urlUnescape bool) (map[string][]
 }
 
 // queryUnescape is a non-strict version of net/url.QueryUnescape.
+// The boolean is true when the input contains malformed percent encoding.
 func queryUnescape(input string) (string, bool) {
 	ilen := len(input)
 	res := strings.Builder{}

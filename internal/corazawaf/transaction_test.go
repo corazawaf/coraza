@@ -191,6 +191,9 @@ func TestProcessURISetsURLencodedErrorForMalformedQuery(t *testing.T) {
 	if got := tx.variables.urlencodedError.Get(); got != "1" {
 		t.Fatalf("expected URLENCODED_ERROR to be 1, got %q", got)
 	}
+	if got := tx.variables.args.FindString("a"); len(got) != 1 || got[0].Value() != "%ZZ" {
+		t.Fatalf("expected malformed query value to be preserved, got %v", got)
+	}
 }
 
 func TestWriteRequestBody(t *testing.T) {
