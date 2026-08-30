@@ -17,7 +17,7 @@ import (
 // Noted that the msg information appears in the error and/or audit log files and is not sent back to the client in response headers.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule &REQUEST_HEADERS:Host "@eq 0" "log,id:60008,severity:2,msg:'Request Missing a Host Header'"
 // ```
 type msgFn struct{}

@@ -23,7 +23,7 @@ import (
 // true if the input starts with the parameter string, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block requests that don't start with GET
 // SecRule REQUEST_LINE "!@beginsWith GET" "id:149,deny,log"
 //

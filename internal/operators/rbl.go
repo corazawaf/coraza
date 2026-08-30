@@ -28,7 +28,7 @@ const timeout = 500 * time.Millisecond
 // true if the IP address is found in the RBL, false otherwise or on timeout
 //
 // Example:
-// ```
+// ```seclang
 // # Check IP against Spamhaus blocklist
 // SecRule REMOTE_ADDR "@rbl sbl-xbl.spamhaus.org" "id:183,deny,log,msg:'IP found in RBL'"
 //

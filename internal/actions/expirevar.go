@@ -15,7 +15,7 @@ import (
 // The expire time will be reset if they are used on their own (perhaps in a SecAction directive).
 //
 // Example:
-// ```
+// ```seclang
 //
 //	SecRule REQUEST_COOKIES:JSESSIONID "!^$" "nolog,phase:1,id:114,pass,setsid:%{REQUEST_COOKIES:JSESSIONID}"
 //

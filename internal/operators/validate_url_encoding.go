@@ -29,7 +29,7 @@ const (
 // true if invalid URL encoding is found (violation), false if encoding is valid
 //
 // Example:
-// ```
+// ```seclang
 // # Ensure proper URL encoding in request URI
 // SecRule REQUEST_URI_RAW "@validateUrlEncoding" "id:191,deny,log,msg:'Invalid URL encoding'"
 //
