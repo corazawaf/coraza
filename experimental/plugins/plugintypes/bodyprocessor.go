@@ -4,6 +4,7 @@
 package plugintypes
 
 import (
+	"context"
 	"io"
 	"io/fs"
 )
@@ -101,10 +102,14 @@ type StreamingBodyProcessor interface {
 
 	// ProcessRequestRecords reads records one at a time from the reader and calls fn
 	// for each record. Processing stops if fn returns a non-nil error.
-	ProcessRequestRecords(reader io.Reader, options BodyProcessorOptions,
+	//
+	// Implementations must honor ctx: check ctx.Err() before each blocking read
+	// and return it (or the read error) when the context is done, so a slow or
+	// endless stream can be cancelled by a deadline or client disconnect.
+	ProcessRequestRecords(ctx context.Context, reader io.Reader, options BodyProcessorOptions,
 		fn func(recordNum int, record Record) error) error
 
 	// ProcessResponseRecords is the response equivalent of ProcessRequestRecords.
-	ProcessResponseRecords(reader io.Reader, options BodyProcessorOptions,
+	ProcessResponseRecords(ctx context.Context, reader io.Reader, options BodyProcessorOptions,
 		fn func(recordNum int, record Record) error) error
 }

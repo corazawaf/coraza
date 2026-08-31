@@ -4,6 +4,7 @@
 package experimental
 
 import (
+	"context"
 	"io"
 
 	"github.com/corazawaf/coraza/v3/types"
@@ -58,16 +59,17 @@ type StreamingTransaction interface {
 
 	// ProcessRequestBodyFromStream reads records from input, evaluates Phase 2 rules
 	// per record, and writes clean records to output. If a record triggers an interruption,
-	// processing stops and the interruption is returned.
+	// processing stops and the interruption is returned. Cancelling ctx (e.g. the
+	// request context) stops processing and returns ctx.Err().
 	//
 	// For non-streaming body processors, this falls back to buffering the input,
 	// processing it normally, and copying the result to output.
-	ProcessRequestBodyFromStream(input io.Reader, output io.Writer) (*types.Interruption, error)
+	ProcessRequestBodyFromStream(ctx context.Context, input io.Reader, output io.Writer) (*types.Interruption, error)
 
 	// ProcessResponseBodyFromStream reads records from input, evaluates Phase 4 rules
 	// per record, and writes clean records to output.
 	//
 	// This method must not be called until ProcessRequestBodyFromStream (or
 	// ProcessRequestBody) has returned, as Phase 2 must complete before Phase 4.
-	ProcessResponseBodyFromStream(input io.Reader, output io.Writer) (*types.Interruption, error)
+	ProcessResponseBodyFromStream(ctx context.Context, input io.Reader, output io.Writer) (*types.Interruption, error)
 }

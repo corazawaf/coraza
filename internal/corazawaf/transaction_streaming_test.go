@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -43,7 +44,7 @@ func (m *mockStreamingBodyProcessor) ProcessResponse(_ io.Reader, _ plugintypes.
 	return nil
 }
 
-func (m *mockStreamingBodyProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (m *mockStreamingBodyProcessor) ProcessRequestRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range m.records {
 		if err := fn(i, rec); err != nil {
@@ -53,7 +54,7 @@ func (m *mockStreamingBodyProcessor) ProcessRequestRecords(_ io.Reader, _ plugin
 	return m.err
 }
 
-func (m *mockStreamingBodyProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (m *mockStreamingBodyProcessor) ProcessResponseRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range m.records {
 		if err := fn(i, rec); err != nil {
@@ -132,7 +133,7 @@ func (c *countingStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.Tra
 	return nil
 }
 
-func (c *countingStreamProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (c *countingStreamProcessor) ProcessRequestRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range c.records {
 		*c.count++
@@ -143,7 +144,7 @@ func (c *countingStreamProcessor) ProcessRequestRecords(_ io.Reader, _ plugintyp
 	return nil
 }
 
-func (c *countingStreamProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (c *countingStreamProcessor) ProcessResponseRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range c.records {
 		*c.count++
@@ -169,7 +170,7 @@ func (s *sentinelWrappingProcessor) ProcessResponse(_ io.Reader, _ plugintypes.T
 	return nil
 }
 
-func (s *sentinelWrappingProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (s *sentinelWrappingProcessor) ProcessRequestRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range s.records {
 		if err := fn(i, rec); err != nil {
@@ -179,7 +180,7 @@ func (s *sentinelWrappingProcessor) ProcessRequestRecords(_ io.Reader, _ plugint
 	return nil
 }
 
-func (s *sentinelWrappingProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (s *sentinelWrappingProcessor) ProcessResponseRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	for i, rec := range s.records {
 		if err := fn(i, rec); err != nil {
@@ -207,7 +208,7 @@ func TestProcessRequestBodyStreamingCleanRecords(t *testing.T) {
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
-	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	it, err := tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -237,7 +238,7 @@ func TestProcessRequestBodyStreamingInterruptionStopsProcessing(t *testing.T) {
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
-	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	it, err := tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -267,7 +268,7 @@ func TestProcessResponseBodyStreamingInterruption(t *testing.T) {
 	defer tx.Close()
 	tx.ResponseBodyAccess = true
 
-	it, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	it, err := tx.processResponseBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -300,7 +301,7 @@ func TestProcessRequestBodyStreamingTxVariablesPersist(t *testing.T) {
 	tx.RequestBodyAccess = true
 	tx.variables.tx.SetIndex("marker", 0, "persist-me")
 
-	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	it, err := tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -335,7 +336,7 @@ func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
-	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	it, err := tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -372,7 +373,7 @@ func TestProcessBodyStreamingProcessorErrorClearsVars(t *testing.T) {
 
 			if tc.request {
 				tx.RequestBodyAccess = true
-				if _, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{}); err != nil {
+				if _, err := tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{}); err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
 				if got := tx.variables.argsPost.Len(); got != 0 {
@@ -380,7 +381,7 @@ func TestProcessBodyStreamingProcessorErrorClearsVars(t *testing.T) {
 				}
 			} else {
 				tx.ResponseBodyAccess = true
-				if _, err := tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{}); err != nil {
+				if _, err := tx.processResponseBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{}); err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
 				if got := tx.variables.responseArgs.Len(); got != 0 {
@@ -411,7 +412,7 @@ func TestProcessRequestBodyStreamingProcessorErrorFallbackEvalNoStaleData(t *tes
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
-	it, err := tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	it, err := tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -471,10 +472,10 @@ func TestProcessBodyStreamingProcessorErrorFallbackEvalClean(t *testing.T) {
 			var procErr error
 			if tc.request {
 				tx.RequestBodyAccess = true
-				it, procErr = tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+				it, procErr = tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 			} else {
 				tx.ResponseBodyAccess = true
-				it, procErr = tx.processResponseBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+				it, procErr = tx.processResponseBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 			}
 			if procErr != nil {
 				t.Fatalf("unexpected error: %v", procErr)
@@ -514,7 +515,7 @@ func TestStreamingTransactionInterface(t *testing.T) {
 	tx.ProcessRequestHeaders()
 
 	var reqOut bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("hello"), &reqOut)
+	it, err := tx.ProcessRequestBodyFromStream(context.Background(), strings.NewReader("hello"), &reqOut)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -531,7 +532,7 @@ func TestStreamingTransactionInterface(t *testing.T) {
 	tx.ProcessResponseHeaders(200, "OK")
 
 	var resOut bytes.Buffer
-	it, err = tx.ProcessResponseBodyFromStream(strings.NewReader("world"), &resOut)
+	it, err = tx.ProcessResponseBodyFromStream(context.Background(), strings.NewReader("world"), &resOut)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -563,9 +564,9 @@ func TestProcessBodyFromStreamEngineOff(t *testing.T) {
 			var it *types.Interruption
 			var err error
 			if tc.request {
-				it, err = tx.ProcessRequestBodyFromStream(strings.NewReader("passthrough data"), &output)
+				it, err = tx.ProcessRequestBodyFromStream(context.Background(), strings.NewReader("passthrough data"), &output)
 			} else {
-				it, err = tx.ProcessResponseBodyFromStream(strings.NewReader("passthrough data"), &output)
+				it, err = tx.ProcessResponseBodyFromStream(context.Background(), strings.NewReader("passthrough data"), &output)
 			}
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -592,10 +593,10 @@ type capturingStreamProcessor struct {
 	capturedOpts plugintypes.BodyProcessorOptions
 }
 
-func (c *capturingStreamProcessor) ProcessRequestRecords(r io.Reader, opts plugintypes.BodyProcessorOptions,
+func (c *capturingStreamProcessor) ProcessRequestRecords(ctx context.Context, r io.Reader, opts plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	c.capturedOpts = opts
-	return c.mockStreamingBodyProcessor.ProcessRequestRecords(r, opts, fn)
+	return c.mockStreamingBodyProcessor.ProcessRequestRecords(ctx, r, opts, fn)
 }
 
 // lastCapturingProcessor holds the most recently created capturingStreamProcessor
@@ -738,7 +739,7 @@ func TestProcessRequestBodyFromStream(t *testing.T) {
 				tx.RequestBodyAccess = false
 			}
 			var output bytes.Buffer
-			it, err := tx.ProcessRequestBodyFromStream(strings.NewReader(tt.input), &output)
+			it, err := tx.ProcessRequestBodyFromStream(context.Background(), strings.NewReader(tt.input), &output)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -765,7 +766,7 @@ func TestProcessRequestBodyFromStreamPassesRecursionLimit(t *testing.T) {
 	defer tx.Close()
 
 	var output bytes.Buffer
-	_, err := tx.ProcessRequestBodyFromStream(strings.NewReader(""), &output)
+	_, err := tx.ProcessRequestBodyFromStream(context.Background(), strings.NewReader(""), &output)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -784,7 +785,7 @@ func TestProcessRequestBodyFromStreamWrongPhase(t *testing.T) {
 	// Don't call ProcessRequestHeaders — lastPhase won't be PhaseRequestHeaders
 
 	var output bytes.Buffer
-	it, err := tx.ProcessRequestBodyFromStream(strings.NewReader("data"), &output)
+	it, err := tx.ProcessRequestBodyFromStream(context.Background(), strings.NewReader("data"), &output)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -858,7 +859,7 @@ func TestProcessResponseBodyFromStream(t *testing.T) {
 				tx.ResponseBodyAccess = false
 			}
 			var output bytes.Buffer
-			it, err := tx.ProcessResponseBodyFromStream(strings.NewReader(tt.input), &output)
+			it, err := tx.ProcessResponseBodyFromStream(context.Background(), strings.NewReader(tt.input), &output)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -881,7 +882,7 @@ func TestProcessResponseBodyFromStreamWrongPhase(t *testing.T) {
 	defer tx.Close()
 
 	var output bytes.Buffer
-	it, err := tx.ProcessResponseBodyFromStream(strings.NewReader("data"), &output)
+	it, err := tx.ProcessResponseBodyFromStream(context.Background(), strings.NewReader("data"), &output)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -898,7 +899,7 @@ func TestProcessRequestBodyFromStreamErrorClearsArgsPost(t *testing.T) {
 	defer tx.Close()
 
 	var output bytes.Buffer
-	_, err := tx.ProcessRequestBodyFromStream(strings.NewReader(""), &output)
+	_, err := tx.ProcessRequestBodyFromStream(context.Background(), strings.NewReader(""), &output)
 	if err == nil {
 		t.Fatal("expected error from failing stream processor")
 	}
@@ -916,7 +917,7 @@ func TestProcessResponseBodyFromStreamErrorClearsResponseArgs(t *testing.T) {
 	defer tx.Close()
 
 	var output bytes.Buffer
-	_, err := tx.ProcessResponseBodyFromStream(strings.NewReader(""), &output)
+	_, err := tx.ProcessResponseBodyFromStream(context.Background(), strings.NewReader(""), &output)
 	if err == nil {
 		t.Fatal("expected error from failing stream processor")
 	}
@@ -1006,7 +1007,7 @@ func (p *binaryStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.Trans
 	return nil
 }
 
-func (p *binaryStreamProcessor) ProcessRequestRecords(reader io.Reader, _ plugintypes.BodyProcessorOptions,
+func (p *binaryStreamProcessor) ProcessRequestRecords(_ context.Context, reader io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	recordNum := 0
 	for {
@@ -1040,9 +1041,9 @@ func (p *binaryStreamProcessor) ProcessRequestRecords(reader io.Reader, _ plugin
 	}
 }
 
-func (p *binaryStreamProcessor) ProcessResponseRecords(reader io.Reader, opts plugintypes.BodyProcessorOptions,
+func (p *binaryStreamProcessor) ProcessResponseRecords(ctx context.Context, reader io.Reader, opts plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
-	return p.ProcessRequestRecords(reader, opts, fn)
+	return p.ProcessRequestRecords(ctx, reader, opts, fn)
 }
 
 func TestProcessRequestBodyStreamingBinaryFormat(t *testing.T) {
@@ -1061,7 +1062,7 @@ func TestProcessRequestBodyStreamingBinaryFormat(t *testing.T) {
 	defer tx.Close()
 	tx.RequestBodyAccess = true
 
-	it, err := tx.processRequestBodyStreaming(&binaryStreamProcessor{}, &stream, plugintypes.BodyProcessorOptions{})
+	it, err := tx.processRequestBodyStreaming(context.Background(), &binaryStreamProcessor{}, &stream, plugintypes.BodyProcessorOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1076,7 +1077,7 @@ func TestBinaryStreamProcessorUnexpectedEOFIsError(t *testing.T) {
 	truncatedHeader := []byte{0x00, 0x00} // only 2 of 4 header bytes
 	sp := &binaryStreamProcessor{}
 	var called bool
-	err := sp.ProcessRequestRecords(bytes.NewReader(truncatedHeader), plugintypes.BodyProcessorOptions{},
+	err := sp.ProcessRequestRecords(context.Background(), bytes.NewReader(truncatedHeader), plugintypes.BodyProcessorOptions{},
 		func(_ int, _ plugintypes.Record) error {
 			called = true
 			return nil
@@ -1147,7 +1148,7 @@ func (p *benchStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.Transa
 	return nil
 }
 
-func (p *benchStreamProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (p *benchStreamProcessor) ProcessRequestRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(int, plugintypes.Record) error) error {
 	for i, rec := range p.records {
 		if err := fn(i, mockRecord{fields: rec.fields, rawRecord: rec.raw}); err != nil {
@@ -1157,9 +1158,9 @@ func (p *benchStreamProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.
 	return nil
 }
 
-func (p *benchStreamProcessor) ProcessResponseRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions,
+func (p *benchStreamProcessor) ProcessResponseRecords(ctx context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(int, plugintypes.Record) error) error {
-	return p.ProcessRequestRecords(nil, plugintypes.BodyProcessorOptions{}, fn)
+	return p.ProcessRequestRecords(ctx, nil, plugintypes.BodyProcessorOptions{}, fn)
 }
 
 func newBenchWAF(b *testing.B) *WAF {
@@ -1216,7 +1217,7 @@ func BenchmarkStreamingEval(b *testing.B) {
 			for b.Loop() {
 				tx := waf.NewTransaction()
 				tx.RequestBodyAccess = true
-				_, _ = tx.processRequestBodyStreaming(sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+				_, _ = tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
 				_ = tx.Close()
 			}
 		})
@@ -1277,7 +1278,7 @@ func BenchmarkStreamingRelay(b *testing.B) {
 				tx.variables.reqbodyProcessor.Set("benchstreamrelay")
 				var output bytes.Buffer
 				output.Grow(totalRaw)
-				_, _ = tx.ProcessRequestBodyFromStream(nil, &output)
+				_, _ = tx.ProcessRequestBodyFromStream(context.Background(), nil, &output)
 				_ = tx.Close()
 			}
 		})
@@ -1321,9 +1322,136 @@ func BenchmarkStreamingBinaryFormat(b *testing.B) {
 				tx := waf.NewTransaction()
 				tx.RequestBodyAccess = true
 				reader := bytes.NewReader(streamBytes)
-				_, _ = tx.processRequestBodyStreaming(sp, reader, plugintypes.BodyProcessorOptions{})
+				_, _ = tx.processRequestBodyStreaming(context.Background(), sp, reader, plugintypes.BodyProcessorOptions{})
 				_ = tx.Close()
 			}
 		})
+	}
+}
+
+// cancelStreamProcessor relays records one at a time and invokes onRelay after
+// each, letting a test cancel the context mid-stream. It honors ctx.Err() before
+// each record so cancellation stops the loop, mirroring a well-behaved processor.
+type cancelStreamProcessor struct {
+	records []mockRecord
+	onRelay func(i int)
+}
+
+func (p *cancelStreamProcessor) ProcessRequest(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (p *cancelStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	return nil
+}
+
+func (p *cancelStreamProcessor) run(_ context.Context, fn func(recordNum int, record plugintypes.Record) error) error {
+	// Deliberately does NOT check ctx itself, so these tests exercise the
+	// transaction's per-record callback guard, which must stop a lazy processor
+	// that keeps delivering records after the context is cancelled.
+	for i := range p.records {
+		if err := fn(i, p.records[i]); err != nil {
+			return err
+		}
+		if p.onRelay != nil {
+			p.onRelay(i)
+		}
+	}
+	return nil
+}
+
+func (p *cancelStreamProcessor) ProcessRequestRecords(ctx context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, record plugintypes.Record) error) error {
+	return p.run(ctx, fn)
+}
+
+func (p *cancelStreamProcessor) ProcessResponseRecords(ctx context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions,
+	fn func(recordNum int, record plugintypes.Record) error) error {
+	return p.run(ctx, fn)
+}
+
+func threeCancelRecords() []mockRecord {
+	return []mockRecord{
+		{fields: map[string]string{"r.0": "a"}, rawRecord: []byte("record0\n")},
+		{fields: map[string]string{"r.1": "b"}, rawRecord: []byte("record1\n")},
+		{fields: map[string]string{"r.2": "c"}, rawRecord: []byte("record2\n")},
+	}
+}
+
+// TestProcessRequestBodyFromStreamContextCancel proves that cancelling the
+// context mid-stream stops per-record evaluation, relays no further records,
+// and returns context.Canceled without raising a spurious body error.
+func TestProcessRequestBodyFromStreamContextCancel(t *testing.T) {
+	waf := NewWAF()
+	ctx, cancel := context.WithCancel(context.Background())
+	relayed := 0
+	bodyprocessors.RegisterBodyProcessor("teststreamcancelreq", func() plugintypes.BodyProcessor {
+		return &cancelStreamProcessor{
+			records: threeCancelRecords(),
+			onRelay: func(i int) {
+				relayed++
+				if i == 0 {
+					cancel()
+				}
+			},
+		}
+	})
+
+	tx := setupRequestStreamTx(t, waf, "TESTSTREAMCANCELREQ")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessRequestBodyFromStream(ctx, strings.NewReader(""), &output)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if relayed != 1 {
+		t.Fatalf("expected exactly 1 record relayed before cancel, got %d", relayed)
+	}
+	if output.String() != "record0\n" {
+		t.Fatalf("expected only record0 relayed, got %q", output.String())
+	}
+	if tx.variables.reqbodyError.Get() == "1" {
+		t.Fatal("cancellation must not set REQBODY_ERROR")
+	}
+}
+
+// TestProcessResponseBodyFromStreamContextCancel is the Phase 4 equivalent.
+func TestProcessResponseBodyFromStreamContextCancel(t *testing.T) {
+	waf := NewWAF()
+	waf.ResponseBodyMimeTypes = []string{"application/octet-stream"}
+	ctx, cancel := context.WithCancel(context.Background())
+	relayed := 0
+	bodyprocessors.RegisterBodyProcessor("teststreamcancelres", func() plugintypes.BodyProcessor {
+		return &cancelStreamProcessor{
+			records: threeCancelRecords(),
+			onRelay: func(i int) {
+				relayed++
+				if i == 0 {
+					cancel()
+				}
+			},
+		}
+	})
+
+	tx := setupResponseStreamTx(t, waf, "TESTSTREAMCANCELRES")
+	defer tx.Close()
+
+	var output bytes.Buffer
+	it, err := tx.ProcessResponseBodyFromStream(ctx, strings.NewReader(""), &output)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if relayed != 1 {
+		t.Fatalf("expected exactly 1 record relayed before cancel, got %d", relayed)
+	}
+	if output.String() != "record0\n" {
+		t.Fatalf("expected only record0 relayed, got %q", output.String())
 	}
 }

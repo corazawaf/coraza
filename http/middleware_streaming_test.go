@@ -8,6 +8,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -64,7 +65,7 @@ func (p *testStreamProcessor) ProcessResponse(_ io.Reader, _ plugintypes.Transac
 	return nil
 }
 
-func (p *testStreamProcessor) ProcessRequestRecords(reader io.Reader, _ plugintypes.BodyProcessorOptions,
+func (p *testStreamProcessor) ProcessRequestRecords(_ context.Context, reader io.Reader, _ plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
 	scanner := bufio.NewScanner(reader)
 	recordNum := 0
@@ -91,9 +92,9 @@ func (p *testStreamProcessor) ProcessRequestRecords(reader io.Reader, _ pluginty
 	return scanner.Err()
 }
 
-func (p *testStreamProcessor) ProcessResponseRecords(reader io.Reader, opts plugintypes.BodyProcessorOptions,
+func (p *testStreamProcessor) ProcessResponseRecords(ctx context.Context, reader io.Reader, opts plugintypes.BodyProcessorOptions,
 	fn func(recordNum int, record plugintypes.Record) error) error {
-	return p.ProcessRequestRecords(reader, opts, fn)
+	return p.ProcessRequestRecords(ctx, reader, opts, fn)
 }
 
 func init() {

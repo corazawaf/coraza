@@ -5,6 +5,7 @@ package ollamae2e
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,14 +48,17 @@ func (*ollamaChatBodyProcessor) ProcessResponse(_ io.Reader, _ plugintypes.Trans
 	return nil
 }
 
-func (*ollamaChatBodyProcessor) ProcessRequestRecords(_ io.Reader, _ plugintypes.BodyProcessorOptions, _ func(int, plugintypes.Record) error) error {
+func (*ollamaChatBodyProcessor) ProcessRequestRecords(_ context.Context, _ io.Reader, _ plugintypes.BodyProcessorOptions, _ func(int, plugintypes.Record) error) error {
 	return nil
 }
 
-func (*ollamaChatBodyProcessor) ProcessResponseRecords(r io.Reader, _ plugintypes.BodyProcessorOptions, fn func(int, plugintypes.Record) error) error {
+func (*ollamaChatBodyProcessor) ProcessResponseRecords(ctx context.Context, r io.Reader, _ plugintypes.BodyProcessorOptions, fn func(int, plugintypes.Record) error) error {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 64*1024), 1*1024*1024)
 	for i := 0; scanner.Scan(); i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		raw := scanner.Bytes()
 		if len(raw) == 0 {
 			continue
@@ -100,7 +104,7 @@ func TestOllamaChatBodyProcessor_Fields(t *testing.T) {
 		raw    []byte
 	}
 	var got []rec
-	err := p.ProcessResponseRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+	err := p.ProcessResponseRecords(context.Background(), strings.NewReader(input), plugintypes.BodyProcessorOptions{},
 		func(_ int, r plugintypes.Record) error {
 			f := make(map[string]string, len(r.Fields()))
 			maps.Copy(f, r.Fields())
@@ -137,7 +141,7 @@ func TestOllamaChatBodyProcessor_CallbackError(t *testing.T) {
 	p := &ollamaChatBodyProcessor{}
 	count := 0
 	sentinel := errors.New("stop")
-	err := p.ProcessResponseRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+	err := p.ProcessResponseRecords(context.Background(), strings.NewReader(input), plugintypes.BodyProcessorOptions{},
 		func(_ int, _ plugintypes.Record) error {
 			count++
 			return sentinel
@@ -159,7 +163,7 @@ func TestOllamaChatBodyProcessor_MalformedJSON(t *testing.T) {
 		raw    string
 	}
 	var got []rec
-	if err := p.ProcessResponseRecords(strings.NewReader(input), plugintypes.BodyProcessorOptions{},
+	if err := p.ProcessResponseRecords(context.Background(), strings.NewReader(input), plugintypes.BodyProcessorOptions{},
 		func(_ int, r plugintypes.Record) error {
 			got = append(got, rec{fields: r.Fields(), raw: string(r.Raw())})
 			return nil
@@ -333,7 +337,7 @@ func ollamaWAFProxyHandler(waf coraza.WAF, ollamaURL string) http.HandlerFunc {
 			return
 		}
 		fw := &flushWriter{w: w, f: flusher}
-		it, streamErr := streamTx.ProcessResponseBodyFromStream(resp.Body, fw)
+		it, streamErr := streamTx.ProcessResponseBodyFromStream(r.Context(), resp.Body, fw)
 		if it != nil || streamErr != nil {
 			// Cannot change status; drop the TCP connection to signal interruption or error
 			if hijacker, ok := w.(http.Hijacker); ok {

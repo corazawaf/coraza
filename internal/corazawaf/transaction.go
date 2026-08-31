@@ -1137,7 +1137,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	// If the body processor supports streaming, evaluate rules per record
 	if sp, ok := bodyprocessor.(plugintypes.StreamingBodyProcessor); ok {
-		return tx.processRequestBodyStreaming(sp, reader, bpOpts)
+		return tx.processRequestBodyStreaming(context.Background(), sp, reader, bpOpts)
 	}
 
 	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), bpOpts); err != nil {
@@ -1158,8 +1158,11 @@ var errStreamInterrupted = errors.New("stream processing interrupted")
 // processRequestBodyStreaming evaluates Phase 2 rules after each record in a streaming body.
 // ArgsPost is cleared and repopulated for each record, while TX variables persist across records
 // for cross-record correlation (e.g., anomaly scoring).
-func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
-	err := sp.ProcessRequestRecords(reader, opts, func(recordNum int, record plugintypes.Record) error {
+func (tx *Transaction) processRequestBodyStreaming(ctx context.Context, sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
+	err := sp.ProcessRequestRecords(ctx, reader, opts, func(recordNum int, record plugintypes.Record) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		// Clear ArgsPost and repopulate with this record's fields only
 		tx.variables.argsPost.Reset()
 		for key, value := range record.Fields() {
@@ -1179,6 +1182,11 @@ func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyP
 	})
 
 	if err != nil && err != errStreamInterrupted {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			tx.debugLogger.Debug().Err(err).Msg("Streaming request body processing cancelled")
+			tx.variables.argsPost.Reset()
+			return tx.interruption, err
+		}
 		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming request body")
 		tx.generateRequestBodyError(err)
 		// Clear stale per-record data unconditionally so neither the fallback
@@ -1194,8 +1202,11 @@ func (tx *Transaction) processRequestBodyStreaming(sp plugintypes.StreamingBodyP
 
 // processResponseBodyStreaming evaluates Phase 4 rules after each record in a streaming response body.
 // ArgsResponse is cleared and repopulated for each record, while TX variables persist across records.
-func (tx *Transaction) processResponseBodyStreaming(sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
-	err := sp.ProcessResponseRecords(reader, opts, func(recordNum int, record plugintypes.Record) error {
+func (tx *Transaction) processResponseBodyStreaming(ctx context.Context, sp plugintypes.StreamingBodyProcessor, reader io.Reader, opts plugintypes.BodyProcessorOptions) (*types.Interruption, error) {
+	err := sp.ProcessResponseRecords(ctx, reader, opts, func(recordNum int, record plugintypes.Record) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		// Clear ResponseArgs and repopulate with this record's fields only
 		tx.variables.responseArgs.Reset()
 		for key, value := range record.Fields() {
@@ -1215,6 +1226,11 @@ func (tx *Transaction) processResponseBodyStreaming(sp plugintypes.StreamingBody
 	})
 
 	if err != nil && err != errStreamInterrupted {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			tx.debugLogger.Debug().Err(err).Msg("Streaming response body processing cancelled")
+			tx.variables.responseArgs.Reset()
+			return tx.interruption, err
+		}
 		tx.debugLogger.Error().Err(err).Msg("Failed to process streaming response body")
 		tx.generateResponseBodyError(err)
 		// Clear stale per-record data unconditionally so neither the fallback
@@ -1237,7 +1253,7 @@ func (tx *Transaction) processResponseBodyStreaming(sp plugintypes.StreamingBody
 // are written to output for relay to the backend.
 //
 // This method handles Phase 2 rule evaluation internally.
-func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.Writer) (*types.Interruption, error) {
+func (tx *Transaction) ProcessRequestBodyFromStream(ctx context.Context, input io.Reader, output io.Writer) (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		// Pass through: copy input to output without evaluation
 		if _, err := io.Copy(output, input); err != nil {
@@ -1325,11 +1341,14 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 		Str("body_processor", rbp).
 		Msg("Attempting to process streaming request body with relay")
 
-	streamErr := sp.ProcessRequestRecords(input, plugintypes.BodyProcessorOptions{
+	streamErr := sp.ProcessRequestRecords(ctx, input, plugintypes.BodyProcessorOptions{
 		Mime:                      mime,
 		StoragePath:               tx.WAF.UploadDir,
 		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 	}, func(recordNum int, record plugintypes.Record) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		// Clear ArgsPost and repopulate with this record's fields only
 		tx.variables.argsPost.Reset()
 		for key, value := range record.Fields() {
@@ -1357,6 +1376,11 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 	})
 
 	if streamErr != nil && streamErr != errStreamInterrupted {
+		if errors.Is(streamErr, context.Canceled) || errors.Is(streamErr, context.DeadlineExceeded) {
+			tx.debugLogger.Debug().Err(streamErr).Msg("Streaming request body relay cancelled")
+			tx.variables.argsPost.Reset()
+			return tx.interruption, streamErr
+		}
 		tx.debugLogger.Error().Err(streamErr).Msg("Failed to process streaming request body relay")
 		tx.generateRequestBodyError(streamErr)
 		tx.variables.argsPost.Reset()
@@ -1372,7 +1396,7 @@ func (tx *Transaction) ProcessRequestBodyFromStream(input io.Reader, output io.W
 // ProcessResponseBodyFromStream processes a streaming response body by reading records
 // from input, evaluating Phase 4 rules per record, and writing clean records to output.
 // This enables true streaming of response bodies without full buffering.
-func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.Writer) (*types.Interruption, error) {
+func (tx *Transaction) ProcessResponseBodyFromStream(ctx context.Context, input io.Reader, output io.Writer) (*types.Interruption, error) {
 	if tx.RuleEngine == types.RuleEngineOff {
 		if _, err := io.Copy(output, input); err != nil {
 			return nil, err
@@ -1442,7 +1466,10 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 		Str("body_processor", bp).
 		Msg("Attempting to process streaming response body with relay")
 
-	streamErr := sp.ProcessResponseRecords(input, plugintypes.BodyProcessorOptions{}, func(recordNum int, record plugintypes.Record) error {
+	streamErr := sp.ProcessResponseRecords(ctx, input, plugintypes.BodyProcessorOptions{}, func(recordNum int, record plugintypes.Record) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		tx.variables.responseArgs.Reset()
 		for key, value := range record.Fields() {
 			tx.variables.responseArgs.SetIndex(key, 0, value)
@@ -1467,6 +1494,11 @@ func (tx *Transaction) ProcessResponseBodyFromStream(input io.Reader, output io.
 	})
 
 	if streamErr != nil && streamErr != errStreamInterrupted {
+		if errors.Is(streamErr, context.Canceled) || errors.Is(streamErr, context.DeadlineExceeded) {
+			tx.debugLogger.Debug().Err(streamErr).Msg("Streaming response body relay cancelled")
+			tx.variables.responseArgs.Reset()
+			return tx.interruption, streamErr
+		}
 		tx.debugLogger.Error().Err(streamErr).Msg("Failed to process streaming response body relay")
 		tx.generateResponseBodyError(streamErr)
 		tx.variables.responseArgs.Reset()
@@ -1700,7 +1732,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 
 		// If the body processor supports streaming, evaluate rules per record
 		if sp, ok := b.(plugintypes.StreamingBodyProcessor); ok {
-			return tx.processResponseBodyStreaming(sp, reader, plugintypes.BodyProcessorOptions{})
+			return tx.processResponseBodyStreaming(context.Background(), sp, reader, plugintypes.BodyProcessorOptions{})
 		}
 
 		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{}); err != nil {
