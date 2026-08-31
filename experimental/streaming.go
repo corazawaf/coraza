@@ -36,6 +36,29 @@ import (
 // while TX-scoped variables (e.g., anomaly scores) persist across records for
 // cross-record correlation.
 //
+// # Cancellation and resource limits
+//
+// Pass a context that reflects the lifetime of the connection — in net/http that
+// is Request.Context(). The transaction checks ctx before evaluating each record,
+// so a cancelled or expired context stops per-record evaluation promptly and the
+// method returns ctx.Err() (a cancelled stream is treated as an aborted
+// transaction, not a malformed body, so REQBODY_ERROR/RESBODY_ERROR is not set).
+//
+// ctx alone does not interrupt a read that is already blocked waiting for more
+// bytes; that depends on the input reader honoring cancellation. A net/http
+// Request.Body does — its Read unblocks when the request context is cancelled or
+// the client disconnects — so passing Request.Context() gives both per-record and
+// blocked-read cancellation. For any other reader, ensure it observes ctx (e.g.
+// by setting a read deadline) or cancellation will not unblock a stalled read.
+//
+// Unlike ProcessRequestBody, the streaming path reads directly from input and does
+// NOT enforce SecRequestBodyLimit — a stream has no inherent whole-body size. It
+// also evaluates the full rule set once per record, so record count is
+// attacker-influenced work. Integrators are responsible for bounding exposure at
+// the transport: set http.Server ReadTimeout/ReadHeaderTimeout and IdleTimeout,
+// and wrap input in an http.MaxBytesReader (or an equivalent limited reader) when
+// a maximum stream size is appropriate for the deployment.
+//
 // # Phase ordering and full-duplex limitations
 //
 // Coraza follows the ModSecurity phase model where request processing (Phases 1–2)
