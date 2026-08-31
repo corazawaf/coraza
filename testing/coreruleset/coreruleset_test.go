@@ -524,6 +524,9 @@ func TestFTW(t *testing.T) {
 
 	customTestingConfig := `
 SecResponseBodyMimeType text/plain
+SecDefaultAction "phase:3,log,auditlog,pass"
+SecDefaultAction "phase:4,log,auditlog,pass"
+SecDefaultAction "phase:5,log,auditlog,pass"
 
 # Rule 900005 from https://github.com/coreruleset/coreruleset/blob/v4.0/dev/tests/regression/README.md#requirements
 SecAction "id:900005,\
@@ -669,7 +672,7 @@ func BenchmarkCRSMultiWAFCompilation(b *testing.B) {
 }
 
 func BenchmarkCRSMemoizeSpeedup(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Cold compilation (first WAF)
 		cold := time.Now()
 		waf1 := crsWAF(b)
@@ -747,10 +750,12 @@ func crsWAF(t testing.TB) coraza.WAF {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// TODO: SecDefaultAction should be removed as soon as we point to a CRS version that carries them by default in the crs-setup.conf.example (From CRS v4.28.0 and v4.25.1 (LTS))
 	customTestingConfig := `
 SecResponseBodyMimeType text/plain
 SecDefaultAction "phase:3,log,auditlog,pass"
 SecDefaultAction "phase:4,log,auditlog,pass"
+SecDefaultAction "phase:5,log,auditlog,pass"
 
 # Rule 900005 from https://github.com/coreruleset/coreruleset/blob/v4.0/dev/tests/regression/README.md#requirements
 SecAction "id:900005,\

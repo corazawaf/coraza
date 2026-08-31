@@ -9,20 +9,20 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 )
 
-// Transaction is created from a WAF instance to handle web requests and responses,
-// it contains a copy of most WAF configurations that can be safely changed.
+// Transaction is created from a WAF instance to handle web requests and responses.
+// It contains a copy of most WAF configurations that can be safely changed.
 // Transactions are used to store all data like URLs, request and response
 // headers. Transactions are used to evaluate rules by phase and generate disruptive
 // actions. Disruptive actions can be read from *tx.Interruption.
-// It is safe to manage multiple transactions but transactions themself are not
-// thread safe
+// It is safe to manage multiple transactions but transactions themselves are not
+// thread safe.
 type Transaction interface {
-	// ProcessConnection should be called at very beginning of a request process, it is
-	// expected to be executed prior to the virtual host resolution, when the
+	// ProcessConnection should be called at the very beginning of a request process,
+	// it is expected to be executed prior to the virtual host resolution, when the
 	// connection arrives on the server.
 	ProcessConnection(client string, cPort int, server string, sPort int)
 
-	// ProcessURI Performs the analysis on the URI and all the query string variables.
+	// ProcessURI performs the analysis on the URI and all the query string variables.
 	// This method should be called at very beginning of a request process, it is
 	// expected to be executed prior to the virtual host resolution, when the
 	// connection arrives on the server.
@@ -30,7 +30,7 @@ type Transaction interface {
 	// SecLanguages phases. It is something that may occur between the SecLanguage
 	// phase 1 and 2.
 	//
-	// note: This function won't add GET arguments, they must be added with AddArgument
+	// Note: This function won't add GET arguments, they must be added with AddGetRequestArgument.
 	ProcessURI(uri string, method string, httpVersion string)
 
 	// SetServerName allows to set server name details.
@@ -43,11 +43,12 @@ type Transaction interface {
 	// AddRequestHeader Adds a request header
 	//
 	// With this method it is possible to feed Coraza with a request header.
+	//
 	// Note: Golang's *http.Request object will not contain a "Host" header,
 	// and you might have to force it
 	AddRequestHeader(key string, value string)
 
-	// ProcessRequestHeaders Performs the analysis on the request readers.
+	// ProcessRequestHeaders performs the analysis on the request headers.
 	//
 	// This method perform the analysis on the request headers, notice however
 	// that the headers should be added prior to the execution of this function.
@@ -60,28 +61,28 @@ type Transaction interface {
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
 
-	// AddGetRequestArgument Add arguments GET, this will feed ARGS_GET, ARGS_GET_NAMES,
+	// AddGetRequestArgument add arguments GET, this will feed ARGS_GET, ARGS_GET_NAMES,
 	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
 	AddGetRequestArgument(key string, value string)
 
-	// AddPostRequestArgument Add arguments POST, this will feed ARGS_POST, ARGS_POST_NAMES,
+	// AddPostRequestArgument add arguments POST, this will feed ARGS_POST, ARGS_POST_NAMES,
 	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
 	AddPostRequestArgument(key string, value string)
 
-	// AddPathRequestArgument Add arguments PATH, this will feed ARGS_PATH, ARGS_PATH_NAMES,
+	// AddPathRequestArgument add arguments PATH, this will feed ARGS_PATH, ARGS_PATH_NAMES,
 	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
 	AddPathRequestArgument(key string, value string)
 
-	// AddResponseArgument Add arguments to the response, this will feed ARGS_RESPONSE
+	// AddResponseArgument add arguments to the response, this will feed ARGS_RESPONSE
 	AddResponseArgument(key string, value string)
 
-	// ProcessRequestBody Performs the analysis of the request body (if any)
+	// ProcessRequestBody performs the analysis of the request body (if any)
 	//
 	// It is recommended to call this method even if it is not expected to have a body.
 	// It permits to execute rules belonging to request body phase, but not necessarily
 	// processing the request body.
 	//
-	// Remember to check for a possible intervention.
+	// Note: Remember to check for a possible intervention.
 	ProcessRequestBody() (*Interruption, error)
 
 	// WriteRequestBody attempts to write data into the body up to the buffer limit and
@@ -109,12 +110,12 @@ type Transaction interface {
 	// With this method it is possible to feed Coraza with a response header.
 	AddResponseHeader(key string, value string)
 
-	// ProcessResponseHeaders Perform the analysis on the response readers.
+	// ProcessResponseHeaders performs the analysis on the response headers.
 	//
 	// This method perform the analysis on the response headers, notice however
 	// that the headers should be added prior to the execution of this function.
 	//
-	// note: Remember to check for a possible intervention.
+	// Note: Remember to check for a possible intervention.
 	ProcessResponseHeaders(code int, proto string) *Interruption
 
 	// ResponseBodyReader returns a reader for content that has been written by
@@ -122,13 +123,13 @@ type Transaction interface {
 	// within the Transaction while also passing it further in an HTTP framework.
 	ResponseBodyReader() (io.Reader, error)
 
-	// ProcessResponseBody Perform the analysis of the response body (if any)
+	// ProcessResponseBody performs the analysis of the response body (if any)
 	//
 	// It is recommended to call this method even if it is not expected to have a body.
-	// It permits to execute rules belonging to request body phase, but not necessarily
-	// processing the response body.
+	// It permits to execute rules belonging to response body phase, but not
+	// necessarily processing the response body.
 	//
-	// note Remember to check for a possible intervention.
+	// Note: Remember to check for a possible intervention.
 	ProcessResponseBody() (*Interruption, error)
 
 	// WriteResponseBody attempts to write data into the body up to the buffer limit and
@@ -152,25 +153,26 @@ type Transaction interface {
 	// delivered prior to the execution of this method.
 	ProcessLogging()
 
-	// IsRuleEngineOff will return true if RuleEngine is set to Off
+	// IsRuleEngineOff returns true if RuleEngine is set to Off
 	IsRuleEngineOff() bool
 
-	// IsRequestBodyAccessible will return true if RequestBody access has been enabled by RequestBodyAccess
+	// IsRequestBodyAccessible returns true if RequestBody access has been enabled by RequestBodyAccess
 	//
 	// This can be used to perform checks just before calling request body related functions.
 	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
 	// only if the API consumer requires them for specific server/proxy actions
 	// (such as avoiding proxy side buffering).
-	// Note: it returns the current status, later rules may still change it via ctl actions.
+	//
+	// Note: it returns the current status, but later rules may still change it via ctl actions.
 	IsRequestBodyAccessible() bool
 
-	// IsResponseBodyAccessible will return true if ResponseBody access has been enabled by ResponseBodyAccess
+	// IsResponseBodyAccessible returns true if ResponseBody access has been enabled by ResponseBodyAccess
 	//
 	// This can be used to perform checks just before calling response body related functions.
 	// In order to avoid any risk of performing wrong early assumptions, perform early checks on this value
 	// only if the API consumer requires them for specific server/proxy actions
 	// (such as avoiding proxy side buffering).
-	// Note: it returns the current status, later rules may still change it via ctl actions.
+	// Note: it returns the current status, but later rules may still change it via ctl actions.
 	IsResponseBodyAccessible() bool
 
 	// IsResponseBodyProcessable returns true if the response body meets the
@@ -180,7 +182,7 @@ type Transaction interface {
 	// directly to the client or write them to Coraza's buffer.
 	IsResponseBodyProcessable() bool
 
-	// IsInterrupted will return true if the transaction was interrupted
+	// IsInterrupted returns true if the transaction was interrupted.
 	IsInterrupted() bool
 
 	// Interruption returns the types.Interruption if the request was interrupted,

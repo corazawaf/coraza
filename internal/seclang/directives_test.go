@@ -37,6 +37,128 @@ func Test_NonImplementedDirective(t *testing.T) {
 	}
 }
 
+func addRule(t *testing.T, waf *corazawaf.WAF, data string) {
+	t.Helper()
+	rule, err := ParseRule(RuleOptions{Data: data, WAF: waf, WithOperator: true})
+	if err != nil {
+		t.Fatalf("failed to parse rule %q: %v", data, err)
+	}
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatalf("failed to add rule %q: %v", data, err)
+	}
+}
+
+func TestSecRuleRemoveById(t *testing.T) {
+	t.Run("removes single rule by ID", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass"`)
+		if err := directiveSecRuleRemoveByID(&DirectiveOptions{WAF: waf, Opts: "1000"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 0 {
+			t.Errorf("expected 0 rules, got %d", waf.Rules.Count())
+		}
+	})
+
+	t.Run("removes multiple rules by ID", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1001,phase:1,log,pass"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1002,phase:1,log,pass"`)
+		if err := directiveSecRuleRemoveByID(&DirectiveOptions{WAF: waf, Opts: "1000 1002"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 1 {
+			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
+		}
+		if waf.Rules.GetRules()[0].ID() != 1001 {
+			t.Errorf("expected rule 1001 to remain, got %d", waf.Rules.GetRules()[0].ID())
+		}
+	})
+
+	t.Run("removes rules by range", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1001,phase:1,log,pass"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1002,phase:1,log,pass"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1003,phase:1,log,pass"`)
+		if err := directiveSecRuleRemoveByID(&DirectiveOptions{WAF: waf, Opts: "1001-1002"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 2 {
+			t.Errorf("expected 2 rules, got %d", waf.Rules.Count())
+		}
+		ids := []int{waf.Rules.GetRules()[0].ID(), waf.Rules.GetRules()[1].ID()}
+		if ids[0] != 1000 || ids[1] != 1003 {
+			t.Errorf("expected rules 1000 and 1003 to remain, got %v", ids)
+		}
+	})
+
+	t.Run("no-op when ID does not exist", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass"`)
+		if err := directiveSecRuleRemoveByID(&DirectiveOptions{WAF: waf, Opts: "9999"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 1 {
+			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
+		}
+	})
+}
+
+func TestSecRuleRemoveByMsg(t *testing.T) {
+	t.Run("removes matching rule", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,msg:'test-msg'"`)
+		if err := directiveSecRuleRemoveByMsg(&DirectiveOptions{WAF: waf, Opts: "test-msg"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 0 {
+			t.Errorf("expected 0 rules, got %d", waf.Rules.Count())
+		}
+	})
+
+	t.Run("no-op when message case does not match", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,msg:'test-msg'"`)
+		if err := directiveSecRuleRemoveByMsg(&DirectiveOptions{WAF: waf, Opts: "TEST-MSG"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 1 {
+			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
+		}
+	})
+}
+
+func TestSecRuleRemoveByTag(t *testing.T) {
+	t.Run("removes matching rules", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,tag:'test-tag'"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1001,phase:1,log,pass,tag:'test-tag'"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1002,phase:1,log,pass,tag:'other-tag'"`)
+		if err := directiveSecRuleRemoveByTag(&DirectiveOptions{WAF: waf, Opts: "test-tag"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 1 {
+			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
+		}
+		if waf.Rules.GetRules()[0].ID() != 1002 {
+			t.Errorf("expected rule 1002 to remain, got %d", waf.Rules.GetRules()[0].ID())
+		}
+	})
+
+	t.Run("no-op when tag case does not match", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,tag:'test-tag'"`)
+		if err := directiveSecRuleRemoveByTag(&DirectiveOptions{WAF: waf, Opts: "TEST-TAG"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 1 {
+			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
+		}
+	})
+}
+
 func TestSecRuleUpdateActionByID(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rule, err := ParseRule(RuleOptions{

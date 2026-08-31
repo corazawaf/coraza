@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -1184,6 +1185,21 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 	}
 }
 
+// TestTransactionFieldCount is a tripwire against pool-reuse state leaks such as
+// https://github.com/corazawaf/coraza/issues/1640. Transactions are pooled and
+// reused, so every field must be reset before a transaction is handed out again
+// (in newTransaction, or in place in Close); a field left set leaks into the next
+// request. This test fails whenever a field is added to or removed from
+// Transaction: when it does, make sure the field is reset on pool reuse, then
+// update wantFields.
+func TestTransactionFieldCount(t *testing.T) {
+	const wantFields = 35
+	if got := reflect.TypeFor[Transaction]().NumField(); got != wantFields {
+		t.Fatalf("Transaction has %d fields, want %d. If you added a field, make sure it "+
+			"is reset on pool reuse in newTransaction() (or Close()), then update wantFields.", got, wantFields)
+	}
+}
+
 func TestLogCallback(t *testing.T) {
 
 	testCases := []struct {
@@ -1713,7 +1729,7 @@ func BenchmarkTxGetField(b *testing.B) {
 	rvp := ruleVariableParams{
 		Variable: variables.Args,
 	}
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tx.GetField(rvp)
 	}
 	if err := tx.Close(); err != nil {
@@ -1745,8 +1761,8 @@ func BenchmarkTxGetFieldWithShortRegexException(b *testing.B) {
 		},
 	}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		tx.GetField(rvp)
 	}
 	b.StopTimer()
@@ -1804,7 +1820,7 @@ func TestTxProcessURI(t *testing.T) {
 }
 
 func BenchmarkTransactionCreation(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		makeTransaction(b)
 	}
 }
@@ -1846,8 +1862,8 @@ func makeTransactionTimestamped(t testing.TB) *Transaction {
 func BenchmarkTransactionTimestamped(b *testing.B) {
 	tx := NewWAF().NewTransaction()
 	tx.Timestamp = time.Now().Unix()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		tx.setTimeVariables()
 	}
 }
@@ -2472,8 +2488,8 @@ func BenchmarkRuleEvalWithTransformations(b *testing.B) {
 		b.Fatalf("unexpected interruption during request headers processing: %+v", it)
 	}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
@@ -2658,8 +2674,8 @@ func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }

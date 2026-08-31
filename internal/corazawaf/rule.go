@@ -231,7 +231,13 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		}
 		r.matchVariable(tx, md)
 	} else {
-		ecol := tx.ruleRemoveTargetByID[r.ID_]
+		// Chain children carry ID_ == noID; ctl:ruleRemoveTarget* stores exceptions
+		// under the parent's ID, so chain children must look up via ParentID_.
+		rid := r.ID_
+		if rid == noID {
+			rid = r.ParentID_
+		}
+		ecol := tx.ruleRemoveTargetByID[rid]
 		for _, v := range r.variables {
 			if multiphaseEvaluation && multiphaseSkipVariable(r, v.Variable, phase) {
 				continue
