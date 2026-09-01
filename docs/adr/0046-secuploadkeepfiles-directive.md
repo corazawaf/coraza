@@ -79,8 +79,9 @@ Follow-up landed as PR #1560.
 - **Positive:** ModSecurity parity; operators get `RelevantOnly` to keep
   only suspicious uploads for post-hoc forensics.
 - **Negative / follow-up:** Full ModSecurity spec requires pairing with
-  `SecUploadDir`; check was added. Wasm builds silently ignore the
-  directive (no FS access).
+  `SecUploadDir`; check was added. On Wasm builds (no FS access) enabling
+  the directive (`On`/`RelevantOnly`) returns an error; `Off` is the no-op
+  default.
 
 ## References
 

@@ -10,8 +10,9 @@
 
 ## Context and Problem
 
-NDJSON / JSON Lines / RFC 7464 (JSON Sequence) streams carry one JSON
-record per line. Applied to WAF processing, each record should be
+NDJSON / JSON Lines streams carry one JSON record per line. (RFC 7464
+JSON Text Sequences use `0x1E` record separators rather than line framing
+and are out of scope for this line-delimited processor.) Applied to WAF processing, each record should be
 evaluated independently — otherwise a malicious record hiding mid-stream
 requires buffering the whole body just to catch it.
 

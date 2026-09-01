@@ -26,7 +26,8 @@ across every capturing evaluation on every request.
 
 - Keep `FindStringSubmatch` and tolerate the allocs.
 - Switch to `FindStringSubmatchIndex`, materialise substrings as slices of
-  the original input (zero-alloc).
+  the original input (removes the per-match `[]string` allocation; the
+  returned slice still allocates once).
 
 ## Decision Outcome
 
