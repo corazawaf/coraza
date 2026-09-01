@@ -109,5 +109,12 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0040](0040-crslang-antlr4-buildtag.md) | [#1536](https://github.com/corazawaf/coraza/pull/1536) | 2026-03-08 | v3.4.0 | F | `crslang` ANTLR4 parser behind build tag |
 | [0041](0041-ruleremovebyid-range-storage.md) | [#1538](https://github.com/corazawaf/coraza/pull/1538) | 2026-03-09 | v3.4.0 | ⚡ | `ruleRemoveById` range storage |
 | [0054](0054-xml-unexpected-eof.md) | [#1452](https://github.com/corazawaf/coraza/pull/1452) | 2025-12-18 | v3.4.0 | P | Ignore unexpected EOF in XML body processor |
+| [0042](0042-regex-memoize-default-on.md) | [#1540](https://github.com/corazawaf/coraza/pull/1540) | 2026-03-18 | v3.5.0 | ⚡ | Regex memoize enabled by default |
+| [0043](0043-waf-close-per-owner-memoize.md) | [#1541](https://github.com/corazawaf/coraza/pull/1541) | 2026-03-11 | v3.5.0 | F | `WAF.Close()` + per-owner memoize tracking |
+| [0044](0044-prefix-transformation-cache.md) | [#1544](https://github.com/corazawaf/coraza/pull/1544) | 2026-03-11 | v3.5.0 | ⚡ | Prefix-based transformation cache |
+| [0045](0045-findstringsubmatchindex-noalloc.md) | [#1547](https://github.com/corazawaf/coraza/pull/1547) | 2026-03-11 | v3.5.0 | ⚡ | `FindStringSubmatchIndex` no-alloc path |
+| [0046](0046-secuploadkeepfiles-directive.md) | [#1557](https://github.com/corazawaf/coraza/pull/1557) | 2026-03-19 | v3.5.0 | P | `SecUploadKeepFiles` directive |
+| [0047](0047-regex-in-ctl-ruleremovetarget.md) | [#1561](https://github.com/corazawaf/coraza/pull/1561) | 2026-03-21 | v3.5.0 | F | Regex in `ctl:ruleRemoveTarget*` |
+| [0048](0048-ndjson-body-processor.md) | [#1563](https://github.com/corazawaf/coraza/pull/1563) | 2026-03-21 | v3.5.0 | F | NDJSON (JSON Stream) body processor |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
