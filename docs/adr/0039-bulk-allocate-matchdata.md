@@ -46,7 +46,7 @@ re-evaluation).
 
 No substantive technical discussion recorded beyond the benchmark data. The
 change is localised, covered by `TestFindAllBulkAllocIndependence` and
-siblings to prove results remain independent after the pool redesign.
+siblings to prove results remain independent after the bulk-allocation redesign.
 
 ## Participants
 

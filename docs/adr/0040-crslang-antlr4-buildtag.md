@@ -34,7 +34,7 @@ Chosen: **build-tag gate** — `//go:build coraza.experimental.crslang_parser`
 on `parser_v2.go` and its test file. Default builds skip the package
 entirely:
 
-```
+```shell
 go build -tags=coraza.experimental.crslang_parser ./...
 go test -tags=coraza.experimental.crslang_parser ./experimental/seclang/...
 ```
