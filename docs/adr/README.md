@@ -91,5 +91,14 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0022](0022-time-variables.md) | [#1223](https://github.com/corazawaf/coraza/pull/1223) | 2024-12-09 | v3.3.0 | P | `TIME_*` variables |
 | [0023](0023-base64encode-transformation.md) | [#1257](https://github.com/corazawaf/coraza/pull/1257) | 2024-12-29 | v3.3.0 | P | `base64Encode` transformation |
 | [0024](0024-hexdecode-transformation.md) | [#1275](https://github.com/corazawaf/coraza/pull/1275) | 2025-01-24 | v3.3.2 | P | `hexDecode` transformation |
+| [0025](0025-selectors-on-names-collections.md) | [#1143](https://github.com/corazawaf/coraza/pull/1143) | 2025-05-30 | v3.4.0 | P | Selectors on `*_NAMES` collections |
+| [0026](0026-pmf-short-alias.md) | [#1356](https://github.com/corazawaf/coraza/pull/1356) | 2025-05-12 | v3.4.0 | P | `@pmf` short alias |
+| [0027](0027-ipmatchf-short-alias.md) | [#1357](https://github.com/corazawaf/coraza/pull/1357) | 2025-05-13 | v3.4.0 | P | `@ipMatchF` short alias |
+| [0028](0028-syslog-audit-log-writer.md) | [#1383](https://github.com/corazawaf/coraza/pull/1383) | 2025-07-21 | v3.4.0 | F | Syslog audit log writer |
+| [0029](0029-json-schema-improvements.md) | [#1384](https://github.com/corazawaf/coraza/pull/1384) | 2025-08-11 | v3.4.0 | F | JSON schema audit log improvements |
+| [0030](0030-secrequestbodyjsondepthlimit.md) | [#1110](https://github.com/corazawaf/coraza/pull/1110) | 2026-03-06 | v3.4.0 | F | `SecRequestBodyJsonDepthLimit` directive |
+| [0031](0031-multipart-unexpected-eof.md) | [#1453](https://github.com/corazawaf/coraza/pull/1453) | 2026-03-06 | v3.4.0 | P | Ignore unexpected EOF in multipart |
+| [0032](0032-ctl-auditlogparts-plus-minus.md) | [#1467](https://github.com/corazawaf/coraza/pull/1467) | 2026-01-13 | v3.4.0 | P | `ctl:auditLogParts` `+`/`-` syntax |
+| [0033](0033-strmatch-operator.md) | [#1473](https://github.com/corazawaf/coraza/pull/1473) | 2026-01-15 | v3.4.0 | P | `@strmatch` operator |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
