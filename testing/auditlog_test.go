@@ -511,6 +511,7 @@ func TestAuditLogWithKFlagWithoutHFlag(t *testing.T) {
 		t.Errorf("Not expected audit log to contain %q, got %q", notExpected, alWithErrMsg.ErrorMessage())
 	}
 }
+
 func TestAuditLogRelevantOnlyDetectionOnly(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
