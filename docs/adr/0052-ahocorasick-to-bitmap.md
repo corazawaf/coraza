@@ -41,9 +41,9 @@ Two additional structural issues were found:
 
 Chosen: **Wu-Manber indexed-bitmap matcher + three structural fixes.**
 
-- `indexedMatcher` scanner with a 2-byte bigram shift table; sub-linear
-  average step (`minNeedleLen/2`), zero heap allocation at match time,
-  up to 256 needles before falling back.
+- `indexedMatcher` scanner with a 256-entry single-byte shift table plus
+  per-byte `endBuckets`; sub-linear average scanning (~`O(H/minLen)`), zero
+  heap allocation at match time, up to 256 needles before falling back.
 - `trieReconstruct`: detects `OpConcat(OpLiteral, OpAlternate)` and
   prepends the shared prefix to each suffix branch, recovering the full
   keyword set for the scanner.

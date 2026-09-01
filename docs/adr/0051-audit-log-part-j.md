@@ -13,7 +13,7 @@
 ModSecurity v2 defines `Part J` of `SecAuditLogParts` as a list of
 uploaded-file metadata:
 
-```
+```text
 1,12345,"image.png","image/png"
 2,67890,"doc.pdf","application/pdf"
 Total,80235
@@ -94,9 +94,10 @@ Applied.
 
 ## Consequences
 
-- **Positive:** Coraza emits ModSecurity v2 Part J verbatim; SIEM
-  pipelines that parse Part J work out of the box across native, JSON, and
-  OCSF formats.
+- **Positive:** the native audit log emits a Part J block of uploaded-file
+  metadata (the part ModSecurity v2 reserved for this purpose); the JSON and
+  OCSF outputs expose the equivalent metadata through their own field
+  structures. SIEM pipelines that consume it work out of the box.
 - **Negative / follow-up:** Part I (fake urlencoded body for multipart
   requests) is still unimplemented and documented as such.
 
