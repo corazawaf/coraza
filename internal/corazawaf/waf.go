@@ -253,6 +253,16 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 
 		tx.variables = *NewTransactionVariables()
 		tx.transformationCache = map[transformationKey]transformationValue{}
+	} else {
+		// The transformation cache is scoped to a single transaction: rulegroup.go
+		// keys it by unsafe.StringData(argKey), which is only sound "as the strings
+		// will be alive throughout the phase". Allocating it inside the branch above
+		// means a transaction coming back from txPool keeps every entry it ever
+		// cached, and each *byte key keeps its backing array reachable, so the map
+		// grows monotonically with the number of requests served. Entries can never
+		// be reused across transactions either: the key holds a fresh string pointer
+		// on every request, so a stale entry can only ever miss.
+		clear(tx.transformationCache)
 	}
 
 	// set capture variables

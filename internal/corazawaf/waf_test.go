@@ -62,6 +62,57 @@ func TestNewTransactionResetsDetectionOnlyInterruption(t *testing.T) {
 	}
 }
 
+func TestNewTransactionResetsTransformationCache(t *testing.T) {
+	waf := NewWAF()
+
+	tx := waf.NewTransaction()
+	argKey := []byte("ARGS:leaked")
+	tx.transformationCache[transformationKey{argKey: &argKey[0], argIndex: 1}] =
+		transformationValue{arg: "transformed"}
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// A subsequent transaction reuses the pooled object. The cache is scoped to a
+	// single transaction, so it must come back empty.
+	reused := waf.NewTransaction()
+	if got := len(reused.transformationCache); got != 0 {
+		t.Errorf("reused transaction inherited %d transformation cache entries, want 0", got)
+	}
+	if err := reused.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTransformationCacheDoesNotGrowAcrossTransactions(t *testing.T) {
+	waf := NewWAF()
+
+	// Each round writes one distinct key, mirroring transformArg: the key holds
+	// unsafe.StringData(argKey), a fresh pointer on every request, so entries can
+	// never be reused across transactions — they can only accumulate.
+	const rounds = 200
+	maxSeen := 0
+	for i := 0; i < rounds; i++ {
+		tx := waf.NewTransaction()
+		argKey := []byte("ARGS:round")
+		tx.transformationCache[transformationKey{argKey: &argKey[0], argIndex: i}] =
+			transformationValue{arg: "transformed"}
+		if n := len(tx.transformationCache); n > maxSeen {
+			maxSeen = n
+		}
+		if err := tx.Close(); err != nil {
+			t.Fatalf("round %d: %v", i, err)
+		}
+	}
+
+	// One entry per round is the entry that round just wrote. Anything above that
+	// is a previous round that was never released.
+	if maxSeen > 1 {
+		t.Errorf("transformation cache accumulated across transactions: saw up to %d entries over %d rounds, want 1",
+			maxSeen, rounds)
+	}
+}
+
 func TestSetDebugLogPath(t *testing.T) {
 	tests := map[string]struct {
 		path string
