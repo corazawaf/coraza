@@ -22,6 +22,8 @@ type MatchData struct {
 	Key_ string
 	// Value of the current VARIABLE:KEY
 	Value_ string
+	// Pre-computed lowercase key for efficient exception filtering
+	LowerKey_ string
 	// Macro expanded message
 	Message_ string
 	// Macro expanded logdata
