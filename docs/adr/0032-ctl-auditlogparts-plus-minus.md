@@ -29,9 +29,9 @@ which forces rule authors to know every current part.
 
 ## Decision Outcome
 
-Chosen: **one function `ApplyAuditLogParts` handling both forms**. It builds
-a `partsMap` for set updates and iterates the package-level
-`orderedAuditLogParts` to restore canonical audit-log ordering.
+Chosen: **one function `ApplyAuditLogParts` handling both forms**, backed
+by an ordered slice of valid parts (not a map) because part ordering
+matters for the audit log layout.
 
 > "either we use ordered in all or we use validHere because otherwise we
 > are reordering the parts."
@@ -42,15 +42,11 @@ a `partsMap` for set updates and iterates the package-level
 > better so I'd rather to that."
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1467#discussion_r2688076857))
 
-The author expected malformed inputs to be rejected by the existing `validOpts` check:
+Malformed inputs are rejected by the existing `validOpts` check:
 
 > "None, as this is checked by `validOpts`. It will be rejected with
 > `invalid audit log parts +`."
 > — @fzipi ([review](https://github.com/corazawaf/coraza/pull/1467#discussion_r2681944724))
-
-In the shipped code `validOpts` only rejects unknown part *letters*; a bare
-`+`/`-` with an empty suffix passes validation and is a no-op rather than an
-error.
 
 ## Technical Discussion
 
@@ -63,7 +59,7 @@ error.
 > "What if moditication is `++` or `--`?"
 > — @jcchavezs ([review](https://github.com/corazawaf/coraza/pull/1467#discussion_r2680505932))
 
-…answered by @fzipi above, though in the shipped code a bare `+`/`-` is a no-op rather than an error.
+…answered by @fzipi above: rejected with a clear error.
 
 **Copilot-reviewer hot-path concern** (deferred):
 
@@ -86,9 +82,8 @@ a package-level variable is an easy follow-up if profiling surfaces it.
 
 - **Positive:** ModSecurity-style additive/subtractive audit-log-part
   tuning works in Coraza; rules no longer need to restate every part.
-- **Negative / follow-up:** a `partsMap` is built per call for set membership
-  (the `orderedAuditLogParts` slice is package-level, not re-allocated); small,
-  but worth profiling if noticed on the hot path.
+- **Negative / follow-up:** `orderedParts` slice re-allocated per call;
+  small, but worth profiling if noticed on the hot path.
 
 ## References
 
