@@ -31,7 +31,7 @@ parsing without validating the input first.
 
 ## Decision Outcome
 
-Chosen: **pre-validate with `gjson.Valid`, then parse**, and introduce
+Chosen: **parse and extract first (best effort), then validate with `gjson.Valid`**, and introduce
 `SecRequestBodyJsonDepthLimit` (default 1024). The author benchmarked the
 overhead explicitly and found it acceptable (~33% of the full JSON pipeline
 in the worst case), citing the upstream library's own recommendation:
