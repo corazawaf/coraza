@@ -22,7 +22,7 @@ func TestUrlPayloads(t *testing.T) {
 
 func BenchmarkParseQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ParseQuery(parseQueryInput, '&')
+		_, _ = ParseQuery(parseQueryInput, '&')
 	}
 }
 
@@ -54,7 +54,7 @@ func TestQueryUnescape(t *testing.T) {
 func BenchmarkQueryUnescape(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for k := range queryUnescapePayloads {
-			queryUnescape(k)
+			_, _ = queryUnescape(k)
 		}
 	}
 }

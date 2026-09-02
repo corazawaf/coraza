@@ -841,8 +841,8 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	if i := strings.IndexByte(uri, '?'); i != -1 {
 		rawQuery = uri[i+1:]
 	}
-	getArguments, queryErr := urlutil.ParseQuery(rawQuery, '&')
-	if queryErr != nil {
+	getArguments, err := urlutil.ParseQuery(rawQuery, '&')
+	if err != nil {
 		tx.variables.urlencodedError.Set("1")
 	}
 	path := ""
