@@ -92,6 +92,14 @@ type Transaction struct {
 	// Used by allow to skip phases
 	lastPhase types.RulePhase
 
+	// inStreamRecordEval and streamRecordNum track whether Rules.Eval is currently being
+	// called once per record of a streaming body. Rules that don't target a record-scoped
+	// variable (e.g. REQUEST_HEADERS, REQUEST_COOKIES) are only evaluated on the first
+	// record; otherwise they would match and re-run their actions identically on every
+	// record, corrupting cross-record state like anomaly scoring. See rule_streaming.go.
+	inStreamRecordEval bool
+	streamRecordNum    int
+
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
 
@@ -1155,6 +1163,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 // when a rule triggers an interruption.
 var errStreamInterrupted = errors.New("stream processing interrupted")
 
+// isSubsequentStreamRecord reports whether tx is currently evaluating a phase for a
+// streaming body record after the first one. See rule_streaming.go.
+func (tx *Transaction) isSubsequentStreamRecord() bool {
+	return tx.inStreamRecordEval && tx.streamRecordNum > 0
+}
+
 // processRequestBodyStreaming evaluates Phase 2 rules after each record in a streaming body.
 // ArgsPost is cleared and repopulated for each record, while TX variables persist across records
 // for cross-record correlation (e.g., anomaly scoring).
@@ -1170,6 +1184,8 @@ func (tx *Transaction) processRequestBodyStreaming(ctx context.Context, sp plugi
 		}
 
 		// Evaluate Phase 2 rules for this record
+		tx.inStreamRecordEval = true
+		tx.streamRecordNum = recordNum
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 
 		if tx.interruption != nil {
@@ -1180,6 +1196,7 @@ func (tx *Transaction) processRequestBodyStreaming(ctx context.Context, sp plugi
 		}
 		return nil
 	})
+	tx.inStreamRecordEval = false
 
 	if err != nil && err != errStreamInterrupted {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
@@ -1214,6 +1231,8 @@ func (tx *Transaction) processResponseBodyStreaming(ctx context.Context, sp plug
 		}
 
 		// Evaluate Phase 4 rules for this record
+		tx.inStreamRecordEval = true
+		tx.streamRecordNum = recordNum
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 
 		if tx.interruption != nil {
@@ -1224,6 +1243,7 @@ func (tx *Transaction) processResponseBodyStreaming(ctx context.Context, sp plug
 		}
 		return nil
 	})
+	tx.inStreamRecordEval = false
 
 	if err != nil && err != errStreamInterrupted {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
@@ -1356,6 +1376,8 @@ func (tx *Transaction) ProcessRequestBodyFromStream(ctx context.Context, input i
 		}
 
 		// Evaluate Phase 2 rules for this record
+		tx.inStreamRecordEval = true
+		tx.streamRecordNum = recordNum
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 
 		if tx.interruption != nil {
@@ -1374,6 +1396,7 @@ func (tx *Transaction) ProcessRequestBodyFromStream(ctx context.Context, input i
 
 		return nil
 	})
+	tx.inStreamRecordEval = false
 
 	if streamErr != nil && streamErr != errStreamInterrupted {
 		if errors.Is(streamErr, context.Canceled) || errors.Is(streamErr, context.DeadlineExceeded) {
@@ -1475,6 +1498,8 @@ func (tx *Transaction) ProcessResponseBodyFromStream(ctx context.Context, input 
 			tx.variables.responseArgs.SetIndex(key, 0, value)
 		}
 
+		tx.inStreamRecordEval = true
+		tx.streamRecordNum = recordNum
 		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 
 		if tx.interruption != nil {
@@ -1492,6 +1517,7 @@ func (tx *Transaction) ProcessResponseBodyFromStream(ctx context.Context, input 
 
 		return nil
 	})
+	tx.inStreamRecordEval = false
 
 	if streamErr != nil && streamErr != errStreamInterrupted {
 		if errors.Is(streamErr, context.Canceled) || errors.Is(streamErr, context.DeadlineExceeded) {

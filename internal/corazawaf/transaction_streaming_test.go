@@ -349,6 +349,88 @@ func TestProcessRequestBodyStreamingArgsPostIsolated(t *testing.T) {
 	}
 }
 
+// countingNonDisruptiveAction is a non-disruptive action for testing how many
+// times a rule's actions run, analogous to CRS's setvar:tx.anomaly_score=+N.
+type countingNonDisruptiveAction struct {
+	count *int
+}
+
+func (*countingNonDisruptiveAction) Init(_ plugintypes.RuleMetadata, _ string) error { return nil }
+func (a *countingNonDisruptiveAction) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {
+	*a.count++
+}
+func (*countingNonDisruptiveAction) Type() plugintypes.ActionType {
+	return plugintypes.ActionTypeNondisruptive
+}
+
+// TestProcessRequestBodyStreamingMixedVariableRuleEvaluatedOnceForStableVariable
+// reproduces the real-world CRS rule shape: a single non-chained rule targeting
+// both a stream-stable variable (REQUEST_COOKIES, set once from the request
+// headers) and a record-scoped variable (ARGS_POST). Only the cookie matches;
+// ARGS_POST never does. Without per-variable skipping, this rule would match
+// and re-run its actions on every record, since REQUEST_COOKIES doesn't change,
+// corrupting anything that accumulates across matches (e.g. anomaly scoring).
+func TestProcessRequestBodyStreamingMixedVariableRuleEvaluatedOnceForStableVariable(t *testing.T) {
+	waf := NewWAF()
+
+	rule := NewRule()
+	rule.ID_ = 942100
+	rule.LogID_ = "test"
+	rule.Phase_ = types.PhaseRequestBody
+	op, err := operators.Get("rx", plugintypes.OperatorOptions{Arguments: "evil"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule.operator = &ruleOperatorParams{Operator: op, Function: "@rx", Data: "evil"}
+	rule.variables = append(rule.variables,
+		ruleVariableParams{Variable: variables.RequestCookies},
+		ruleVariableParams{Variable: variables.ArgsPost},
+	)
+	actionCount := 0
+	if err := rule.AddAction("setvar", &countingNonDisruptiveAction{count: &actionCount}); err != nil {
+		t.Fatalf("add action: %v", err)
+	}
+	rule.Log = true
+	rule.Audit = true
+	if err := waf.Rules.Add(rule); err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+	tx.RequestBodyAccess = true
+	// Cookies are parsed once from request headers before the body streams and
+	// never change per record.
+	tx.variables.requestCookies.Add("session", "evil-cookie")
+	// Phase 1 must run before phase 2 for the multiphase evaluation build (matches
+	// real request processing order; the rule is phase:2 either way).
+	if it := tx.ProcessRequestHeaders(); it != nil {
+		t.Fatalf("unexpected interruption in ProcessRequestHeaders: %v", it)
+	}
+
+	sp := &mockStreamingBodyProcessor{
+		records: []mockRecord{
+			{fields: map[string]string{"json.0.data": "clean-1"}, rawRecord: []byte(`{"data":"clean-1"}` + "\n")},
+			{fields: map[string]string{"json.1.data": "clean-2"}, rawRecord: []byte(`{"data":"clean-2"}` + "\n")},
+			{fields: map[string]string{"json.2.data": "clean-3"}, rawRecord: []byte(`{"data":"clean-3"}` + "\n")},
+		},
+	}
+
+	it, err := tx.processRequestBodyStreaming(context.Background(), sp, strings.NewReader(""), plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if it != nil {
+		t.Fatalf("unexpected interruption: %v", it)
+	}
+	if len(tx.matchedRules) != 1 {
+		t.Fatalf("expected 1 matched rule (cookie only matches once), got %d — the rule re-fired on every record", len(tx.matchedRules))
+	}
+	if actionCount != 1 {
+		t.Fatalf("expected the rule's action to run exactly once, got %d — cross-record state (e.g. anomaly score) would be corrupted", actionCount)
+	}
+}
+
 // TestProcessBodyStreamingProcessorErrorClearsVars verifies that per-record
 // variables are cleared after a mid-stream processor error so no stale data
 // leaks into subsequent phases.
