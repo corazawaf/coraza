@@ -116,5 +116,10 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0046](0046-secuploadkeepfiles-directive.md) | [#1557](https://github.com/corazawaf/coraza/pull/1557) | 2026-03-19 | v3.5.0 | P | `SecUploadKeepFiles` directive |
 | [0047](0047-regex-in-ctl-ruleremovetarget.md) | [#1561](https://github.com/corazawaf/coraza/pull/1561) | 2026-03-21 | v3.5.0 | F | Regex in `ctl:ruleRemoveTarget*` |
 | [0048](0048-ndjson-body-processor.md) | [#1563](https://github.com/corazawaf/coraza/pull/1563) | 2026-03-21 | v3.5.0 | F | NDJSON (JSON Stream) body processor |
+| [0049](0049-rx-literal-prefilter.md) | [#1534](https://github.com/corazawaf/coraza/pull/1534) | 2026-03-31 | v3.6.0 | ⚡ | `@rx` literal pre-filter |
+| [0050](0050-secrxprefilter-directive.md) | [#1589](https://github.com/corazawaf/coraza/pull/1589) | 2026-04-05 | v3.7.0 | F | `SecRxPreFilter` directive |
+| [0051](0051-audit-log-part-j.md) | [#1591](https://github.com/corazawaf/coraza/pull/1591) | 2026-04-03 | v3.7.0 | P | Audit log Part J (uploaded files) |
+| [0052](0052-ahocorasick-to-bitmap.md) | [#1597](https://github.com/corazawaf/coraza/pull/1597) | 2026-04-09 | unreleased | ⚡ | Aho-Corasick → indexed-bitmap matcher |
+| [0053](0053-pm-minlen-prefilter.md) | [#1601](https://github.com/corazawaf/coraza/pull/1601) | 2026-04-13 | unreleased | ⚡ | `@pm` `minLen` prefilter |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
