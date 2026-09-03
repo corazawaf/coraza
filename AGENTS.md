@@ -27,7 +27,7 @@ Other documents worth knowing:
 ## Repository structure
 
 | Directory | Purpose |
-|---|---|
+| --- | --- |
 | `types/` | Public API interfaces: `Transaction`, `WAF`, `MatchData`, `Interruption`, `RuleMetadata`, variables |
 | `collection/` | Public collection interfaces: `Collection`, `Single`, `Keyed`, `Map` |
 | `debuglog/` | Debug logging interfaces and helpers |
@@ -216,7 +216,7 @@ plugins.RegisterAction("myaction", func() plugintypes.Action { return &myAction{
 WAF variables are stored in typed collections within each transaction.
 
 | Interface | Description | Example variables |
-|---|---|---|
+| --- | --- | --- |
 | `collection.Single` | Single string value | `REQUEST_METHOD`, `RESPONSE_STATUS`, `REQUEST_URI` |
 | `collection.Keyed` | Named lookups with key/regex support | `REQUEST_HEADERS`, `ARGS`, `TX` |
 | `collection.Map` | Mutable keyed collection (extends `Keyed`) | `REQUEST_HEADERS`, `ARGS_POST`, `ARGS_GET` |
@@ -292,7 +292,7 @@ The authoritative list is the "Build tags" section of [`README.md`](README.md).
 Summary:
 
 | Tag | Effect |
-|---|---|
+| --- | --- |
 | `coraza.disabled_operators.<name>` | Exclude a specific operator from compilation |
 | `coraza.rule.multiphase_evaluation` | Evaluate rule variables in the phases they become ready |
 | `coraza.rule.case_sensitive_args_keys` | Case-sensitive ARGS key matching (RFC 3986) |
@@ -442,7 +442,7 @@ second home.
 ### Layer map
 
 | What you are testing | Home | Do NOT put it in |
-|---|---|---|
+| --- | --- | --- |
 | Rule and directive semantics: given these rules and this request, expect these rule IDs, this interruption, this log line | a profile in `testing/engine/*.go` | a hand-written `NewWAF` + `tx.Process*` test |
 | SecLang parse errors, directive argument validation, rule compilation failures | table test in `internal/seclang` | engine profiles |
 | One operator's boolean result for given inputs | table test in `internal/operators` | engine profiles |
@@ -479,7 +479,7 @@ Group profiles by the **behaviour** under test (`setvar.go`, `chains.go`,
 Available assertions in `profile.ExpectedOutput`:
 
 | Field | Asserts |
-|---|---|
+| --- | --- |
 | `TriggeredRules` / `NonTriggeredRules` | a rule id matched at least once / never |
 | `LogContains` / `NoLogContains` | a substring is present / absent in the error log |
 | `Interruption` | the interruption's rule id, action, status and data |
