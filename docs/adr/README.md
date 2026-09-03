@@ -121,5 +121,7 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0051](0051-audit-log-part-j.md) | [#1591](https://github.com/corazawaf/coraza/pull/1591) | 2026-04-03 | v3.7.0 | P | Audit log Part J (uploaded files) |
 | [0052](0052-ahocorasick-to-bitmap.md) | [#1597](https://github.com/corazawaf/coraza/pull/1597) | 2026-04-09 | unreleased | ⚡ | Aho-Corasick → indexed-bitmap matcher |
 | [0053](0053-pm-minlen-prefilter.md) | [#1601](https://github.com/corazawaf/coraza/pull/1601) | 2026-04-13 | unreleased | ⚡ | `@pm` `minLen` prefilter |
+| [0055](0055-accuracy-rule-action.md) | [#1693](https://github.com/corazawaf/coraza/pull/1693) | 2026-08-27 | unreleased | P | `accuracy` metadata action |
+| [0056](0056-fips-140-3-support.md) | [#1678](https://github.com/corazawaf/coraza/pull/1678) | 2026-08-28 | unreleased | F | Runtime FIPS 140-3 support for `t:md5`/`t:sha1` |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
