@@ -30,7 +30,7 @@ entirely or exclude the whole collection. Regex-delimited keys
 - Extract `HasRegex` into `internal/strings` and reuse in `rule.go` +
   `ctl.go`.
 - Pass the memoizer through `OperatorOptions` to dedupe
-  `regexp.MustCompile` calls.
+  `regexp.Compile` calls.
 
 ## Decision Outcome
 

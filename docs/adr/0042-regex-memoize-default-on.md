@@ -35,7 +35,10 @@ default-on.
 Chosen: **default-on with `coraza.no_memoize` opt-out.**
 
 The build tag `memoize_builders` no longer exists. `OperatorOptions` grows a
-`Memoizer` field (zero value = no memoization, backwards compatible).
+`Memoizer` field (zero value = no memoization). This is backwards compatible
+for callers using keyed struct literals or field access; external code that
+builds `OperatorOptions{...}` with unkeyed positional literals breaks, since
+the struct now has one more field.
 
 ## Technical Discussion
 
@@ -83,7 +86,8 @@ The tests were reshaped to fit TinyGo timing before the PR merged.
 - **Negative / follow-up:** TinyGo scale benchmarks were reshaped because
   the slower regex engine can't run them in CI time. Backwards-compat for
   out-of-tree operator plugins is maintained via the zero-value-Memoizer
-  behaviour.
+  behaviour for keyed literals and field access only; plugins that build
+  `OperatorOptions` with unkeyed positional literals need updating.
 
 ## References
 
