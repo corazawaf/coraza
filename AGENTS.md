@@ -685,9 +685,10 @@ honestly: the checklist is a contract, not decoration.
 
 ### Before opening
 
-- Enhancements are proposed in
-  [Discussions](https://github.com/corazawaf/coraza/discussions/categories/ideas)
-  first; bug fixes can go straight to a PR with a linked issue.
+- Enhancements are proposed in an
+  [issue](https://github.com/corazawaf/coraza/issues) first, so the use case is
+  agreed before code is written; bug fixes can go straight to a PR with a linked
+  issue. The project does not use GitHub Discussions.
 - One logical change per PR. No drive-by refactors, formatting or dependency bumps.
 - `go run mage.go check` passes locally (or install the hook with
   `go run mage.go precommit`). `go run mage.go adr` passes if `docs/adr/` changed.
@@ -702,7 +703,7 @@ honestly: the checklist is a contract, not decoration.
 - Title in conventional-commit style, as in the history:
   `feat(seclang): ...`, `fix(bodyprocessors): ...`, `perf(rx): ...`,
   `docs(adr): ...`, `test(engine): ...`, `chore(deps): ...`.
-- The description says **what** changed, **why** (link the issue or discussion),
+- The description says **what** changed, **why** (link the issue),
   and **how it was verified**: which mage targets and build tags were run, and the
   before/after numbers for any performance or coverage claim.
 - Call out behaviour changes, compatibility notes and follow-ups explicitly. A
