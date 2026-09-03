@@ -10,8 +10,11 @@
 
 ## Context and Problem
 
-ModSecurity v2 defines `Part J` of `SecAuditLogParts` as a list of
-uploaded-file metadata:
+ModSecurity v2's docs describe `Part J` of `SecAuditLogParts` as a list of
+uploaded-file metadata, but ModSecurity v2 itself never implemented it —
+`msc_logging.c` has no Part J output or escaping logic to match. The
+format below is Coraza's own, built from the documented field list, not a
+byte-for-byte match to a real ModSecurity output:
 
 ```text
 1,12345,"image.png","image/png"
@@ -37,10 +40,12 @@ being folded into Part C in a way that wasn't spec-compliant.
 
 ## Decision Outcome
 
-Chosen: **move to Part J, emit in ModSecurity v2 native format**, use
-`strconv.Quote` for safe escaping. JSON format inherits the data via
-struct marshalling; OCSF already read from `Request().Files()` so it gains
-the data automatically.
+Chosen: **move to Part J, emit Coraza's own CSV-like format based on
+ModSecurity v2's documented field list** (index, size, filename,
+content-type), using `strconv.Quote` for escaping — there's no shipped
+ModSecurity v2 output to be byte-compatible with. JSON format inherits
+the data via struct marshalling; OCSF already read from
+`Request().Files()` so it gains the data automatically.
 
 ## Technical Discussion
 
@@ -52,6 +57,11 @@ the data automatically.
 > observable logic in `formats_ocsf.go:110` that reads from
 > `Request().Files()`, so it works once the data is populated."
 > — @fzipi ([comment](https://github.com/corazawaf/coraza/pull/1591#issuecomment-4183561086))
+
+`msc_logging.c` doesn't actually contain a Part J implementation to match —
+ModSecurity v2 documented the part but never shipped it. "Matches" here
+means the field list (index, size, filename, content-type), not verified
+wire-compatible output.
 
 **TODO cleanup** @M4tteoP asked:
 
@@ -104,5 +114,6 @@ Applied.
 ## References
 
 - PR: https://github.com/corazawaf/coraza/pull/1591
-- ModSecurity reference: Part J in `msc_logging.c`
+- ModSecurity reference: Part J documented (but unimplemented) in
+  `msc_logging.c`
 - Related ADRs: ADR-0005 (formatter interface), ADR-0018 (OCSF)
