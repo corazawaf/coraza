@@ -79,8 +79,18 @@ type ExpectedInterruption struct {
 // Profiles is a map of registered profiles used by test runners
 var Profiles = map[string]Profile{}
 
-// RegisterProfile registers a profile for running from tests
+// RegisterProfile registers a profile for running from tests.
+//
+// Profiles are keyed by Meta.Name, so a duplicate name would silently replace
+// an already registered profile and drop its cases from every run. Panicking
+// here surfaces the mistake at package initialisation instead.
 func RegisterProfile(p Profile) Profile {
+	if p.Meta.Name == "" {
+		panic("profile: Meta.Name is required")
+	}
+	if _, ok := Profiles[p.Meta.Name]; ok {
+		panic("profile: duplicate profile name " + p.Meta.Name)
+	}
 	Profiles[p.Meta.Name] = p
 	return p
 }

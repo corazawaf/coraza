@@ -12,7 +12,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 		Author:      "jptosso",
 		Description: "Test if the env work",
 		Enabled:     true,
-		Name:        "direcenvstives.yaml",
+		Name:        "envs.yaml",
 	},
 	Tests: []profile.Test{
 		{
