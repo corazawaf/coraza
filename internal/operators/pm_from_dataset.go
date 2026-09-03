@@ -25,7 +25,7 @@ import (
 // true if any pattern from the dataset is found in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Match against pre-loaded dataset
 // SecRule REQUEST_URI "@pmFromDataset blocked_paths" "id:174,deny,log"
 //
@@ -47,7 +47,7 @@ func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator
 
 	m, _ := memoizeDo(options.Memoizer, data, func() (any, error) { return builder.Build(dataset), nil })
 
-	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
+	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(dataset)}, nil
 }
 
 func init() {

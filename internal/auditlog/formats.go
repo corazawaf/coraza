@@ -22,6 +22,7 @@ package auditlog
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -125,6 +126,25 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 					res.WriteByte('\n')
 				}
 			}
+		case types.AuditLogPartUploadedFiles:
+			// Part J: Uploaded files information
+			// Format matches ModSecurity v2: index,size,"filename","content_type"
+			if al.Transaction().HasRequest() {
+				files := al.Transaction().Request().Files()
+				var totalSize int64
+				for i, file := range files {
+					contentType := file.Mime()
+					if contentType == "" {
+						contentType = "<Unknown Content-Type>"
+					}
+					_, _ = fmt.Fprintf(&res, "%d,%d,%s,%s\n",
+						i+1, file.Size(),
+						strconv.Quote(file.Name()),
+						strconv.Quote(contentType))
+					totalSize += file.Size()
+				}
+				_, _ = fmt.Fprintf(&res, "Total,%d\n", totalSize)
+			}
 		case types.AuditLogPartRulesMatched:
 			// Part K: Matched rules
 			for _, alEntry := range al.Messages() {
@@ -134,7 +154,7 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		case types.AuditLogPartEndMarker:
 			// Part Z: Final boundary marker with no content
 		default:
-			// For any other parts (D, G, I, J) that aren't explicitly handled,
+			// For any other parts (D, G, I) that aren't explicitly handled,
 			// they remain empty
 		}
 

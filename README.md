@@ -42,13 +42,14 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 * [Caddy Reverse Proxy and Webserver Plugin](https://github.com/corazawaf/coraza-caddy) - stable, needs a maintainer
 * [Proxy WASM extension](https://github.com/corazawaf/coraza-proxy-wasm) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
+* [Traefik WASM extension](https://github.com/jcchavezs/coraza-http-wasm-traefik) for Traefik Proxy - experimental, needs a maintainer
 * [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - experimental
 * [Coraza C Library (For nginx, etc)](https://github.com/corazawaf/libcoraza) - experimental
 * [RuiQi WAF](https://github.com/HUAHUAI23/RuiQi) - Web management panel and enhanced traffic control for Coraza SPOA - experimental
 
 ## Prerequisites
 
-* Go v1.22+ or tinygo compiler
+* Recent Go version (see [go.mod](./go.mod)) or tinygo compiler.
 * Linux distribution (Debian or Centos recommended), Windows or Mac.
 
 ## Coraza Core Usage
@@ -107,8 +108,24 @@ live reloads, use `WAF.Close()` (via `experimental.WAFCloser`) to release cached
 WAF is destroyed, or use this tag to opt out of memoization entirely.
 * `no_fs_access` - indicates that the target environment has no access to FS in order to not leverage OS' filesystem related functionality e.g. file body buffers.
 * `coraza.rule.case_sensitive_args_keys` - enables case-sensitive matching for ARGS keys, aligning Coraza behavior with RFC 3986 specification. It will be enabled by default in the next major version.
-* `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876)
+* `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876).
 * `coraza.rule.mandatory_rule_id_check` - enables strict rule id check where `id` action is required for all SecRule/SecAction.
+* `coraza.rule.rx_prefilter` - sets the default value of the `SecRxPreFilter` directive to `On`. Optimizes `@rx` operator, by skipping the full regex when an input can not match. This build tag is meant only for testing purposes, rely on `SecRxPreFilter` directive for runtime configuration and broader documentation on this feature.
+
+### FIPS mode
+
+Coraza supports running under Go's [FIPS 140-3 mode](https://go.dev/doc/security/fips140) enabled.
+Detection of FIPS mode is performed at runtime, so no build tag is required and default builds are unchanged.
+
+`t:md5` and `t:sha1` are unavailable whenever FIPS mode is on, that is under all of
+`GODEBUG=fips140=on`, `=debug` and `=only`. Coraza applies the restriction uniformly so that
+behaviour does not vary across FIPS modes.
+Both transformations stay **registered**, so rule sets referencing them, including the CRS, still
+load unchanged. The restriction applies at evaluation time: the transformation errors, the engine
+logs a warning and keeps the untransformed value. The chain is **not** aborted and
+the rule is **not** skipped. For example, `t:sha1,t:hexEncode` becomes effectively `t:hexEncode` over
+the raw input and the rule may match *differently* rather than simply not matching.
+Review any rule depending on these before deploying in FIPS mode.
 
 ## E2E Testing
 
@@ -145,11 +162,11 @@ $ go run mage.go -l
 Targets:
   check        runs lint and tests.
   coverage     runs tests with coverage and race detector enabled.
-  doc          runs godoc, access at http://localhost:6060
+  doc          runs godoc, access at http://localhost:6060.
   format       formats code in this repository.
-  fuzz         runs fuzz tests
+  fuzz         runs fuzz tests.
   lint         verifies code quality.
-  precommit    installs a git hook to run check when committing
+  precommit    installs a git hook to run check when committing.
   test         runs all tests.
 ```
 
@@ -180,7 +197,7 @@ Our vulnerability management team will respond within 3 working days of your rep
 
 ## Donations
 
-For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall)
+For donations, see [Donations site](https://owasp.org/donate/?reponame=www-project-coraza-web-application-firewall&title=OWASP+Coraza+Web+Application+Firewall).
 
 ## Thanks to all the people who have contributed
 

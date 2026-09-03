@@ -30,11 +30,12 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	// Process with recursion limit
 	col := v.ArgsPost()
 	data, err := readJSON(ss, bpo.RequestBodyRecursionLimit)
-	if err != nil {
-		return err
-	}
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
+	}
+	if err != nil {
+		return err
 	}
 
 	// Store the raw JSON in the TX variable for validateSchema
@@ -59,11 +60,12 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	// Process with no recursion limit as we don't have a directive for response body
 	col := v.ResponseArgs()
 	data, err := readJSON(ss, ignoreJSONRecursionLimit)
-	if err != nil {
-		return err
-	}
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
+	}
+	if err != nil {
+		return err
 	}
 
 	// Store the raw JSON in the TX variable for validateSchema
@@ -80,12 +82,15 @@ func readJSON(s string, maxRecursion int) (map[string]string, error) {
 	res := make(map[string]string)
 	key := []byte("json")
 
+	json := gjson.Parse(s)
+	err := readItems(json, key, maxRecursion, res)
+	if err != nil {
+		return res, err
+	}
 	if !gjson.Valid(s) {
 		return res, errors.New("invalid JSON")
 	}
-	json := gjson.Parse(s)
-	err := readItems(json, key, maxRecursion, res)
-	return res, err
+	return res, nil
 }
 
 // Transform JSON to a map[string]string

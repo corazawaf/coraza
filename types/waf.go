@@ -278,7 +278,7 @@ type Interruption struct {
 type BodyBufferOptions struct {
 	// TmpPath is the path to store temporary files
 	TmpPath string
-	// MemoryLimit is the maximum amount of memory to be stored in memory
+	// MemoryLimit is the maximum amount of data to be stored in memory
 	// Once the limit is reached, the file will be stored on disk
 	MemoryLimit int64
 	// Limit is the overall maximum amount of memory to be buffered

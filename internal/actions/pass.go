@@ -13,7 +13,7 @@ import (
 // Continues processing with the next rule in spite of a successful match.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule REQUEST_HEADERS:User-Agent "@streq Test" "log,pass,id:122"
 //
 // # When using pass with a SecRule with multiple targets,

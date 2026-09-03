@@ -39,7 +39,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecMarker "END-REPORTING"
 
 	SecRule REQUEST_URI "@unconditionalMatch" "id:3,phase:2,pass,log,skipAfter:END,chain"
-	SecRule REQUEST_URI "@rx /UrlThatWillNotMatch" "id:3,phase:2,pass,log"
+	SecRule REQUEST_URI "@rx /UrlThatWillNotMatch" "log"
 	SecAction "id:4,phase:2,deny,status:403,log,msg:'Should match because rule 3 should not be triggered, not being the whole chain matched'"
 	SecMarker "END"
 `,

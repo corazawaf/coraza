@@ -70,6 +70,20 @@ var b64DecodeTests = []struct {
 		input:    "PFRFU1Q-",
 		expected: "<TEST",
 	},
+	// The strict decoder's stop-at-first-invalid-character behavior
+	// (documented on base64decode) is unchanged by the base64decodeext
+	// fix for https://github.com/corazawaf/coraza/issues/1661 -- only the
+	// ext/forgiving decoder skips invalid bytes and keeps going.
+	{
+		name:     "decoded up to a non-ASCII byte (invalid character)",
+		input:    "dzBz\xc2\xa9V==",
+		expected: "w0s",
+	},
+	{
+		name:     "empty when the non-ASCII byte comes first (invalid character)",
+		input:    "\xc2\xa9dzBzV==",
+		expected: "",
+	},
 	// The following tests are from the golang base64 decoder tests
 	// Source: https://github.com/golang/go/blob/c95fe91d0715dc0a8d55ac80a80f383c3635548b/src/encoding/base64/base64_test.go#L25C4-L49
 	{

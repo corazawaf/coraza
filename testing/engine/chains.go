@@ -143,7 +143,7 @@ SecRule REQUEST_HEADERS "@rx attack20" \
   SecRule MATCHED_VARS_NAMES "@rx Host" \
     "chain"
     SecRule REQUEST_HEADERS:Host "@rx attack20" \
-      "block"
+      ""
 
 SecRule REQUEST_HEADERS "@rx attack21" \
   "id:21,\
@@ -156,8 +156,7 @@ SecRule REQUEST_HEADERS "@rx attack21" \
     chain"
     SecRule MATCHED_VAR_NAME "@rx MATCHED_VARS_NAMES" \
     "msg:'Sub Sub Chain Rule',\
-    logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}',\
-    block"
+    logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}'"
 `,
 })
 

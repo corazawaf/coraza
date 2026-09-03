@@ -25,7 +25,7 @@ import (
 // true if any of the patterns are found in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Detect known malicious user agents
 // SecRule REQUEST_HEADERS:User-Agent "@pm WebZIP WebCopier Webster" "id:170,deny,log"
 //
@@ -34,6 +34,9 @@ import (
 // ```
 type pm struct {
 	matcher ahocorasick.AhoCorasick
+	// minLen is the length of the shortest pattern. If the input is shorter
+	// than this, no pattern can match and we skip the Aho-Corasick automaton.
+	minLen int
 }
 
 var _ plugintypes.Operator = (*pm)(nil)
@@ -52,11 +55,31 @@ func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 
 	m, _ := memoizeDo(options.Memoizer, data, func() (any, error) { return builder.Build(dict), nil })
 	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
-	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
+	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(dict)}, nil
 }
 
 func (o *pm) Evaluate(tx plugintypes.TransactionState, value string) bool {
+	if len(value) < o.minLen {
+		return false
+	}
 	return pmEvaluate(o.matcher, tx, value)
+}
+
+// minPatternLen returns the length of the shortest pattern.
+// If any pattern is empty it returns 0 immediately, disabling short-circuiting:
+// an empty pattern matches every input, so no input can be safely skipped.
+// If there are no patterns, it returns 0.
+func minPatternLen(patterns []string) int {
+	min := 0
+	for _, p := range patterns {
+		if len(p) == 0 {
+			return 0
+		}
+		if min == 0 || len(p) < min {
+			min = len(p)
+		}
+	}
+	return min
 }
 
 func pmEvaluate(matcher ahocorasick.AhoCorasick, tx plugintypes.TransactionState, value string) bool {

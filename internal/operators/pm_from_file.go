@@ -28,7 +28,7 @@ import (
 // true if any keyword from the file(s) is found in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block user agents from denylist file
 // SecRule REQUEST_HEADERS:User-Agent "@pmFromFile /path/to/denylist.txt" "id:172,deny,log"
 //
@@ -66,7 +66,7 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 
 	m, _ := memoizeDo(options.Memoizer, strings.Join(options.Path, ",")+filepath, func() (any, error) { return builder.Build(lines), nil })
 
-	return &pm{matcher: m.(ahocorasick.AhoCorasick)}, nil
+	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(lines)}, nil
 }
 
 func init() {

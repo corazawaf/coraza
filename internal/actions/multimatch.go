@@ -13,10 +13,10 @@ import (
 // Description:
 // Perform multiple operator invocations for every target, before and after every anti-evasion transformation is performed.
 // Normally, variables are inspected only once per rule, and only after all transformation functions have been completed.
-// With multiMatch, variables are checked against the operator before and after every transformation function that changes the input.
+// With `multiMatch`, variables are checked against the operator before and after every transformation function that changes the input.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule ARGS "attack" "phase1,log,deny,id:119,t:removeNulls,t:lowercase,multiMatch"
 // ```
 type multimatchFn struct{}

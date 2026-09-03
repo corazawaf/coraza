@@ -202,11 +202,14 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, r.LogID())
 	if r.Msg != nil {
-		ruleCol.SetIndex("msg", 0, r.Msg.String())
+		// Expand the message using the current TX variables so that %{rule.msg} in setvar actions
+		// returns the fully expanded message, matching ModSecurity behavior.
+		ruleCol.SetIndex("msg", 0, r.Msg.Expand(tx))
 	}
 	ruleCol.SetIndex("rev", 0, r.Rev_)
 	if r.LogData != nil {
-		ruleCol.SetIndex("logdata", 0, r.LogData.String())
+		// Same expansion for logdata, matching ModSecurity behavior for %{rule.logdata}.
+		ruleCol.SetIndex("logdata", 0, r.LogData.Expand(tx))
 	}
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
@@ -228,7 +231,13 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		}
 		r.matchVariable(tx, md)
 	} else {
-		ecol := tx.ruleRemoveTargetByID[r.ID_]
+		// Chain children carry ID_ == noID; ctl:ruleRemoveTarget* stores exceptions
+		// under the parent's ID, so chain children must look up via ParentID_.
+		rid := r.ID_
+		if rid == noID {
+			rid = r.ParentID_
+		}
+		ecol := tx.ruleRemoveTargetByID[rid]
 		for _, v := range r.variables {
 			if multiphaseEvaluation && multiphaseSkipVariable(r, v.Variable, phase) {
 				continue
@@ -763,8 +772,9 @@ func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {
 func NewRule() *Rule {
 	return &Rule{
 		RuleMetadata: corazarules.RuleMetadata{
-			Phase_: 2,
-			Tags_:  []string{},
+			Phase_:    2,
+			Severity_: types.RuleSeverityUnset,
+			Tags_:     []string{},
 		},
 	}
 }

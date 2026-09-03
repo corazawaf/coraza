@@ -14,11 +14,11 @@ import (
 // Action Group: Metadata
 //
 // Description:
-// > This action is mandatory for all `SecRule` and `SecAction`, and it must be numeric.
-// Assigns a unique ID to the rule or chain in which it appears.
+// Assigns a unique ID to the rule or chain in which it appears. This action is
+// a numeric value and is mandatory for all `SecRule` and `SecAction`.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule &REQUEST_HEADERS:Host "@eq 0" "log,id:60008,severity:2,msg:'Request Missing a Host Header'"
 // ```
 type idFn struct{}

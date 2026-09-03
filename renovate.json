@@ -1,6 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "local>corazawaf/renovate-config"
+    "github>corazawaf/renovate-config"
+  ],
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "packageRules": [
+    {
+      "description": "Hold kaptinlin/jsonschema at v0.4.x: v0.9.8+ requires Go 1.26.5, which drops the supported Go 1.25.x. Remove when Coraza raises its minimum Go to 1.26.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["github.com/kaptinlin/jsonschema"],
+      "allowedVersions": "<0.5.0"
+    }
   ]
 }

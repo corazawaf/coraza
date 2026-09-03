@@ -50,7 +50,12 @@ test_overrides:
       status: 505
       log:
         no_expect_ids: [920430]
-
+  - rule_id: 920620
+    test_ids: [1]
+    reason: "Go/http retains multiple separate Content-Type headers, which is what this rule is looking for"
+    output:
+     log:
+      expect_ids: [920620]
   - rule_id: 922130
     test_ids: [1,2,7]
     reason: "Multipart parsing tests. 922130 rule is not reached, Coraza triggers rule 200003 (MULTIPART_STRICT_ERROR) at parsing time"
