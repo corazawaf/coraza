@@ -17,7 +17,6 @@ go 1.25.0
 // - ocsf-schema-golang
 
 require (
-	github.com/anuraaga/go-modsecurity v0.0.0-20220824035035-b9a4099778df
 	github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
 	github.com/corazawaf/libinjection-go v0.3.3
 	github.com/foxcpp/go-mockdns v1.2.0
