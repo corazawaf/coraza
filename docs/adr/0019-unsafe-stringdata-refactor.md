@@ -58,8 +58,11 @@ the reviewer:
 
 ## Consequences
 
-- **Positive:** Removes a deprecated API usage; GC-safe string/byte
-  reinterpretation; lint exception deleted.
+- **Positive:** Removes a deprecated API usage; `rule.go` uses
+  `unsafe.StringData(argKey)` only to obtain a `*byte` for the transformation
+  cache key (`transformationKey.argKey`), not general string/byte
+  reinterpretation — the bytes referenced by that pointer must not be
+  modified; lint exception deleted.
 - **Negative:** None.
 
 ## References

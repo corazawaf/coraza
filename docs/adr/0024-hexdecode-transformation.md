@@ -27,8 +27,13 @@ parity gap.
 
 ## Decision Outcome
 
-Chosen: **best-effort decode**, following the existing pattern used by sibling
-transformations. This was a question explicitly raised and resolved in review.
+Chosen in review: **best-effort decode**, following the existing pattern used
+by sibling transformations. The shipped implementation diverges from that
+outcome — it delegates to `encoding/hex.DecodeString`, which returns an error
+for malformed input (odd length or non-hex characters) instead of trimming
+and decoding what's valid. `internal/transformations/hex_decode_test.go`
+asserts this strict behavior. This was a question explicitly raised and
+discussed in review.
 
 > "This PR is mostly based on assumptions cause I didn't get any reply here
 > [#1253]. The main assumption is that coraza wants to go 'best effort
@@ -60,8 +65,9 @@ existing test expectations (best-effort, trim trailing).
 ## Consequences
 
 - **Positive:** `t:hexDecode` works for ModSecurity-migrated rulesets.
-- **Negative:** The "best-effort" choice on malformed input matches existing
-  coraza behaviour but is not strictly RFC-correct. Documented inline.
+- **Negative:** Malformed input (odd length or non-hex characters) errors out
+  rather than best-effort decoding what's valid, diverging from the outcome
+  discussed in review and from sibling transformations' precedent.
 
 ## References
 

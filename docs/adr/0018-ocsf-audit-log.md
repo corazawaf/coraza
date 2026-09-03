@@ -102,6 +102,10 @@ updates (PR #1148). After the rebase:
   schemas.
 - **Negative / follow-up:** Coraza's Go minimum version moved forward;
   `reflect.StringHeader` deprecation surfaced (fixed in ADR-0019).
+  `ocsfFormatter.Format` calls `Transaction.Request()`/`Response()`
+  unconditionally without checking `HasRequest()`/`HasResponse()`; a
+  transaction missing either causes a nil-interface panic, an undocumented
+  precondition that needs hardening.
 
 ## References
 

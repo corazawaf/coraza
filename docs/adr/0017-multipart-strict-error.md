@@ -25,7 +25,7 @@ wrong" signal was needed as a replacement.
 ## Considered Options
 
 - Implement every ModSecurity multipart sub-variable (large effort).
-- Set a single `MULTIPART_STRICT_ERROR=1` on any parse failure; rewrite the
+- Set a single `MULTIPART_STRICT_ERROR=1` on parse failure; rewrite the
   recommended config rules to use it.
 
 ## Decision Outcome
@@ -66,7 +66,10 @@ Follow-up for an engine-level regression test was captured for a future PR:
 - **Positive:** Multipart evasion detection in the recommended config
   actually works; operators get a truthful config out of the box.
 - **Negative / follow-up:** ModSecurity sub-variables remain unimplemented;
-  the single signal is coarse by design.
+  the single signal is coarse by design. A truncated part (`io.ErrUnexpectedEOF`
+  from the underlying reader) does not set `MULTIPART_STRICT_ERROR` — parsing
+  simply stops and `ProcessRequest` returns `nil`, undocumented at the time of
+  writing.
 
 ## References
 
