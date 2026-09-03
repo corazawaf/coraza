@@ -54,6 +54,27 @@ func TestTxSettersMultipart(t *testing.T) {
 	validateMacroExpansion(exp, tx, t)
 }
 
+// TestTransactionString covers the debug dump, which is the only caller of the
+// per-collection Format methods. It cannot be a profile: it asserts the Go
+// String() contract of Transaction, not rule behaviour.
+func TestTransactionString(t *testing.T) {
+	tx := makeTransaction(t)
+	dump := tx.String()
+	for _, want := range []string{
+		"REQUEST_URI: /testurl.php?id=123&b=456",
+		"REQUEST_METHOD: POST",
+		"REQUEST_HEADERS:",
+		"ARGS_GET:",
+	} {
+		if !strings.Contains(dump, want) {
+			t.Errorf("expected debug dump to contain %q, got:\n%s", want, dump)
+		}
+	}
+	if err := tx.Close(); err != nil {
+		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestTxSetters(t *testing.T) {
 	tx := makeTransaction(t)
 	exp := map[string]string{
