@@ -332,7 +332,7 @@ when necessary.
 Each task below adds a directive, operator, action or transformation. Those are
 structural changes: the PR **must** include an ADR (see
 [Architecture Decision Records](#architecture-decision-records)) and tests in the
-home the [Testing](#testing) section assigns.
+location assigned by the [Testing](#testing) section.
 
 ### Adding an operator
 
@@ -616,7 +616,9 @@ excluded by `codecov.yml`.
 ### Running tests
 
 ```bash
-go run mage.go test        # full matrix: default, no_memoize, CRS, multiphase, no_regex_multiline
+go run mage.go test        # full matrix: default and no_memoize, CRS under default, no_memoize,
+                           # multiphase and no_regex_multiline, plus TestRx* under no_regex_multiline
+                           # and TestCaseSensitive* under case_sensitive_args_keys
 go run mage.go check       # tests plus lint
 go test ./testing/         # every declarative engine profile
 go test -race ./...
@@ -755,7 +757,8 @@ honestly: the checklist is a contract, not decoration.
   (`go run mage.go format`). Lint with `golangci-lint` via `go run mage.go lint`.
 - Prefer clear, readable code over clever optimisations.
 - Keep functions small and focused on a single responsibility.
-- Every file starts with the Apache-2.0 license header (`addlicense` adds it).
+- Every **Go** file starts with the Apache-2.0 SPDX header; `go run mage.go format`
+  adds it. Markdown and YAML files do not carry one, so do not add one by hand.
 
 ### Naming
 
@@ -787,7 +790,10 @@ honestly: the checklist is a contract, not decoration.
 
 ### Transaction processing
 
-- Transactions must be concurrent-safe and hold isolated state.
+- Each transaction holds isolated state, so many transactions can run
+  concurrently from one shared WAF instance. That isolation is the guarantee.
+- A single transaction and its collections are **not** concurrent-safe. Never
+  share one across goroutines (`collection/collection.go`, `waf.go`).
 - Clean up resources after transaction completion (`tx.Close()`).
 - Support interruption (block/drop) at any phase.
 
