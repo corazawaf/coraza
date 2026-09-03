@@ -818,9 +818,18 @@ honestly: the checklist is a contract, not decoration.
 
 - Minimise external dependencies; prefer the standard library.
 - Document why each dependency is needed.
+- **No CGO.** Coraza is pure Go and must stay that way: it has to build with
+  TinyGo, cross-compile without a C toolchain and embed in WASM. A dependency
+  that needs CGO is rejected, however good it is.
+- **`unsafe` is prohibited in most cases.** The only accepted use is zero-copy
+  string/byte reinterpretation on a measured hot path, and that already exists
+  in `internal/strings` and `internal/corazawaf/rule.go` (see ADR-0019). Reuse
+  those helpers instead of adding a new `import "unsafe"`. A new use needs a
+  benchmark that shows a real win, an ADR, and reviewer agreement.
 
 ### Code anti-patterns
 
+- No CGO, and no new `unsafe` (see Dependencies).
 - No global mutable state.
 - No reflection in performance-critical code.
 - Do not ignore errors.
