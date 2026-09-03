@@ -83,5 +83,13 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0014](0014-base64decodeext-transformation.md) | [#1046](https://github.com/corazawaf/coraza/pull/1046) | 2024-04-24 | v3.2.0 | P | `base64DecodeExt` transformation |
 | [0015](0015-case-sensitive-maps.md) | [#1055](https://github.com/corazawaf/coraza/pull/1055) | 2024-05-01 | v3.2.0 | F | Case-sensitive maps |
 | [0016](0016-case-sensitive-args.md) | [#1059](https://github.com/corazawaf/coraza/pull/1059) | 2024-05-28 | v3.2.0 | P | Case-sensitive args support |
+| [0017](0017-multipart-strict-error.md) | [#1098](https://github.com/corazawaf/coraza/pull/1098) | 2024-07-18 | v3.3.0 | P | `MULTIPART_STRICT_ERROR` variable |
+| [0018](0018-ocsf-audit-log.md) | [#1089](https://github.com/corazawaf/coraza/pull/1089) | 2024-09-17 | v3.3.0 | F | OCSF audit log format |
+| [0019](0019-unsafe-stringdata-refactor.md) | [#1162](https://github.com/corazawaf/coraza/pull/1162) | 2024-10-04 | v3.3.0 | R | `reflect.StringHeader` → `unsafe.StringData` |
+| [0020](0020-secruleupdateactionbyid.md) | [#1071](https://github.com/corazawaf/coraza/pull/1071) | 2024-10-31 | v3.3.0 | P | `SecRuleUpdateActionById` directive |
+| [0021](0021-square-brackets-in-variables.md) | [#1226](https://github.com/corazawaf/coraza/pull/1226) | 2024-11-21 | v3.3.0 | P | Square brackets in macro variables |
+| [0022](0022-time-variables.md) | [#1223](https://github.com/corazawaf/coraza/pull/1223) | 2024-12-09 | v3.3.0 | P | `TIME_*` variables |
+| [0023](0023-base64encode-transformation.md) | [#1257](https://github.com/corazawaf/coraza/pull/1257) | 2024-12-29 | v3.3.0 | P | `base64Encode` transformation |
+| [0024](0024-hexdecode-transformation.md) | [#1275](https://github.com/corazawaf/coraza/pull/1275) | 2025-01-24 | v3.3.2 | P | `hexDecode` transformation |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
