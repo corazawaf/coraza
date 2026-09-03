@@ -94,6 +94,31 @@ SecAction "id:3,phase:1,pass,nolog,setvar:'tx.score=+2'"
 			},
 		},
 		{
+			Title: "audit log without part K carries messages with no detail",
+			Rules: `
+SecRuleEngine On
+SecAuditEngine On
+SecAuditLogParts ABCFHZ
+SecRule ARGS "@rx attack" "id:1,phase:1,pass,log,msg:'attack detected'"
+`,
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?payload=attack",
+						},
+						Output: profile.ExpectedOutput{
+							AuditLog: &profile.ExpectedAuditLog{
+								Parts:             "ABCFHZ",
+								MessageCount:      intPtr(1),
+								NoMessagesContain: []string{"should not appear"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			Title: "audit log carries one message per matched rule",
 			Rules: `
 SecRuleEngine On
