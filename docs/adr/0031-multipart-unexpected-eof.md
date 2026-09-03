@@ -83,11 +83,15 @@ were flagged and fixed:
 
 - **Positive:** `ProcessPartial` actually yields partial data for multipart
   requests; truncation does not wipe the transaction.
-- **Negative / follow-up:** The `io.ErrUnexpectedEOF` case is now silently
-  benign in the multipart path; genuine parse corruption may be harder to
-  distinguish from legitimate truncation. The existing
+- **Negative / follow-up:** The multipart processor checks
+  `errors.Is(err, io.ErrUnexpectedEOF)` unconditionally — it does not check
+  whether `SecRequestBodyLimitAction` is actually `ProcessPartial` — so a
+  transport-level or malformed truncation unrelated to the body limit is
+  also swallowed as clean termination without setting
+  `MULTIPART_STRICT_ERROR`. Genuine parse corruption may be harder to
+  distinguish from legitimate `ProcessPartial` truncation. The existing
   `MULTIPART_STRICT_ERROR` (see [ADR-0017](0017-multipart-strict-error.md))
-  still triggers on actual parse faults.
+  still triggers on other parse faults.
 
 ## References
 
