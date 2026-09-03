@@ -1,4 +1,4 @@
-# ADR-0035: `WAFWithRules` experimental interface — `RulesCount()` / `MergeRules()`
+# ADR-0035: `WAFWithRules` experimental interface — `RulesCount()`
 
 - **Status:** accepted
 - **Date:** 2026-02-27
@@ -10,37 +10,57 @@
 
 ## Context and Problem
 
-Connectors (nginx, Apache) needed a way to:
+Connectors (nginx, Apache) needed a way to report how many rules a WAF
+instance has loaded — for caching, logging, and load-verification checks.
+No such capability was exposed before this PR.
 
-1. Report how many rules a WAF instance has loaded — for caching, logging,
-   and load-verification checks.
-2. Inherit/merge rules across config scopes (http → server → location in
-   nginx terms).
-
-Neither capability was exposed before this PR.
+The PR originally also proposed a `MergeRules()` method to inherit/merge
+rules across config scopes (http → server → location in nginx terms). That
+part was dropped before merge — see Decision Outcome.
 
 ## Decision Drivers
 
 - Provide an experimental interface (`WAFWithRules`) that connectors can
   type-assert to, keeping the main `WAF` interface small.
-- Define merge semantics: duplicate IDs skipped, ID=0 rules (`SecMarker`,
-  un-ID'd `SecAction`) always merged because they legitimately repeat.
-- Allow concurrent-safety guarantees to remain with the initialization
-  phase only.
+- Ship what's actually needed now (`RulesCount()`) rather than a larger,
+  unused surface — see Decision Outcome.
 
 ## Considered Options
 
-- Promote `RulesCount()` / `MergeRules()` onto `WAF` (breaks semver).
-- Ship as a separate `WAFWithRules` experimental interface.
+- Promote `RulesCount()` onto `WAF` (breaks semver).
+- Ship `RulesCount()` as a separate `WAFWithRules` experimental interface.
+- Also ship `MergeRules()` in the same interface/PR (attempted, then
+  descoped — see Technical Discussion).
 
 ## Decision Outcome
 
-Chosen: **separate `experimental.WAFWithRules` interface**. ID=0 merge
-semantics explicitly documented.
+Chosen: **separate `experimental.WAFWithRules` interface exposing only
+`RulesCount()`**. `MergeRules()` was implemented and went through review
+(the ID=0 semantics and structural concerns below), but was pulled from
+the PR before merge once it turned out the downstream consumer didn't
+need it yet:
+
+> "In fact, `MergeRules` is not used at all by the nginx module. Only
+> `RulesCount` is. I initially wanted to remove the stub from libcoraza,
+> but since it is not (yet) needed, we can re-introduce it later — as you
+> wish. I can simplify this PR to remove `MergeRules` and keep only
+> `RulesCount` if you prefer."
+> — @ppomes ([comment](https://github.com/corazawaf/coraza/pull/1492#issuecomment-3939553512))
+
+> "The simpler the better, and if it is not used, then we can always add
+> it later."
+> — @fzipi ([comment](https://github.com/corazawaf/coraza/pull/1492#issuecomment-3969120877))
+
+The merged diff touches only `experimental/waf.go`, `waf.go`, and
+`waf_test.go`, and adds `RulesCount()` alone — no `MergeRules`,
+`RuleGroup.Merge`, or ID=0 handling shipped in this PR.
 
 ## Technical Discussion
 
-The Copilot reviewer drove five substantive structural changes:
+This discussion concerns the `MergeRules()` design that was in the PR at
+review time and was later dropped (see Decision Outcome); it is kept here
+because it's the reason `MergeRules()` didn't ship. The Copilot reviewer
+raised five structural concerns against that now-removed code:
 
 **1. O(n·m) merge complexity.**
 > "`RuleGroup.Merge` performs `FindByID` for each rule being merged, making
@@ -90,24 +110,34 @@ The Copilot reviewer drove five substantive structural changes:
 >   and never deduplicated"
 > — @ppomes ([review](https://github.com/corazawaf/coraza/pull/1492#discussion_r2835771992))
 
-@fzipi flagged the ID=0 semantic during review ("wait, my bad: `SecMarker`
-has ID=0, not `SecAction`"), showing the nuance the Copilot reviewer's
-concern was pointing at.
+@fzipi initially second-guessed the semantics during review ("wait, my
+bad: `SecMarker` has ID=0, not `SecAction`"), but @ppomes confirmed both
+get ID=0 in the default build:
+
+> "You're right that `SecMarker` always has ID=0. Note that `SecAction`
+> without explicit `id:` also gets ID=0 (default build without
+> `mandatory_rule_id_check` tag), so the test is still valid."
+> — @ppomes ([comment](https://github.com/corazawaf/coraza/pull/1492#issuecomment-3939553512))
+
+None of this shipped — it documents why `MergeRules()` was dropped, not
+behavior present in the merged code.
 
 ## Participants
 
 - @ppomes — author (downstream libcoraza driving the need)
 - @fzipi — review (SecAction / SecMarker ID-0 semantics)
 - @M4tteoP — review
-- @Copilot — reviewer bot (drove 5 structural improvements)
+- @Copilot — reviewer bot (raised 5 structural concerns on the dropped
+  `MergeRules` design)
 
 ## Consequences
 
-- **Positive:** Connectors can query rule counts and merge rulesets across
-  configuration scopes without maintaining their own bookkeeping.
-- **Negative / follow-up:** Merge is not safe concurrent with transaction
-  processing — documented. The brittle type-switch / lack of decorator
-  support were improved during review but remain an area to watch.
+- **Positive:** Connectors can query rule counts without maintaining their
+  own bookkeeping, via a small experimental interface.
+- **Negative / follow-up:** No rule-merging capability shipped.
+  `MergeRules()`'s O(n·m) cost, nil-safety, concurrency-safety
+  documentation, and brittle type-switch (Technical Discussion) remain
+  open questions for whoever picks it up if/when a consumer needs it.
 
 ## References
 

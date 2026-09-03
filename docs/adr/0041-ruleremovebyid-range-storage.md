@@ -19,8 +19,8 @@ even though the effective filter was just two numbers.
 
 - Avoid thousands of per-request allocations for common CRS ranges.
 - Keep the rule-evaluation skip check cheap.
-- Cover both `ctl:ruleRemoveById` and `ctl:ruleRemoveTargetById` range
-  forms.
+- Scoped to `ctl:ruleRemoveById`; `ctl:ruleRemoveTargetById` keeps its
+  existing per-call scan (see Consequences) and was not touched.
 
 ## Considered Options
 
@@ -62,6 +62,10 @@ in the original prompt block of the PR body.
   `[2]int` entry.
 - **Negative / follow-up:** Rule-eval skip now has two data structures to
   consult (map + range slice). Both small, overall cost is net-negative.
+  `ctl:ruleRemoveTargetById` still parses its range with `parseIDOrRange`
+  but doesn't store it — it walks every WAF rule and calls
+  `RemoveRuleTargetByID` per match, an O(n) scan on every invocation. It
+  wasn't part of this optimization.
 
 ## References
 

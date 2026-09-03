@@ -52,8 +52,13 @@ counter-proposals on the thread.
 - **Positive:** Parity with [ADR-0031](0031-multipart-unexpected-eof.md)
   for XML; `ProcessPartial` consistently yields partial data across body
   processors.
-- **Negative:** Genuine XML corruption becomes indistinguishable from a
-  legitimate truncation on the parser side.
+- **Negative:** `readXML`/`ProcessRequest` don't receive the body-limit
+  action, so the unexpected-EOF suppression is unconditional — it applies
+  to every request, not just ones truncated by `ProcessPartial`. Genuine
+  XML corruption becomes indistinguishable from a legitimate truncation,
+  and an incomplete (attacker-truncated or transport-truncated) request
+  body can populate `RequestXML` with partial data even when
+  `SecRequestBodyLimitAction` is not `ProcessPartial`.
 
 ## References
 
