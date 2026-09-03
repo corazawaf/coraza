@@ -81,9 +81,19 @@ type ExpectedOutput struct {
 	// TriggeredRules only asserts "at least once".
 	TriggeredRulesCount map[int]int `yaml:"triggered_rules_count,omitempty"`
 
-	// LogContainsCount asserts how many error log lines contain each substring.
-	// Use it to pin down repeated tags, messages or logdata.
+	// LogContainsCount asserts how many times each substring appears across the
+	// error logs that were actually emitted, that is the logs of rules with
+	// logging enabled. Use it to pin down repeated tags, messages or logdata.
+	//
+	// LogContains and TriggeredRules search every matched rule instead,
+	// including rules marked nolog.
 	LogContainsCount map[string]int `yaml:"log_contains_count,omitempty"`
+
+	// MatchedDataCount asserts how many variables a rule matched against, summed
+	// over every time it fired. A multiMatch rule that evaluates the same value
+	// twice shows up here and nowhere else: TriggeredRulesCount would still
+	// report a single match.
+	MatchedDataCount map[int]int `yaml:"matched_data_count,omitempty"`
 
 	// Variables asserts the value of transaction variables after phase 5.
 	// Keys are seclang variable selectors, e.g. "TX:score" or "REQUEST_URI".

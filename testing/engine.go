@@ -13,6 +13,7 @@ import (
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/variables"
 	"github.com/corazawaf/coraza/v3/testing/profile"
@@ -267,6 +268,7 @@ func (t *Test) OutputErrors() []string {
 		}
 	}
 	errors = append(errors, t.triggeredRulesCountErrors()...)
+	errors = append(errors, t.matchedDataCountErrors()...)
 	errors = append(errors, t.logContainsCountErrors()...)
 	errors = append(errors, t.variableErrors()...)
 	errors = append(errors, t.auditLogErrors()...)
@@ -293,17 +295,52 @@ func (t *Test) triggeredRulesCountErrors() []string {
 	return errors
 }
 
-// logContainsCountErrors asserts how many error logs contain each substring.
+// matchedDataCountErrors asserts how many variables each rule matched against.
+func (t *Test) matchedDataCountErrors() []string {
+	if len(t.ExpectedOutput.MatchedDataCount) == 0 {
+		return nil
+	}
+	counts := map[int]int{}
+	for _, mr := range t.transaction.MatchedRules() {
+		counts[mr.Rule().ID()] += len(mr.MatchedDatas())
+	}
+	var errors []string
+	for _, id := range sortedIntKeys(t.ExpectedOutput.MatchedDataCount) {
+		want := t.ExpectedOutput.MatchedDataCount[id]
+		if got := counts[id]; got != want {
+			errors = append(errors, fmt.Sprintf("Expected rule '%d' to match %d variable(s), got %d", id, want, got))
+		}
+	}
+	return errors
+}
+
+// emittedLogs returns the error logs of the rules that actually log, which is
+// what a "nolog" rule is expected not to contribute to. Rules that do not carry
+// the flag are included, so an unexpected rule type never hides a log line.
+func (t *Test) emittedLogs() []string {
+	var logs []string
+	for _, mr := range t.transaction.MatchedRules() {
+		if withLog, ok := mr.(*corazarules.MatchedRule); ok && !withLog.Log() {
+			continue
+		}
+		logs = append(logs, mr.ErrorLog())
+	}
+	return logs
+}
+
+// logContainsCountErrors asserts how many times a substring appears across the
+// emitted error logs.
 func (t *Test) logContainsCountErrors() []string {
 	if len(t.ExpectedOutput.LogContainsCount) == 0 {
 		return nil
 	}
+	logs := t.emittedLogs()
 	var errors []string
 	for _, want := range sortedStringKeys(t.ExpectedOutput.LogContainsCount) {
 		expected := t.ExpectedOutput.LogContainsCount[want]
 		got := 0
-		for _, mr := range t.transaction.MatchedRules() {
-			got += strings.Count(mr.ErrorLog(), want)
+		for _, log := range logs {
+			got += strings.Count(log, want)
 		}
 		if got != expected {
 			errors = append(errors, fmt.Sprintf("Expected log to contain '%s' %d time(s), got %d", want, expected, got))
