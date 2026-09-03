@@ -100,5 +100,14 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0031](0031-multipart-unexpected-eof.md) | [#1453](https://github.com/corazawaf/coraza/pull/1453) | 2026-03-06 | v3.4.0 | P | Ignore unexpected EOF in multipart |
 | [0032](0032-ctl-auditlogparts-plus-minus.md) | [#1467](https://github.com/corazawaf/coraza/pull/1467) | 2026-01-13 | v3.4.0 | P | `ctl:auditLogParts` `+`/`-` syntax |
 | [0033](0033-strmatch-operator.md) | [#1473](https://github.com/corazawaf/coraza/pull/1473) | 2026-01-15 | v3.4.0 | P | `@strmatch` operator |
+| [0034](0034-rule-observer-callback.md) | [#1478](https://github.com/corazawaf/coraza/pull/1478) | 2026-02-24 | v3.4.0 | F | Optional rule observer callback |
+| [0035](0035-wafwithrules-interface.md) | [#1492](https://github.com/corazawaf/coraza/pull/1492) | 2026-02-27 | v3.4.0 | F | `WAFWithRules` interface |
+| [0036](0036-remove-root-experimental-dep.md) | [#1494](https://github.com/corazawaf/coraza/pull/1494) | 2026-02-24 | v3.4.0 | R | Remove root package dependency on `experimental` |
+| [0037](0037-ctl-whole-collection-exclusion.md) | [#1495](https://github.com/corazawaf/coraza/pull/1495) | 2026-03-05 | v3.4.0 | P | `ctl:ruleRemoveTargetById` whole-collection exclusion |
+| [0038](0038-map-for-ruleremovebyid.md) | [#1524](https://github.com/corazawaf/coraza/pull/1524) | 2026-03-06 | v3.4.0 | ⚡ | `map` for `ruleRemoveByID` O(1) lookup |
+| [0039](0039-bulk-allocate-matchdata.md) | [#1530](https://github.com/corazawaf/coraza/pull/1530) | 2026-03-11 | v3.4.0 | ⚡ | Bulk-allocate `MatchData` in `collection.Find*` |
+| [0040](0040-crslang-antlr4-buildtag.md) | [#1536](https://github.com/corazawaf/coraza/pull/1536) | 2026-03-08 | v3.4.0 | F | `crslang` ANTLR4 parser behind build tag |
+| [0041](0041-ruleremovebyid-range-storage.md) | [#1538](https://github.com/corazawaf/coraza/pull/1538) | 2026-03-09 | v3.4.0 | ⚡ | `ruleRemoveById` range storage |
+| [0054](0054-xml-unexpected-eof.md) | [#1452](https://github.com/corazawaf/coraza/pull/1452) | 2025-12-18 | v3.4.0 | P | Ignore unexpected EOF in XML body processor |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
