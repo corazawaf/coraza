@@ -77,5 +77,11 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0008](0008-transaction-context.md) | [#963](https://github.com/corazawaf/coraza/pull/963) | 2024-01-31 | v3.1.0 | F | Transaction `context.Context` plumbing |
 | [0009](0009-structured-logging.md) | [#971](https://github.com/corazawaf/coraza/pull/971) | 2024-02-01 | v3.1.0 | R | Structured `debuglog` facade |
 | [0010](0010-raw-body-processor.md) | [#983](https://github.com/corazawaf/coraza/pull/983) | 2024-02-06 | v3.1.0 | F | `raw` request body processor |
+| [0011](0011-expose-expected-directives.md) | [#1012](https://github.com/corazawaf/coraza/pull/1012) | 2024-03-08 | v3.2.0 | F | Expose expected directives for e2e |
+| [0012](0012-secruleupdatetargetbytag.md) | [#1020](https://github.com/corazawaf/coraza/pull/1020) | 2024-03-28 | v3.2.0 | P | `SecRuleUpdateTargetByTag` + ID ranges |
+| [0013](0013-tinygo-formatter-registration.md) | [#1027](https://github.com/corazawaf/coraza/pull/1027) | 2024-04-02 | v3.2.0 | P | TinyGo formatter registration |
+| [0014](0014-base64decodeext-transformation.md) | [#1046](https://github.com/corazawaf/coraza/pull/1046) | 2024-04-24 | v3.2.0 | P | `base64DecodeExt` transformation |
+| [0015](0015-case-sensitive-maps.md) | [#1055](https://github.com/corazawaf/coraza/pull/1055) | 2024-05-01 | v3.2.0 | F | Case-sensitive maps |
+| [0016](0016-case-sensitive-args.md) | [#1059](https://github.com/corazawaf/coraza/pull/1059) | 2024-05-28 | v3.2.0 | P | Case-sensitive args support |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
