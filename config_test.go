@@ -72,6 +72,7 @@ func TestConfigSetters(t *testing.T) {
 		WithErrorCallback(c).
 		WithRequestBodyLimit(200).
 		WithRequestBodyInMemoryLimit(100).
+		WithResponseBodyLimit(200).
 		WithResponseBodyMimeTypes([]string{"text/html"}).
 		WithDirectives(`
 		SecRule REQUEST_URI "@unconditionalMatch" "phase:1,id:1,log,msg:'ok'"

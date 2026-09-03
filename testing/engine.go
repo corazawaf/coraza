@@ -6,10 +6,16 @@ package testing
 import (
 	b64 "encoding/base64"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/corazarules"
+	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/variables"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -261,8 +267,219 @@ func (t *Test) OutputErrors() []string {
 			}
 		}
 	}
+	errors = append(errors, t.triggeredRulesCountErrors()...)
+	errors = append(errors, t.matchedDataCountErrors()...)
+	errors = append(errors, t.logContainsCountErrors()...)
+	errors = append(errors, t.variableErrors()...)
+	errors = append(errors, t.auditLogErrors()...)
 
 	return errors
+}
+
+// triggeredRulesCountErrors asserts the exact number of matches per rule id.
+func (t *Test) triggeredRulesCountErrors() []string {
+	if len(t.ExpectedOutput.TriggeredRulesCount) == 0 {
+		return nil
+	}
+	counts := map[int]int{}
+	for _, mr := range t.transaction.MatchedRules() {
+		counts[mr.Rule().ID()]++
+	}
+	var errors []string
+	for _, id := range sortedIntKeys(t.ExpectedOutput.TriggeredRulesCount) {
+		want := t.ExpectedOutput.TriggeredRulesCount[id]
+		if got := counts[id]; got != want {
+			errors = append(errors, fmt.Sprintf("Expected rule '%d' to be triggered %d time(s), got %d", id, want, got))
+		}
+	}
+	return errors
+}
+
+// matchedDataCountErrors asserts how many variables each rule matched against.
+func (t *Test) matchedDataCountErrors() []string {
+	if len(t.ExpectedOutput.MatchedDataCount) == 0 {
+		return nil
+	}
+	counts := map[int]int{}
+	for _, mr := range t.transaction.MatchedRules() {
+		counts[mr.Rule().ID()] += len(mr.MatchedDatas())
+	}
+	var errors []string
+	for _, id := range sortedIntKeys(t.ExpectedOutput.MatchedDataCount) {
+		want := t.ExpectedOutput.MatchedDataCount[id]
+		if got := counts[id]; got != want {
+			errors = append(errors, fmt.Sprintf("Expected rule '%d' to match %d variable(s), got %d", id, want, got))
+		}
+	}
+	return errors
+}
+
+// emittedLogs returns the error logs of the rules that actually log, which is
+// what a "nolog" rule is expected not to contribute to. Rules that do not carry
+// the flag are included, so an unexpected rule type never hides a log line.
+func (t *Test) emittedLogs() []string {
+	var logs []string
+	for _, mr := range t.transaction.MatchedRules() {
+		if withLog, ok := mr.(*corazarules.MatchedRule); ok && !withLog.Log() {
+			continue
+		}
+		logs = append(logs, mr.ErrorLog())
+	}
+	return logs
+}
+
+// logContainsCountErrors asserts how many times a substring appears across the
+// emitted error logs.
+func (t *Test) logContainsCountErrors() []string {
+	if len(t.ExpectedOutput.LogContainsCount) == 0 {
+		return nil
+	}
+	logs := t.emittedLogs()
+	var errors []string
+	for _, want := range sortedStringKeys(t.ExpectedOutput.LogContainsCount) {
+		expected := t.ExpectedOutput.LogContainsCount[want]
+		got := 0
+		for _, log := range logs {
+			got += strings.Count(log, want)
+		}
+		if got != expected {
+			errors = append(errors, fmt.Sprintf("Expected log to contain '%s' %d time(s), got %d", want, expected, got))
+		}
+	}
+	return errors
+}
+
+// variableErrors asserts the value of transaction variables after the phases ran.
+func (t *Test) variableErrors() []string {
+	if len(t.ExpectedOutput.Variables) == 0 {
+		return nil
+	}
+	tx, ok := t.transaction.(*corazawaf.Transaction)
+	if !ok {
+		return []string{"Variables assertions require the default transaction implementation"}
+	}
+	var errors []string
+	for _, selector := range sortedStringKeys(t.ExpectedOutput.Variables) {
+		want := t.ExpectedOutput.Variables[selector]
+		got, err := variableValue(tx, selector)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Variable '%s': %s", selector, err))
+			continue
+		}
+		if got != want {
+			errors = append(errors, fmt.Sprintf("Variable '%s': expected: '%s', got: '%s'", selector, want, got))
+		}
+	}
+	return errors
+}
+
+// variableValue resolves a seclang variable selector such as "TX:score" or
+// "REQUEST_URI" against the transaction. A missing value resolves to "", so a
+// test can assert a variable was never set.
+func variableValue(tx *corazawaf.Transaction, selector string) (string, error) {
+	name, key, _ := strings.Cut(selector, ":")
+	if key == "" {
+		name, key, _ = strings.Cut(selector, ".")
+	}
+	v, err := variables.Parse(strings.ToUpper(strings.TrimSpace(name)))
+	if err != nil {
+		return "", fmt.Errorf("unknown variable %q", name)
+	}
+	col := tx.Collection(v)
+	if col == nil {
+		return "", nil
+	}
+	if key == "" {
+		if single, ok := col.(collection.Single); ok {
+			return single.Get(), nil
+		}
+	}
+	if keyed, ok := col.(collection.Keyed); ok {
+		values := keyed.Get(key)
+		if len(values) == 0 {
+			return "", nil
+		}
+		return values[0], nil
+	}
+	if single, ok := col.(collection.Single); ok {
+		return single.Get(), nil
+	}
+	if all := col.FindAll(); len(all) > 0 {
+		return all[0].Value(), nil
+	}
+	return "", nil
+}
+
+// auditLogErrors asserts on the audit log built for the transaction.
+func (t *Test) auditLogErrors() []string {
+	expected := t.ExpectedOutput.AuditLog
+	if expected == nil {
+		return nil
+	}
+	tx, ok := t.transaction.(*corazawaf.Transaction)
+	if !ok {
+		return []string{"AuditLog assertions require the default transaction implementation"}
+	}
+	al := tx.AuditLog()
+	var errors []string
+	if expected.Parts != "" {
+		got := make([]byte, 0, len(al.Parts()))
+		for _, part := range al.Parts() {
+			got = append(got, byte(part))
+		}
+		if string(got) != expected.Parts {
+			errors = append(errors, fmt.Sprintf("AuditLog.Parts: expected: '%s', got: '%s'", expected.Parts, got))
+		}
+	}
+	if expected.MessageCount != nil {
+		if got := len(al.Messages()); got != *expected.MessageCount {
+			errors = append(errors, fmt.Sprintf("AuditLog.MessageCount: expected: %d, got: %d", *expected.MessageCount, got))
+		}
+	}
+	for _, want := range expected.MessagesContain {
+		if !auditLogMessagesContain(al.Messages(), want) {
+			errors = append(errors, fmt.Sprintf("Expected an audit log message to contain '%s'", want))
+		}
+	}
+	for _, unwanted := range expected.NoMessagesContain {
+		if auditLogMessagesContain(al.Messages(), unwanted) {
+			errors = append(errors, fmt.Sprintf("Expected no audit log message to contain '%s'", unwanted))
+		}
+	}
+	return errors
+}
+
+func auditLogMessagesContain(messages []plugintypes.AuditLogMessage, want string) bool {
+	for _, m := range messages {
+		if strings.Contains(m.Message(), want) {
+			return true
+		}
+		if data := m.Data(); data != nil {
+			if strings.Contains(data.Data(), want) || strings.Contains(data.Raw(), want) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// sortedIntKeys keeps assertion failures in a stable order across runs.
+func sortedIntKeys[V any](m map[int]V) []int {
+	keys := make([]int, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	return keys
+}
+
+func sortedStringKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // LogContains checks if the log contains a string

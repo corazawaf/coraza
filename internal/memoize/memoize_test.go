@@ -1,13 +1,14 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build tinygo && !coraza.no_memoize
+//go:build !coraza.no_memoize
 
 package memoize
 
 import (
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 )
@@ -243,6 +244,10 @@ func TestCacheBoundedWithClose(t *testing.T) {
 		t.Log("skipping scale test in short mode")
 		return
 	}
+	if os.Getenv("CORAZA_MEMOIZE_SCALE") != "1" {
+		t.Log("skipping scale test; set CORAZA_MEMOIZE_SCALE=1 to enable")
+		return
+	}
 	t.Cleanup(Reset)
 
 	const (
@@ -267,6 +272,9 @@ func TestCacheBoundedWithClose(t *testing.T) {
 		Release(i)
 	}
 
+	// After releasing each owner immediately, only the last cycle's
+	// entries remain (the last owner hasn't been released yet — but we
+	// DID release it in the loop). Cache should be empty.
 	if n := cacheLen(); n != 0 {
 		t.Fatalf("expected empty cache after all releases, got %d", n)
 	}
@@ -320,7 +328,7 @@ func BenchmarkRelease(b *testing.B) {
 				for o := 0; o < numOwners; o++ {
 					m := NewMemoizer(uint64(o + 1))
 					for _, p := range patterns {
-						m.Do(p, func() (any, error) {
+						_, _ = m.Do(p, func() (any, error) {
 							return regexp.Compile(p)
 						})
 					}

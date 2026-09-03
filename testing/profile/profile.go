@@ -43,13 +43,23 @@ type Test struct {
 	Title       string  `yaml:"test_title,omitempty"`
 	Description string  `yaml:"desc,omitempty"`
 	Stages      []Stage `yaml:"stages,omitempty"`
+
+	// Rules overrides Profile.Rules for this test only. It exists so that a
+	// behaviour needing its own ruleset does not require a whole new profile
+	// file: group the cases by the behaviour under test, not by the ruleset.
+	// When empty, Profile.Rules is used.
+	Rules string `yaml:"rules,omitempty"`
 }
 
 // Profile represents a test profile
 // It contains metadata and instructions for a test
 // It requires more documentation
 type Profile struct {
+	// Rules is the default ruleset for every test in the profile.
+	// Individual tests may override it with Test.Rules.
 	Rules string `yaml:"rules,omitempty"`
+	// Deprecated: Pass is not evaluated by the runner. Express the expectation
+	// in ExpectedOutput instead.
 	Pass  bool   `yaml:"pass,omitempty"`
 	Meta  Meta   `yaml:"meta,omitempty"`
 	Tests []Test `yaml:"tests,omitempty"`
@@ -57,15 +67,61 @@ type Profile struct {
 
 // ExpectedOutput contains the expected output results for a test
 type ExpectedOutput struct {
-	Headers           map[string]string     `yaml:"headers,omitempty"`
-	Data              any                   `yaml:"data,omitempty"` // Accepts array or string
-	LogContains       string                `yaml:"log_contains,omitempty"`
-	NoLogContains     string                `yaml:"no_log_contains,omitempty"`
-	ExpectError       bool                  `yaml:"expect_error,omitempty"`
-	TriggeredRules    []int                 `yaml:"triggered_rules,omitempty"`
-	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
-	Status            any                   `yaml:"status,omitempty"`
-	Interruption      *ExpectedInterruption `yaml:"interruption,omitempty"`
+	Headers       map[string]string `yaml:"headers,omitempty"`
+	Data          any               `yaml:"data,omitempty"` // Accepts array or string
+	LogContains   string            `yaml:"log_contains,omitempty"`
+	NoLogContains string            `yaml:"no_log_contains,omitempty"`
+	// ExpectError asserts that running the phases returns an error.
+	ExpectError       bool  `yaml:"expect_error,omitempty"`
+	TriggeredRules    []int `yaml:"triggered_rules,omitempty"`
+	NonTriggeredRules []int `yaml:"non_triggered_rules,omitempty"`
+
+	// TriggeredRulesCount asserts how many times each rule id was matched.
+	// Use it for duplicate-logging regressions: a rule id present in
+	// TriggeredRules only asserts "at least once".
+	TriggeredRulesCount map[int]int `yaml:"triggered_rules_count,omitempty"`
+
+	// LogContainsCount asserts how many times each substring appears across the
+	// error logs that were actually emitted, that is the logs of rules with
+	// logging enabled. Use it to pin down repeated tags, messages or logdata.
+	//
+	// LogContains and TriggeredRules search every matched rule instead,
+	// including rules marked nolog.
+	LogContainsCount map[string]int `yaml:"log_contains_count,omitempty"`
+
+	// MatchedDataCount asserts how many variables a rule matched against, summed
+	// over every time it fired. A multiMatch rule that evaluates the same value
+	// twice shows up here and nowhere else: TriggeredRulesCount would still
+	// report a single match.
+	MatchedDataCount map[int]int `yaml:"matched_data_count,omitempty"`
+
+	// Variables asserts the value of transaction variables after phase 5.
+	// Keys are seclang variable selectors, e.g. "TX:score" or "REQUEST_URI".
+	// Use it instead of hand-driving a transaction to check setvar results.
+	Variables map[string]string `yaml:"variables,omitempty"`
+
+	// AuditLog asserts on the audit log produced by the transaction.
+	AuditLog *ExpectedAuditLog `yaml:"audit_log,omitempty"`
+
+	// Deprecated: Status is not evaluated. Assert Interruption.Status instead.
+	Status       any                   `yaml:"status,omitempty"`
+	Interruption *ExpectedInterruption `yaml:"interruption,omitempty"`
+}
+
+// ExpectedAuditLog contains the expected audit log results for a test.
+// It exists so audit log behaviour is asserted from the same declarative case
+// as the rule behaviour that produced it, instead of from a separate hand
+// written transaction test.
+type ExpectedAuditLog struct {
+	// Parts asserts the exact set of audit log parts, e.g. "ABCFHZ".
+	Parts string `yaml:"parts,omitempty"`
+	// MessageCount asserts the number of messages in part H.
+	// It is a pointer so that 0 can be asserted explicitly.
+	MessageCount *int `yaml:"message_count,omitempty"`
+	// MessagesContain asserts every listed substring appears in some message.
+	MessagesContain []string `yaml:"messages_contain,omitempty"`
+	// NoMessagesContain asserts no message contains any listed substring.
+	NoMessagesContain []string `yaml:"no_messages_contain,omitempty"`
 }
 
 // ExpectedInterruption contains the expected interruption results for a test
@@ -79,8 +135,18 @@ type ExpectedInterruption struct {
 // Profiles is a map of registered profiles used by test runners
 var Profiles = map[string]Profile{}
 
-// RegisterProfile registers a profile for running from tests
+// RegisterProfile registers a profile for running from tests.
+//
+// Profiles are keyed by Meta.Name, so a duplicate name would silently replace
+// an already registered profile and drop its cases from every run. Panicking
+// here surfaces the mistake at package initialisation instead.
 func RegisterProfile(p Profile) Profile {
+	if p.Meta.Name == "" {
+		panic("profile: Meta.Name is required")
+	}
+	if _, ok := Profiles[p.Meta.Name]; ok {
+		panic("profile: duplicate profile name " + p.Meta.Name)
+	}
 	Profiles[p.Meta.Name] = p
 	return p
 }

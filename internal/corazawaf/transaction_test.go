@@ -54,6 +54,27 @@ func TestTxSettersMultipart(t *testing.T) {
 	validateMacroExpansion(exp, tx, t)
 }
 
+// TestTransactionString covers the debug dump, which is the only caller of the
+// per-collection Format methods. It cannot be a profile: it asserts the Go
+// String() contract of Transaction, not rule behaviour.
+func TestTransactionString(t *testing.T) {
+	tx := makeTransaction(t)
+	dump := tx.String()
+	for _, want := range []string{
+		"REQUEST_URI: /testurl.php?id=123&b=456",
+		"REQUEST_METHOD: POST",
+		"REQUEST_HEADERS:",
+		"ARGS_GET:",
+	} {
+		if !strings.Contains(dump, want) {
+			t.Errorf("expected debug dump to contain %q, got:\n%s", want, dump)
+		}
+	}
+	if err := tx.Close(); err != nil {
+		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestTxSetters(t *testing.T) {
 	tx := makeTransaction(t)
 	exp := map[string]string{
@@ -414,67 +435,44 @@ func TestResponseHeader(t *testing.T) {
 	}
 }
 
-func TestProcessRequestHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := NewWAF().NewTransaction()
-	tx.RuleEngine = types.RuleEngineOff
-
-	if !tx.IsRuleEngineOff() {
-		t.Fatal("expected Engine off")
+// TestPhasesDoNoEvaluationOnEngineOff asserts the engine short-circuits rather
+// than evaluating a phase and finding nothing to match: lastPhase stays 0. It
+// cannot be a profile, which can only observe that no rule triggered.
+func TestPhasesDoNoEvaluationOnEngineOff(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func(t *testing.T, tx *Transaction)
+	}{
+		{"request headers", func(_ *testing.T, tx *Transaction) { _ = tx.ProcessRequestHeaders() }},
+		{"request body", func(t *testing.T, tx *Transaction) {
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				t.Fatalf("failed to process request body: %s", err)
+			}
+		}},
+		{"response headers", func(_ *testing.T, tx *Transaction) { _ = tx.ProcessResponseHeaders(200, "OK") }},
+		{"response body", func(t *testing.T, tx *Transaction) {
+			if _, err := tx.ProcessResponseBody(); err != nil {
+				t.Fatalf("failed to process response body: %s", err)
+			}
+		}},
+		{"logging", func(_ *testing.T, tx *Transaction) { tx.ProcessLogging() }},
 	}
 
-	_ = tx.ProcessRequestHeaders()
-	if tx.lastPhase != 0 { // 0 means no phases have been evaluated
-		t.Fatal("unexpected rule evaluation")
-	}
-
-	if err := tx.Close(); err != nil {
-		t.Fatalf("Failed to close transaction: %s", err.Error())
-	}
-}
-
-func TestProcessRequestBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := NewWAF().NewTransaction()
-	tx.RuleEngine = types.RuleEngineOff
-	if _, err := tx.ProcessRequestBody(); err != nil {
-		t.Fatal("failed to process request body")
-	}
-	if tx.lastPhase != 0 {
-		t.Fatal("unexpected rule evaluation")
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatalf("Failed to close transaction: %s", err.Error())
-	}
-}
-
-func TestProcessResponseHeadersDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := NewWAF().NewTransaction()
-	tx.RuleEngine = types.RuleEngineOff
-	_ = tx.ProcessResponseHeaders(200, "OK")
-	if tx.lastPhase != 0 {
-		t.Fatal("unexpected rule evaluation")
-	}
-}
-
-func TestProcessResponseBodyDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := NewWAF().NewTransaction()
-	tx.RuleEngine = types.RuleEngineOff
-	if _, err := tx.ProcessResponseBody(); err != nil {
-		t.Fatal("Failed to process response body")
-	}
-	if tx.lastPhase != 0 {
-		t.Fatal("unexpected rule evaluation")
-	}
-}
-
-func TestProcessLoggingDoesNoEvaluationOnEngineOff(t *testing.T) {
-	tx := NewWAF().NewTransaction()
-	tx.RuleEngine = types.RuleEngineOff
-	tx.ProcessLogging()
-	if tx.lastPhase != 0 {
-		t.Fatal("unexpected rule evaluation")
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatalf("Failed to close transaction: %s", err.Error())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := NewWAF().NewTransaction()
+			tx.RuleEngine = types.RuleEngineOff
+			if !tx.IsRuleEngineOff() {
+				t.Fatal("expected rule engine to be off")
+			}
+			tt.run(t, tx)
+			if tx.lastPhase != 0 {
+				t.Errorf("expected no phase to be evaluated, got phase %d", tx.lastPhase)
+			}
+			if err := tx.Close(); err != nil {
+				t.Fatalf("failed to close transaction: %s", err)
+			}
+		})
 	}
 }
 

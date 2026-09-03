@@ -384,6 +384,11 @@ func (m Message) ErrorMessage() string {
 }
 
 func (m Message) Data() plugintypes.AuditLogMessageData {
+	// Messages built for part H alone carry no detail, and returning the typed
+	// nil pointer would hand callers a non-nil interface that panics on use.
+	if m.Data_ == nil {
+		return nil
+	}
 	return m.Data_
 }
 
