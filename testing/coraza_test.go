@@ -29,8 +29,12 @@ func TestEngine(t *testing.T) {
 
 			for _, test := range tt {
 				t.Run(test.Name, func(t *testing.T) {
-					if err := test.RunPhases(); err != nil {
+					err := test.RunPhases()
+					switch {
+					case err != nil && !test.ExpectedOutput.ExpectError:
 						t.Errorf("%s, ERROR: %s", test.Name, err)
+					case err == nil && test.ExpectedOutput.ExpectError:
+						t.Errorf("%s: expected an error while running phases, got none", test.Name)
 					}
 
 					for _, e := range test.OutputErrors() {
@@ -66,10 +70,14 @@ func testList(t *testing.T, p *profile.Profile) ([]*Test, error) {
 	var tests []*Test
 	for _, test := range p.Tests {
 		name := test.Title
+		rules := p.Rules
+		if test.Rules != "" {
+			rules = test.Rules
+		}
 		for _, stage := range test.Stages {
 			w, err := coraza.NewWAF(coraza.NewWAFConfig().
 				WithRootFS(os.DirFS("testdata")).
-				WithDirectives(p.Rules).
+				WithDirectives(rules).
 				WithDebugLogger(logger))
 			if err != nil {
 				return nil, err
