@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-08-27
-- **Version:** unreleased
+- **Version:** unreleased (post-v3.7.0)
 - **PR:** [#1693](https://github.com/corazawaf/coraza/pull/1693)
 - **Issue(s):** [#1104](https://github.com/corazawaf/coraza/issues/1104)
 - **Deciders:** @ChrisJr404, @fzipi
