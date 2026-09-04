@@ -266,7 +266,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 					args, errs = r.transformMultiMatchArg(arg)
 					argsLen = len(args)
 				} else {
-					args[0], errs = r.transformArg(arg, i, cache)
+					args[0], errs = r.transformArg(arg, i, cache, v.Count)
 					argsLen = 1
 				}
 				if len(errs) > 0 {
@@ -420,7 +420,7 @@ func (r *Rule) transformMultiMatchArg(arg types.MatchData) ([]string, []error) {
 	return r.executeTransformationsMultimatch(arg.Value())
 }
 
-func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]transformationValue) (string, []error) {
+func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transformationKey]transformationValue, isCount bool) (string, []error) {
 	switch {
 	case len(r.transformations) == 0:
 		return arg.Value(), nil
@@ -428,23 +428,29 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 		// no cache for TX
 		arg, errs := r.executeTransformations(arg.Value())
 		return arg, errs
+	case isCount:
+		// No cache for counts (&VARIABLE): the value is a short decimal string
+		// synthesized per call, so every transformation on it is a no-op and an
+		// entry would cost more than the work it saves.
+		arg, errs := r.executeTransformations(arg.Value())
+		return arg, errs
 	default:
 		// NOTE: See comment on transformationKey struct to understand this hacky code
-		argKey := arg.Key()
-		argKeyPtr := unsafe.StringData(argKey)
+		argValue := arg.Value()
+		argValuePtr := unsafe.StringData(argValue)
+		argValueLen := len(argValue)
 
 		// Search from longest prefix (full chain) backwards for a cache hit.
 		// Best case: full chain cached → single map lookup, done.
 		// Typical case: shared prefix cached → start computing from there.
 		startIdx := 0
-		value := arg.Value()
+		value := argValue
 		var errs []error
 
 		for i := len(r.transformationPrefixIDs) - 1; i >= 0; i-- {
 			key := transformationKey{
-				argKey:            argKeyPtr,
-				argIndex:          argIdx,
-				argVariable:       arg.Variable(),
+				argValue:          argValuePtr,
+				argValueLen:       argValueLen,
 				transformationsID: r.transformationPrefixIDs[i],
 			}
 			if cached, ok := cache[key]; ok {
@@ -470,9 +476,8 @@ func (r *Rule) transformArg(arg types.MatchData, argIdx int, cache map[transform
 			}
 
 			key := transformationKey{
-				argKey:            argKeyPtr,
-				argIndex:          argIdx,
-				argVariable:       arg.Variable(),
+				argValue:          argValuePtr,
+				argValueLen:       argValueLen,
 				transformationsID: r.transformationPrefixIDs[i],
 			}
 			cache[key] = transformationValue{arg: value, errs: errs}

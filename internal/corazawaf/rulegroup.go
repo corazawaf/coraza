@@ -10,7 +10,6 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // RuleGroup is a collection of rules
@@ -291,13 +290,17 @@ type transformationKey struct {
 	// TODO(anuraaga): This is a big hack to support performance on TinyGo. TinyGo
 	// cannot efficiently compute a hashcode for a struct if it has embedded non-fixed
 	// size fields, for example string as we'd prefer to use here. A pointer is usable,
-	// and it works for us since we know that the arg key string is populated once per
-	// transaction phase and we would never have different string pointers with the same
-	// content, or more problematically same pointer for different content, as the strings
-	// will be alive throughout the phase.
-	argKey            *byte
-	argIndex          int
-	argVariable       variables.RuleVariable
+	// and it works for us since the values we cache are owned by a collection and stay
+	// alive throughout the phase, so we never see different pointers with the same
+	// content, or more problematically the same pointer for different content.
+	//
+	// The identity is the value itself (data pointer + length), not the argument's key
+	// and position: collections backed by a map return FindAll() results in Go map
+	// iteration order, so an argument's position is not stable from one rule to the
+	// next within a phase. Values that are not collection-owned (TX, which mutates
+	// mid-phase, and &VARIABLE counts, which are synthesized per call) are not cached.
+	argValue          *byte
+	argValueLen       int
 	transformationsID int
 }
 
