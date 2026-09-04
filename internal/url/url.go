@@ -4,17 +4,24 @@
 package url
 
 import (
+	"errors"
 	"strings"
 )
 
+// ErrInvalidURLEncoding is returned when a query contains malformed percent encoding.
+var ErrInvalidURLEncoding = errors.New("invalid URL encoding")
+
 // ParseQuery parses the URL-encoded query string and returns the corresponding map.
-// It takes separators as parameter, for example: & or ; or &;
-func ParseQuery(query string, separator byte) map[string][]string {
+// It takes separators as parameter, for example: & or ; or &;.
+// Parsing is non-strict: malformed percent encoding is kept as-is and
+// ErrInvalidURLEncoding is returned alongside the fully populated map.
+func ParseQuery(query string, separator byte) (map[string][]string, error) {
 	return doParseQuery(query, separator, true)
 }
 
-func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
+func doParseQuery(query string, separator byte, urlUnescape bool) (map[string][]string, error) {
 	m := make(map[string][]string)
+	var err error
 	for query != "" {
 		key := query
 		if i := strings.IndexByte(key, separator); i >= 0 {
@@ -30,19 +37,30 @@ func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]s
 			key, value = key[:i], key[i+1:]
 		}
 		if urlUnescape {
-			key = queryUnescape(key)
-			value = queryUnescape(value)
+			var keyErr, valueErr error
+			key, keyErr = queryUnescape(key)
+			value, valueErr = queryUnescape(value)
+			if err == nil {
+				if keyErr != nil {
+					err = keyErr
+				} else {
+					err = valueErr
+				}
+			}
 		}
 		m[key] = append(m[key], value)
 	}
-	return m
+	return m, err
 }
 
 // queryUnescape is a non-strict version of net/url.QueryUnescape.
-func queryUnescape(input string) string {
+// Malformed percent sequences are written as-is and reported through
+// ErrInvalidURLEncoding.
+func queryUnescape(input string) (string, error) {
 	ilen := len(input)
 	res := strings.Builder{}
 	res.Grow(ilen)
+	var err error
 	for i := 0; i < ilen; i++ {
 		ci := input[i]
 		if ci == '+' {
@@ -51,16 +69,19 @@ func queryUnescape(input string) string {
 		}
 		if ci == '%' {
 			if i+2 >= ilen {
+				err = ErrInvalidURLEncoding
 				res.WriteByte(ci)
 				continue
 			}
 			hi, ok := hexDigitToByte(input[i+1])
 			if !ok {
+				err = ErrInvalidURLEncoding
 				res.WriteByte(ci)
 				continue
 			}
 			lo, ok := hexDigitToByte(input[i+2])
 			if !ok {
+				err = ErrInvalidURLEncoding
 				res.WriteByte(ci)
 				continue
 			}
@@ -70,7 +91,7 @@ func queryUnescape(input string) string {
 		}
 		res.WriteByte(ci)
 	}
-	return res.String()
+	return res.String(), err
 }
 
 func hexDigitToByte(digit byte) (byte, bool) {

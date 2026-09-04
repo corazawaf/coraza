@@ -23,7 +23,10 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	}
 
 	b := buf.String()
-	values := urlutil.ParseQuery(b, '&')
+	values, err := urlutil.ParseQuery(b, '&')
+	if err != nil {
+		v.UrlencodedError().(*collections.Single).Set("1")
+	}
 	argsCol := v.ArgsPost()
 	for k, vs := range values {
 		argsCol.Set(k, vs)
