@@ -1353,6 +1353,29 @@ func TestMultipleCookiesWithSpaceBetweenThem(t *testing.T) {
 	}
 }
 
+func TestAkamaiAbckCookieIsIndexedInCookieNames(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	cookies := "_abck=f672ea8d260dd9b181c8cee7e8a56ea2~0~yaaqreqf9cadggxaqaaf.../32~-1; _ga=GA1.1.123456789; OptanonConsent=isIABGlobal=false"
+	tx.AddRequestHeader("cookie", cookies)
+
+	if !utils.InSlice("_abck", collectionValues(t, tx.variables.requestCookiesNames)) {
+		t.Fatal("failed to set _abck cookie name", collectionValues(t, tx.variables.requestCookiesNames))
+	}
+
+	values := tx.variables.requestCookies.Get("_abck")
+	if len(values) != 1 {
+		t.Fatalf("expected one _abck cookie value, got %d", len(values))
+	}
+	if values[0] != "f672ea8d260dd9b181c8cee7e8a56ea2~0~yaaqreqf9cadggxaqaaf.../32~-1" {
+		t.Fatalf("unexpected _abck cookie value: %q", values[0])
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func collectionValues(t *testing.T, col collection.Collection) []string {
 	t.Helper()
 	all := col.FindAll()
