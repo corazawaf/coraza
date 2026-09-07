@@ -372,9 +372,12 @@ func directiveSecResponseBodyJsonDepthLimit(options *DirectiveOptions) error {
 // element contents and attribute values are appended to XML:/* and XML://@*
 // respectively. Values of every XML part are merged into the same collection.
 //
-// Uploads are still written to disk as usual, so FILES, FILES_NAMES, FILES_SIZES
-// and FILES_TMPNAMES keep their behaviour. Parsing failures on a part are not
-// fatal: the part is skipped and the rest of the body is processed.
+// Upload handling is unchanged: FILES, FILES_NAMES, FILES_SIZES and, on builds
+// with filesystem access, FILES_TMPNAMES keep their behaviour. Builds without it
+// (the no_fs_access tag, TinyGo) already drain file parts instead of storing them,
+// so FILES_TMPNAMES stays empty there whether this directive is On or Off. Parsing
+// failures on a part are not fatal: the part is skipped and the rest of the body is
+// processed.
 //
 // Note: this is a deviation from ModSecurity, which never parses multipart parts.
 // It is Off by default for that reason, and because parsing costs CPU and holds
