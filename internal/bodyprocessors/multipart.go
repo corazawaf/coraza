@@ -122,7 +122,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		}
 		if filename != "" {
 			seenUnexpectedEOF := false
-			// Only copy the file to a temporary one when the build has filesystem
+			// Only copy the file to a temporary one on builds with filesystem
 			// access, otherwise the part is drained and only its size is kept.
 			dst := io.Discard
 			var temp *os.File
