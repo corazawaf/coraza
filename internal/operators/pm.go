@@ -25,7 +25,7 @@ import (
 // true if any of the patterns are found in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Detect known malicious user agents
 // SecRule REQUEST_HEADERS:User-Agent "@pm WebZIP WebCopier Webster" "id:170,deny,log"
 //

@@ -4,8 +4,30 @@
 package engine
 
 import (
+	"crypto/fips140"
+
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )
+
+// Rules 777 and 778 rely on t:md5, which is unavailable when the binary runs in FIPS 140-3 mode:
+// the transformation errors out, the untransformed value reaches the operator, and the rules no
+// longer match.
+//
+// These are functions rather than an init() because package-level variables are initialized before
+// init() runs, so an init() would be too late to affect the registered profile below.
+func md5TriggeredRules() []int {
+	if fips140.Enabled() {
+		return []int{942101}
+	}
+	return []int{777, 778, 942101}
+}
+
+func md5NonTriggeredRules() []int {
+	if fips140.Enabled() {
+		return []int{777, 778}
+	}
+	return nil
+}
 
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
@@ -28,7 +50,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 							},
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{777, 778, 942101},
+							TriggeredRules:    md5TriggeredRules(),
+							NonTriggeredRules: md5NonTriggeredRules(),
 						},
 					},
 				},

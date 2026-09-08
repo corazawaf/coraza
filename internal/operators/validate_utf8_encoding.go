@@ -23,7 +23,7 @@ import (
 // true if invalid UTF-8 encoding is found (violation), false if encoding is valid
 //
 // Example:
-// ```
+// ```seclang
 // # Ensure valid UTF-8 in request parameters
 // SecRule ARGS "@validateUtf8Encoding" "id:193,deny,log,msg:'Invalid UTF-8 encoding'"
 //

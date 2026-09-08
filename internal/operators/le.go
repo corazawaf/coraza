@@ -23,7 +23,7 @@ import (
 // true if the input value is less than or equal to the parameter value, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Allow requests with reasonable header count
 // SecRule &REQUEST_HEADERS_NAMES "@le 15" "id:164,pass,log"
 //

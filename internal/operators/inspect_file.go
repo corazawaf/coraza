@@ -26,7 +26,7 @@ import (
 // true if the external program indicates a match (non-'1' output), false on timeout or '1' output
 //
 // Example:
-// ```
+// ```seclang
 // # Scan uploaded files with external antivirus
 // SecRule FILES_TMPNAMES "@inspectFile /usr/local/bin/av-scan.sh" "id:203,deny,log,msg:'Virus detected'"
 //

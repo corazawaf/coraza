@@ -23,7 +23,7 @@ import (
 // true if the input value is greater than or equal to the parameter value, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block if too many request headers
 // SecRule &REQUEST_HEADERS_NAMES "@ge 15" "id:155,deny,log"
 //

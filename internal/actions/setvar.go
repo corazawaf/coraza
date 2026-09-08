@@ -20,7 +20,7 @@ import (
 // Creates, removes, or updates a variable. Variable names are **case-insensitive**.
 //
 // Example:
-// ```
+// ```seclang
 // # Create a variable and set its value to 1 (usually used for setting flags)
 // `setvar:TX.score`
 //

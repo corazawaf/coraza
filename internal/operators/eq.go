@@ -23,7 +23,7 @@ import (
 // true if the input value equals the parameter value numerically, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Check if request header count is exactly 15
 // SecRule &REQUEST_HEADERS_NAMES "@eq 15" "id:153,deny,log"
 //

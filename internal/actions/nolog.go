@@ -15,7 +15,7 @@ import (
 // Although `nolog` implies `noauditlog`, you can override the former by using `nolog,auditlog`.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule REQUEST_HEADERS:User-Agent "@streq Test" "allow,nolog,id:121"
 // ```
 type nologFn struct{}

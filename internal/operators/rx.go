@@ -31,7 +31,7 @@ import (
 // true if the pattern matches the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Match User-Agent containing "nikto" (with explicit @rx)
 // SecRule REQUEST_HEADERS:User-Agent "@rx nikto" "id:180,deny,log"
 //

@@ -24,7 +24,7 @@ import (
 // true if the parameter string is found anywhere in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block requests with WebZIP user agent
 // SecRule REQUEST_HEADERS:User-Agent "@strmatch WebZIP" "id:1,deny"
 //

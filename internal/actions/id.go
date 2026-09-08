@@ -18,7 +18,7 @@ import (
 // a numeric value and is mandatory for all `SecRule` and `SecAction`.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule &REQUEST_HEADERS:Host "@eq 0" "log,id:60008,severity:2,msg:'Request Missing a Host Header'"
 // ```
 type idFn struct{}

@@ -56,13 +56,22 @@ func TestTransformations(t *testing.T) {
 					// Cannot use t.Skip for TinyGo support
 					return
 				}
-				out, _, err := trans(data.Input)
+				out, changed, err := trans(data.Input)
 				if err != nil {
 					t.Error(err)
 				}
 				if out != data.Output {
 					t.Errorf("Transformation %s:\nInput: %s\nExpected: %v\nGot: %v\nExpected String: %s\nGot String: %s",
 						data.Name, data.Input, []byte(data.Output), []byte(out), data.Output, out)
+				}
+				// Only check the changed return value for normalisePath and normalisePathWin
+				// where the ret field reliably indicates whether the path was modified
+				if data.Name == "normalisePath" || data.Name == "normalisePathWin" {
+					expectedChanged := data.Ret != 0
+					if changed != expectedChanged {
+						t.Errorf("Transformation %s:\nInput: %s\nExpected changed: %v\nGot changed: %v",
+							data.Name, data.Input, expectedChanged, changed)
+					}
 				}
 			})
 		}

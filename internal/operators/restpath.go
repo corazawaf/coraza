@@ -28,7 +28,7 @@ var rePathTokenRe = regexp.MustCompile(`\{([^\}]+)\}`)
 // true if the URI matches the path template, false otherwise. Matched placeholders are available in ARGS_PATH.
 //
 // Example:
-// ```
+// ```seclang
 // # Match REST endpoint and extract path parameters
 // SecRule REQUEST_URI "@restpath /api/v1/users/{userId}/posts/{postId}" "id:201,pass,log"
 //

@@ -113,6 +113,8 @@ func doRawWSUpgrade(t *testing.T, conn net.Conn, addr, key string, extraHeaders 
 // Coraza interceptor rather than the manual-header-write path tested by
 // TestWAFNotBypassedAfterWebSocketUpgrade.
 func TestWebSocketUpgradeViaResponseWriter(t *testing.T) {
+	skipIfFIPS(t)
+
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
 SecRuleEngine On
 SecRequestBodyAccess On

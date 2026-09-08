@@ -18,7 +18,7 @@ import (
 // If status is not set, deny action defaults to status 403.
 //
 // Example:
-// ```
+// ```seclang
 // # Deny status 403
 // SecDefaultAction "phase:1,log,deny,id:145,status:403"
 // ```
