@@ -215,21 +215,25 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
 		logger.Debug().Msg("Forcing rule to match")
-		md := &corazarules.MatchData{}
-		if r.ParentID_ != noID || r.MultiMatch {
-			// In order to support Msg and LogData for inner rules, we need to expand them now
-			if r.Msg != nil {
-				md.Message_ = r.Msg.Expand(tx)
+		// SecAction/SecMark match unconditionally, so they have no record-scoped variable
+		// to key off; only run them once, on the first record of a streaming body.
+		if !tx.isSubsequentStreamRecord() {
+			md := &corazarules.MatchData{}
+			if r.ParentID_ != noID || r.MultiMatch {
+				// In order to support Msg and LogData for inner rules, we need to expand them now
+				if r.Msg != nil {
+					md.Message_ = r.Msg.Expand(tx)
+				}
+				if r.LogData != nil {
+					md.Data_ = r.LogData.Expand(tx)
+				}
 			}
-			if r.LogData != nil {
-				md.Data_ = r.LogData.Expand(tx)
+			matchedValues = append(matchedValues, md)
+			if multiphaseEvaluation {
+				*collectiveMatchedValues = append(*collectiveMatchedValues, md)
 			}
+			r.matchVariable(tx, md)
 		}
-		matchedValues = append(matchedValues, md)
-		if multiphaseEvaluation {
-			*collectiveMatchedValues = append(*collectiveMatchedValues, md)
-		}
-		r.matchVariable(tx, md)
 	} else {
 		// Chain children carry ID_ == noID; ctl:ruleRemoveTarget* stores exceptions
 		// under the parent's ID, so chain children must look up via ParentID_.
@@ -240,6 +244,14 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		ecol := tx.ruleRemoveTargetByID[rid]
 		for _, v := range r.variables {
 			if multiphaseEvaluation && multiphaseSkipVariable(r, v.Variable, phase) {
+				continue
+			}
+			// During streaming, only record-scoped variables (e.g. ARGS_POST) are
+			// re-evaluated on every record; other variables (e.g. REQUEST_HEADERS)
+			// already had their chance to match on the first record. Without this,
+			// a rule that also matches on a stable variable would re-run its actions
+			// (e.g. setvar:tx.anomaly_score=+N) once per record.
+			if tx.isSubsequentStreamRecord() && !isStreamRecordScopedVariable(v.Variable) {
 				continue
 			}
 			var values []types.MatchData
