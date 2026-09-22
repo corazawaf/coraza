@@ -192,11 +192,7 @@ func applyInterruptionHeaders(header http.Header, it *types.Interruption) {
 }
 
 func dropConnection(w http.ResponseWriter) bool {
-	hijacker, ok := w.(http.Hijacker)
-	if !ok {
-		return false
-	}
-	conn, _, err := hijacker.Hijack()
+	conn, _, err := http.NewResponseController(w).Hijack()
 	if err != nil {
 		return false
 	}
