@@ -67,11 +67,11 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
 		i.cleanHeaders()
 		i.Header().Set("Content-Length", "0")
-		applyInterruptionHeaders(i.Header(), it)
 		if it.Action == "drop" && dropConnection(i.w) {
 			i.isHijacked = true
 			return
 		}
+		applyInterruptionHeaders(i.Header(), it)
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode))
 		i.flushWriteHeader()
 		return
@@ -140,11 +140,11 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 			// if there is an interruption we must clean the headers and override the status code
 			i.cleanHeaders()
 			i.Header().Set("Content-Length", "0")
-			applyInterruptionHeaders(i.Header(), it)
 			if it.Action == "drop" && dropConnection(i.w) {
 				i.isHijacked = true
 				return len(b), nil
 			}
+			applyInterruptionHeaders(i.Header(), it)
 			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode)))
 			// We only flush the status code after an interruption.
 			i.flushWriteHeader()
@@ -264,11 +264,11 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				// if there is an interruption we must clean the headers and override the status code
 				i.cleanHeaders()
 				i.Header().Set("Content-Length", "0")
-				applyInterruptionHeaders(i.Header(), it)
 				if it.Action == "drop" && dropConnection(i.w) {
 					i.isHijacked = true
 					return nil
 				}
+				applyInterruptionHeaders(i.Header(), it)
 				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode)))
 				i.flushWriteHeader()
 				return nil
