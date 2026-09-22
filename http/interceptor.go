@@ -72,7 +72,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 			i.isHijacked = true
 			return
 		}
-		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
+		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode))
 		i.flushWriteHeader()
 		return
 	}
@@ -145,7 +145,7 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 				i.isHijacked = true
 				return len(b), nil
 			}
-			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
+			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode)))
 			// We only flush the status code after an interruption.
 			i.flushWriteHeader()
 			// We return the number of bytes as according to the interface io.Writer
@@ -269,7 +269,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 					i.isHijacked = true
 					return nil
 				}
-				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
+				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode)))
 				i.flushWriteHeader()
 				return nil
 			}

@@ -144,7 +144,7 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 				return
 			}
 			applyInterruptionHeaders(w.Header(), it)
-			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusInternalServerError))
+			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, http.StatusInternalServerError)))
 			return
 		}
 
@@ -189,6 +189,13 @@ func applyInterruptionHeaders(header http.Header, it *types.Interruption) {
 	if it.Action == "redirect" && it.Data != "" {
 		header.Set("Location", it.Data)
 	}
+}
+
+func interruptionFallbackStatusCode(it *types.Interruption, defaultStatusCode int) int {
+	if it.Action == "drop" {
+		return http.StatusInternalServerError
+	}
+	return defaultStatusCode
 }
 
 func dropConnection(w http.ResponseWriter) bool {

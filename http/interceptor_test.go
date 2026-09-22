@@ -540,6 +540,31 @@ func TestWriteHeaderHandlesDropInterruption(t *testing.T) {
 	}
 }
 
+func TestWriteHeaderHandlesDropInterruptionWithoutHijacker(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+			SecRuleEngine On
+			SecRule RESPONSE_HEADERS:X-Drop "@streq true" "id:1,phase:3,drop"
+		`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	req, _ := http.NewRequest("GET", "/test", nil)
+	rec := httptest.NewRecorder()
+	rw, _ := wrap(rec, req, tx)
+
+	rw.Header().Set("X-Drop", "true")
+	rw.WriteHeader(http.StatusOK)
+
+	if want, have := http.StatusInternalServerError, rec.Code; want != have {
+		t.Fatalf("expected fallback status %d, got %d", want, have)
+	}
+}
+
 func TestHijackTrackerSetsIsHijacked(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
 	if err != nil {
