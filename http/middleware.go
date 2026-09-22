@@ -140,7 +140,11 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 			tx.DebugLogger().Error().Err(err).Msg("Failed to process request")
 			return
 		} else if it != nil {
-			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusOK))
+			if it.Action == "drop" && dropConnection(w) {
+				return
+			}
+			applyInterruptionHeaders(w.Header(), it)
+			w.WriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, http.StatusInternalServerError))
 			return
 		}
 
@@ -159,15 +163,43 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 }
 
 // obtainStatusCodeFromInterruptionOrDefault returns the desired status code derived from the interruption
-// on a "deny" action or a default value.
+// or a default value.
 func obtainStatusCodeFromInterruptionOrDefault(it *types.Interruption, defaultStatusCode int) int {
-	if it.Action == "deny" {
+	switch it.Action {
+	case "deny":
 		statusCode := it.Status
 		if statusCode == 0 {
 			statusCode = 403
 		}
-
 		return statusCode
+	case "redirect":
+		if it.Status != 0 {
+			return it.Status
+		}
+		return http.StatusFound
+	default:
+		if it.Status != 0 {
+			return it.Status
+		}
+		return defaultStatusCode
 	}
-	return defaultStatusCode
+}
+
+func applyInterruptionHeaders(header http.Header, it *types.Interruption) {
+	if it.Action == "redirect" && it.Data != "" {
+		header.Set("Location", it.Data)
+	}
+}
+
+func dropConnection(w http.ResponseWriter) bool {
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		return false
+	}
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
 }

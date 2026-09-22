@@ -67,6 +67,10 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
 		i.cleanHeaders()
 		i.Header().Set("Content-Length", "0")
+		applyInterruptionHeaders(i.Header(), it)
+		if it.Action == "drop" && i.dropConnection() {
+			return
+		}
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
 		i.flushWriteHeader()
 		return
@@ -135,6 +139,10 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 			// if there is an interruption we must clean the headers and override the status code
 			i.cleanHeaders()
 			i.Header().Set("Content-Length", "0")
+			applyInterruptionHeaders(i.Header(), it)
+			if it.Action == "drop" && i.dropConnection() {
+				return len(b), nil
+			}
 			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 			// We only flush the status code after an interruption.
 			i.flushWriteHeader()
@@ -183,6 +191,20 @@ func (i *rwInterceptor) Flush() {
 		}
 
 	}
+}
+
+func (i *rwInterceptor) dropConnection() bool {
+	hijacker, ok := i.w.(http.Hijacker)
+	if !ok {
+		return false
+	}
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		return false
+	}
+	i.isHijacked = true
+	_ = conn.Close()
+	return true
 }
 
 func (i *rwInterceptor) writeBufferedResponseBodyToDownstream() error {
@@ -254,6 +276,10 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				// if there is an interruption we must clean the headers and override the status code
 				i.cleanHeaders()
 				i.Header().Set("Content-Length", "0")
+				applyInterruptionHeaders(i.Header(), it)
+				if it.Action == "drop" && i.dropConnection() {
+					return nil
+				}
 				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
 				i.flushWriteHeader()
 				return nil
