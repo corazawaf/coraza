@@ -68,7 +68,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 		i.cleanHeaders()
 		i.Header().Set("Content-Length", "0")
 		applyInterruptionHeaders(i.Header(), it)
-		if it.Action == "drop" && i.dropConnection() {
+		if it.Action == "drop" && dropConnection(i.w, func() { i.isHijacked = true }) {
 			return
 		}
 		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode)
@@ -140,7 +140,7 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 			i.cleanHeaders()
 			i.Header().Set("Content-Length", "0")
 			applyInterruptionHeaders(i.Header(), it)
-			if it.Action == "drop" && i.dropConnection() {
+			if it.Action == "drop" && dropConnection(i.w, func() { i.isHijacked = true }) {
 				return len(b), nil
 			}
 			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))
@@ -191,20 +191,6 @@ func (i *rwInterceptor) Flush() {
 		}
 
 	}
-}
-
-func (i *rwInterceptor) dropConnection() bool {
-	hijacker, ok := i.w.(http.Hijacker)
-	if !ok {
-		return false
-	}
-	conn, _, err := hijacker.Hijack()
-	if err != nil {
-		return false
-	}
-	i.isHijacked = true
-	_ = conn.Close()
-	return true
 }
 
 func (i *rwInterceptor) writeBufferedResponseBodyToDownstream() error {
@@ -277,7 +263,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.cleanHeaders()
 				i.Header().Set("Content-Length", "0")
 				applyInterruptionHeaders(i.Header(), it)
-				if it.Action == "drop" && i.dropConnection() {
+				if it.Action == "drop" && dropConnection(i.w, func() { i.isHijacked = true }) {
 					return nil
 				}
 				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, i.statusCode))

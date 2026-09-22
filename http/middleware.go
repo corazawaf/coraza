@@ -140,7 +140,7 @@ func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 			tx.DebugLogger().Error().Err(err).Msg("Failed to process request")
 			return
 		} else if it != nil {
-			if it.Action == "drop" && dropConnection(w) {
+			if it.Action == "drop" && dropConnection(w, nil) {
 				return
 			}
 			applyInterruptionHeaders(w.Header(), it)
@@ -191,7 +191,7 @@ func applyInterruptionHeaders(header http.Header, it *types.Interruption) {
 	}
 }
 
-func dropConnection(w http.ResponseWriter) bool {
+func dropConnection(w http.ResponseWriter, onSuccess func()) bool {
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		return false
@@ -199,6 +199,9 @@ func dropConnection(w http.ResponseWriter) bool {
 	conn, _, err := hijacker.Hijack()
 	if err != nil {
 		return false
+	}
+	if onSuccess != nil {
+		onSuccess()
 	}
 	_ = conn.Close()
 	return true
