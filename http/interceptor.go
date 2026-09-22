@@ -65,6 +65,10 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 
 	i.statusCode = statusCode
 	if it := i.tx.ProcessResponseHeaders(statusCode, i.proto); it != nil {
+		fallbackStatusCode := i.statusCode
+		if it.Action == "drop" {
+			fallbackStatusCode = http.StatusInternalServerError
+		}
 		i.cleanHeaders()
 		i.Header().Set("Content-Length", "0")
 		if it.Action == "drop" && dropConnection(i.w) {
@@ -72,7 +76,7 @@ func (i *rwInterceptor) WriteHeader(statusCode int) {
 			return
 		}
 		applyInterruptionHeaders(i.Header(), it)
-		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode))
+		i.statusCode = obtainStatusCodeFromInterruptionOrDefault(it, fallbackStatusCode)
 		i.flushWriteHeader()
 		return
 	}
@@ -137,6 +141,10 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 		// to it, otherwise we just send it to the response writer.
 		it, n, err := i.tx.WriteResponseBody(b)
 		if it != nil {
+			fallbackStatusCode := i.statusCode
+			if it.Action == "drop" {
+				fallbackStatusCode = http.StatusInternalServerError
+			}
 			// if there is an interruption we must clean the headers and override the status code
 			i.cleanHeaders()
 			i.Header().Set("Content-Length", "0")
@@ -145,7 +153,7 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 				return len(b), nil
 			}
 			applyInterruptionHeaders(i.Header(), it)
-			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode)))
+			i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, fallbackStatusCode))
 			// We only flush the status code after an interruption.
 			i.flushWriteHeader()
 			// We return the number of bytes as according to the interface io.Writer
@@ -261,6 +269,10 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 				i.flushWriteHeader()
 				return err
 			} else if it != nil {
+				fallbackStatusCode := i.statusCode
+				if it.Action == "drop" {
+					fallbackStatusCode = http.StatusInternalServerError
+				}
 				// if there is an interruption we must clean the headers and override the status code
 				i.cleanHeaders()
 				i.Header().Set("Content-Length", "0")
@@ -269,7 +281,7 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 					return nil
 				}
 				applyInterruptionHeaders(i.Header(), it)
-				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, interruptionFallbackStatusCode(it, i.statusCode)))
+				i.overrideWriteHeader(obtainStatusCodeFromInterruptionOrDefault(it, fallbackStatusCode))
 				i.flushWriteHeader()
 				return nil
 			}
