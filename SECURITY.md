@@ -43,6 +43,16 @@ A valid security report **must** include:
 
 Reports that do not satisfy these requirements will be closed as invalid without further discussion.
 
+### AI Disclosure
+
+When AI tools have materially contributed to the finding, the report **must** disclose:
+
+1. **Which AI tools and models were used** (e.g., "GitHub Copilot", "Claude Opus 4.5", "ChatGPT-4o").
+2. **What was generated or assisted** (e.g., the vulnerability hypothesis, the proof-of-concept script, the impact write-up).
+3. **What review was performed** (e.g., reproduced by hand against a specific version/commit, traced the affected code path manually, verified the PoC independently of the tool).
+
+Using AI, or disclosing that AI was used, does not by itself invalidate a report. Rejection is always tied to the "Core Principles" above: a missing reproducible PoC or unsupported/speculative claims. Omitting the disclosure above when AI materially contributed is itself treated as such an unsupported claim, and the report is closed as invalid on that basis.
+
 ## :trophy: Hall of Fame :trophy:
 
 1. No records

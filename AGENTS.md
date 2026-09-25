@@ -723,14 +723,27 @@ honestly: the checklist is a contract, not decoration.
 ### Vulnerabilities
 
 - **Never open a public issue or PR describing an exploitable bug.** Report it
-  through the GitHub security advisory link in [`SECURITY.md`](SECURITY.md). The
-  project follows a 90-day coordinated disclosure timeline.
+  through the GitHub security advisory link:
+  <https://github.com/corazawaf/coraza/security/advisories/new>. The project
+  follows a 90-day coordinated disclosure timeline (see [`SECURITY.md`](SECURITY.md)).
 - A valid report needs a **working proof of concept**, affected versions and a
   concrete impact. `SECURITY.md` explains that speculative, theoretical or
   AI-generated reports without a reproducer are closed as invalid.
-- **Coding agents do not file security reports.** If you find something that looks
-  exploitable while working, stop, describe it privately to the maintainer you are
-  working with, with a reproducer, and let a human decide how to disclose it.
+- **A coding agent may draft or submit an advisory through the link above only
+  with a human maintainer/contributor in the loop.** If you find something that
+  looks exploitable while working, stop, describe it privately to the maintainer
+  you are working with, with a reproducer, before anything is submitted.
+- **Disclose AI involvement in the advisory itself.** When AI tools have
+  materially contributed to the finding, the advisory description must include:
+  1. **Which AI tools and models were used** (e.g., "GitHub Copilot", "Claude
+     Opus 4.5", "ChatGPT-4o").
+  2. **What was generated or assisted** (e.g., the vulnerability hypothesis, the
+     proof-of-concept script, the impact write-up).
+  3. **What review was performed** (e.g., reproduced by hand against a specific
+     version/commit, traced the affected code path manually, verified the PoC
+     independently of the tool).
+  Omitting this disclosure when AI materially contributed is treated the same as
+  a missing PoC: the report is closed as invalid.
 - A fix for a reported vulnerability is developed on a private fork / advisory
   branch, not on a public PR, until the advisory is published.
 
