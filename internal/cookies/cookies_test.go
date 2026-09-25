@@ -88,6 +88,15 @@ func TestParseCookies(t *testing.T) {
 			args: args{rawCookies: "test1=value1;test1=value2"},
 			want: map[string][]string{"test1": {"value1", "value2"}},
 		},
+		{
+			name: "AkamaiAbckCookieValueWithTildeAndSlash",
+			args: args{rawCookies: "_abck=f672ea8d260dd9b181c8cee7e8a56ea2~0~yaaqreqf9cadggxaqaaf.../32~-1; _ga=GA1.1.123456789; OptanonConsent=isIABGlobal=false"},
+			want: map[string][]string{
+				"_abck":          {"f672ea8d260dd9b181c8cee7e8a56ea2~0~yaaqreqf9cadggxaqaaf.../32~-1"},
+				"_ga":            {"GA1.1.123456789"},
+				"OptanonConsent": {"isIABGlobal=false"},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
