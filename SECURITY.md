@@ -51,7 +51,7 @@ When AI tools have materially contributed to the finding, the report **must** di
 2. **What was generated or assisted** (e.g., the vulnerability hypothesis, the proof-of-concept script, the impact write-up).
 3. **What review was performed** (e.g., reproduced by hand against a specific version/commit, traced the affected code path manually, verified the PoC independently of the tool).
 
-Omitting this disclosure when AI materially contributed to the finding is treated the same as a missing PoC: the report is closed as invalid.
+Using AI, or disclosing that AI was used, does not by itself invalidate a report. Rejection is always tied to the "Core Principles" above: a missing reproducible PoC or unsupported/speculative claims. Omitting the disclosure above when AI materially contributed is itself treated as such an unsupported claim, and the report is closed as invalid on that basis.
 
 ## :trophy: Hall of Fame :trophy:
 
