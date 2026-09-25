@@ -123,5 +123,6 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0053](0053-pm-minlen-prefilter.md) | [#1601](https://github.com/corazawaf/coraza/pull/1601) | 2026-04-13 | unreleased | ⚡ | `@pm` `minLen` prefilter |
 | [0055](0055-accuracy-rule-action.md) | [#1693](https://github.com/corazawaf/coraza/pull/1693) | 2026-08-27 | unreleased | P | `accuracy` metadata action |
 | [0056](0056-fips-140-3-support.md) | [#1678](https://github.com/corazawaf/coraza/pull/1678) | 2026-08-28 | unreleased | F | Runtime FIPS 140-3 support for `t:md5`/`t:sha1` |
+| [0057](0057-multipart-xml-part-processing.md) | [#1716](https://github.com/corazawaf/coraza/pull/1716) | 2026-09-07 | unreleased | F | `SecRequestBodyMultipartXMLParts` directive |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

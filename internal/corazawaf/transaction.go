@@ -1133,6 +1133,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Mime:                      mimeType,
 		StoragePath:               tx.WAF.UploadDir,
 		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
+		MultipartXMLParts:         tx.WAF.RequestBodyMultipartXMLParts,
 	}); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)

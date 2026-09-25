@@ -133,3 +133,149 @@ SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, msg:'Multipart request body failed strict validation."
   `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "victors",
+		Description: "XML file parts are reachable through XML targets when SecRequestBodyMultipartXMLParts is On",
+		Enabled:     true,
+		Name:        "multipart_xml_parts.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "xml file part is parsed into the XML collection",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/upload.php",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							// The payload is entity-encoded on the wire, as a
+							// well-formed XML document carrying it would be. It is
+							// only visible to @detectXSS once the part has been
+							// tokenized.
+							Data: "----0000\r\n" +
+								"Content-Disposition: form-data; name=\"file\"; filename=\"payload.xml\"\r\n" +
+								"Content-Type: application/octet-stream\r\n" +
+								"\r\n" +
+								"<?xml version=\"1.0\"?><r a=\"&lt;img src=x onerror=alert(1)&gt;\">&lt;script&gt;alert(1)&lt;/script&gt;</r>\r\n" +
+								"----0000--\r\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{500, 501, 502, 503},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "non-xml file part contributes nothing to the XML collection",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/upload.php",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: "----0000\r\n" +
+								"Content-Disposition: form-data; name=\"file\"; filename=\"notes.txt\"\r\n" +
+								"Content-Type: text/plain\r\n" +
+								"\r\n" +
+								"just a log line\r\n" +
+								"----0000--\r\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{503},
+							NonTriggeredRules: []int{500, 501, 502},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "benign xml file part does not trigger the XSS rule",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/upload.php",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							// The XML declaration and tag syntax are consumed as
+							// structure, so they never reach @detectXSS. Feeding
+							// the raw bytes to it instead would match here.
+							Data: "----0000\r\n" +
+								"Content-Disposition: form-data; name=\"file\"; filename=\"report.xml\"\r\n" +
+								"Content-Type: application/xml\r\n" +
+								"\r\n" +
+								"<?xml version=\"1.0\"?><report><title>quarterly figures</title></report>\r\n" +
+								"----0000--\r\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{500, 503},
+							NonTriggeredRules: []int{501, 502},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRequestBodyAccess On
+SecRequestBodyMultipartXMLParts On
+SecRule XML:/* "@rx ." "id:500, phase:2, log, pass"
+SecRule XML:/* "@detectXSS" "id:501, phase:2, t:none, t:htmlEntityDecode, log, pass"
+SecRule XML://@* "@detectXSS" "id:502, phase:2, t:none, t:htmlEntityDecode, log, pass"
+SecRule FILES "@rx ." "id:503, phase:2, log, pass"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "victors",
+		Description: "XML file parts stay invisible while SecRequestBodyMultipartXMLParts is Off",
+		Enabled:     true,
+		Name:        "multipart_xml_parts_disabled.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "default configuration does not expose file part content",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/upload.php",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: "----0000\r\n" +
+								"Content-Disposition: form-data; name=\"file\"; filename=\"payload.xml\"\r\n" +
+								"Content-Type: application/xml\r\n" +
+								"\r\n" +
+								"<?xml version=\"1.0\"?><r>&lt;script&gt;alert(1)&lt;/script&gt;</r>\r\n" +
+								"----0000--\r\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{503},
+							NonTriggeredRules: []int{500, 501},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRequestBodyAccess On
+SecRule XML:/* "@rx ." "id:500, phase:2, log, pass"
+SecRule XML:/* "@detectXSS" "id:501, phase:2, t:none, t:htmlEntityDecode, log, pass"
+SecRule FILES "@rx ." "id:503, phase:2, log, pass"
+`,
+})

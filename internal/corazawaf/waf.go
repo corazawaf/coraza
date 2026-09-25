@@ -64,6 +64,10 @@ type WAF struct {
 	// Request body JSON recursive depth limit
 	RequestBodyJsonDepthLimit int
 
+	// If true, XML file parts of a multipart/form-data request body are parsed
+	// and exposed through the XML collection, in addition to the FILES* variables.
+	RequestBodyMultipartXMLParts bool
+
 	// Request body in memory limit
 	requestBodyInMemoryLimit *int64
 
@@ -326,17 +330,18 @@ func NewWAF() *WAF {
 		// Initializing pool for transactions
 		txPool: sync.NewPool(func() any { return new(Transaction) }),
 		// These defaults are unavoidable as they are zero values for the variables
-		RuleEngine:                types.RuleEngineOn,
-		RequestBodyAccess:         false,
-		RequestBodyLimit:          134217728, // Hard limit equal to _1gib
-		RequestBodyLimitAction:    types.BodyLimitActionReject,
-		RequestBodyJsonDepthLimit: DefaultRequestBodyJsonDepthLimit,
-		ResponseBodyAccess:        false,
-		ResponseBodyLimit:         524288, // Hard limit equal to _1gib
-		ResponseBodyLimitAction:   types.BodyLimitActionProcessPartial,
-		auditLogWriter:            logWriter,
-		auditLogWriterInitialized: false,
-		AuditLogWriterConfig:      auditlog.NewConfig(),
+		RuleEngine:                   types.RuleEngineOn,
+		RequestBodyAccess:            false,
+		RequestBodyLimit:             134217728, // Hard limit equal to _1gib
+		RequestBodyLimitAction:       types.BodyLimitActionReject,
+		RequestBodyJsonDepthLimit:    DefaultRequestBodyJsonDepthLimit,
+		RequestBodyMultipartXMLParts: false,
+		ResponseBodyAccess:           false,
+		ResponseBodyLimit:            524288, // Hard limit equal to _1gib
+		ResponseBodyLimitAction:      types.BodyLimitActionProcessPartial,
+		auditLogWriter:               logWriter,
+		auditLogWriterInitialized:    false,
+		AuditLogWriterConfig:         auditlog.NewConfig(),
 		AuditLogParts: types.AuditLogParts{
 			types.AuditLogPartRequestHeaders,
 			types.AuditLogPartRequestBody,

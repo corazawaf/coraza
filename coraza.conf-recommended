@@ -47,6 +47,19 @@ SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
 # Configures the maximum JSON recursion depth limit Coraza will accept.
 SecRequestBodyJsonDepthLimit 1024
 
+# Enable parsing of XML file parts inside a multipart/form-data body. The
+# rule above only engages the XML processor when the whole request body is
+# XML; an XML document uploaded as a file part is stored and counted, but its
+# contents are not exposed to any variable. With this On, such a part is
+# tokenized and its element contents and attribute values are added to the
+# XML collection, so the XML:/* and XML://@* targets reach an uploaded
+# document just as they reach an XML request body. The FILES, FILES_NAMES,
+# FILES_SIZES and FILES_TMPNAMES variables are unaffected, and a part that
+# fails to parse is skipped rather than failing the request.
+# Note: ModSecurity does not parse multipart parts, hence the default of Off.
+#
+#SecRequestBodyMultipartXMLParts On
+
 # Maximum request body size (bytes) Coraza will accept for buffering. When
 # supporting file uploads, this value has to be as large as the largest
 # file that should be accepted.

@@ -23,6 +23,10 @@ type BodyProcessorOptions struct {
 	DirMode fs.FileMode
 	// RequestBodyRecursionLimit is the maximum recursion level accepted in a body processor
 	RequestBodyRecursionLimit int
+	// MultipartXMLParts enables parsing of XML file parts inside a multipart
+	// body, exposing them through the XML collection. Ignored by processors
+	// other than multipart.
+	MultipartXMLParts bool
 }
 
 // BodyProcessor interface is used to create
