@@ -135,6 +135,75 @@ SecRule REQUEST_HEADERS:Transfer-Encoding "@contains identity" "id:1,phase:1,den
 	}
 }
 
+func TestWrapHandlerRequestPhaseRedirect(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecRule REQUEST_HEADERS:User-Agent "@streq redirect-me" "id:1,phase:1,log,status:307,redirect:https://www.example.com/failed.html"
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("downstream handler must not run after a redirect interruption")
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/redirect-me", nil)
+	req.Header.Set("User-Agent", "redirect-me")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if want, have := http.StatusTemporaryRedirect, rec.Code; want != have {
+		t.Fatalf("unexpected status code, want %d, have %d", want, have)
+	}
+	if want, have := "https://www.example.com/failed.html", rec.Header().Get("Location"); want != have {
+		t.Fatalf("unexpected redirect location, want %q, have %q", want, have)
+	}
+}
+
+func TestWrapHandlerRequestPhaseDrop(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecRule REQUEST_HEADERS:User-Agent "@streq drop-me" "id:1,phase:1,log,drop"
+	`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handler := WrapHandler(waf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("downstream handler must not run after a drop interruption")
+	}))
+
+	t.Run("hijacks and closes when supported", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/drop-me", nil)
+		req.Header.Set("User-Agent", "drop-me")
+		rec := newHijackableRecorder()
+		rec.Code = 0
+
+		handler.ServeHTTP(rec, req)
+
+		if !rec.hijacked {
+			t.Fatal("expected drop interruption to hijack the connection")
+		}
+		if rec.Code != 0 || rec.Body.Len() != 0 {
+			t.Fatalf("expected no HTTP response to be written after drop, got code %d and body length %d", rec.Code, rec.Body.Len())
+		}
+	})
+
+	t.Run("falls back to a server error without hijacking support", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/drop-me", nil)
+		req.Header.Set("User-Agent", "drop-me")
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		if want, have := http.StatusInternalServerError, rec.Code; want != have {
+			t.Fatalf("unexpected fallback status code, want %d, have %d", want, have)
+		}
+	})
+}
+
 func createMultipartRequest(t *testing.T) *http.Request {
 	t.Helper()
 
@@ -576,6 +645,26 @@ func TestObtainStatusCodeFromInterruptionOrDefault(t *testing.T) {
 		"default code": {
 			defaultCode:  204,
 			expectedCode: 204,
+		},
+		"action redirect with code": {
+			interruptionAction: "redirect",
+			interruptionCode:   http.StatusTemporaryRedirect,
+			expectedCode:       http.StatusTemporaryRedirect,
+		},
+		"action redirect without code": {
+			interruptionAction: "redirect",
+			expectedCode:       http.StatusFound,
+		},
+		"action drop with explicit code": {
+			interruptionAction: "drop",
+			interruptionCode:   http.StatusServiceUnavailable,
+			defaultCode:        http.StatusInternalServerError,
+			expectedCode:       http.StatusServiceUnavailable,
+		},
+		"action drop falls back to default": {
+			interruptionAction: "drop",
+			defaultCode:        http.StatusInternalServerError,
+			expectedCode:       http.StatusInternalServerError,
 		},
 	}
 
