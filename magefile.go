@@ -253,3 +253,45 @@ func Precommit() error {
 func Check() {
 	mg.SerialDeps(Lint, Test)
 }
+
+// combinations generates all possible combinations of build tags
+func combinations(tags []string) []string {
+	var result []string
+	n := len(tags)
+	for i := 0; i < (1 << n); i++ {
+		var combo []string
+		for j := 0; j < n; j++ {
+			if i&(1<<j) != 0 {
+				combo = append(combo, tags[j])
+			}
+		}
+		if len(combo) > 0 {
+			result = append(result, strings.Join(combo, ","))
+		} else {
+			result = append(result, "")
+		}
+	}
+	return result
+}
+
+// Generates a JSON output to stdout which contains all permutations of build tags for the project.
+func TagsMatrix() error {
+	tags := []string{
+		"coraza.rule.mandatory_rule_id_check",
+		"coraza.rule.case_sensitive_args_keys",
+		"coraza.rule.no_regex_multiline",
+		"coraza.no_memoize",
+		"coraza.rule.multiphase_evaluation",
+		"no_fs_access",
+	}
+	combos := combinations(tags)
+
+	jsonData, err := json.Marshal(combos)
+	if err != nil {
+		fmt.Println("Error generating JSON:", err)
+		return nil
+	}
+
+	fmt.Println(string(jsonData))
+	return nil
+}
