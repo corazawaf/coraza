@@ -729,6 +729,28 @@ honestly: the checklist is a contract, not decoration.
 - A valid report needs a **working proof of concept**, affected versions and a
   concrete impact. `SECURITY.md` explains that speculative, theoretical or
   AI-generated reports without a reproducer are closed as invalid.
+- **CVSS preconditions get verified, not copied from the report.** A submitted
+  CVSS vector reflects what the reporter wants the score to be, not necessarily
+  what the vulnerability requires. Before accepting a suggested score, or when
+  drafting one, check what exploitation actually depends on:
+  - If it fires from attacker-supplied input alone, on any deployment, Attack
+    Complexity is Low.
+  - If it depends on something outside the attacker's direct control — a
+    specific backend behavior (e.g. an application echoing input back into a
+    response), a non-default configuration, another vulnerability chained in —
+    Attack Complexity is High, and the advisory should say what that
+    precondition is.
+  - If the PoC only reproduces on one narrow, specific environment — one exact
+    pinned patch version of an unrelated language runtime or framework (e.g.
+    "only on Python 3.9.14", or one particular Django app's routing) — that is
+    evidence about that one combination, not about the affected code path in
+    general. Check whether it reproduces on a representative setup before
+    accepting the report's claimed affected-version range as-is; narrow it if
+    it does not.
+  Recompute and correct the vector during triage regardless of what the report
+  proposed; note the reasoning as an advisory comment, or, if advisory
+  comments aren't reachable through the API for that repository, as a PR
+  comment or in the fix PR's description.
 - **A coding agent may draft or submit an advisory through the link above only
   with a human maintainer/contributor in the loop.** If you find something that
   looks exploitable while working, stop, describe it privately to the maintainer
