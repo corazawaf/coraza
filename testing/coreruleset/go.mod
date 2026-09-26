@@ -8,7 +8,7 @@ require (
 	github.com/corazawaf/coraza/v3 v3.7.0
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw/v2 v2.5.0
-	github.com/rs/zerolog v1.35.0
+	github.com/rs/zerolog v1.35.1
 )
 
 require (
@@ -16,19 +16,19 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
-	github.com/corazawaf/libinjection-go v0.3.2 // indirect
+	github.com/corazawaf/libinjection-go v0.3.3 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/go-json-experiment/json v0.0.0-20250910080747-cc2cfa0554c3 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gotnospirit/makeplural v0.0.0-20180622080156-a5f48d94d976 // indirect
-	github.com/gotnospirit/messageformat v0.0.0-20221001023931-dfe49f1eb092 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/icza/backscanner v0.0.0-20241124160932-dff01ac50250 // indirect
-	github.com/kaptinlin/go-i18n v0.1.4 // indirect
-	github.com/kaptinlin/jsonschema v0.4.6 // indirect
+	github.com/kaptinlin/go-i18n v0.1.7 // indirect
+	github.com/kaptinlin/jsonschema v0.4.15 // indirect
+	github.com/kaptinlin/messageformat-go v0.4.4 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/yaml v1.1.0 // indirect
 	github.com/knadh/koanf/providers/env/v2 v2.0.0 // indirect
@@ -36,7 +36,7 @@ require (
 	github.com/knadh/koanf/providers/rawbytes v1.0.0 // indirect
 	github.com/knadh/koanf/v2 v2.3.4 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.13 // indirect
-	github.com/magefile/mage v1.17.0 // indirect
+	github.com/magefile/mage v1.17.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -44,7 +44,7 @@ require (
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/gjson v1.19.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/valllabh/ocsf-schema-golang v1.0.3 // indirect
