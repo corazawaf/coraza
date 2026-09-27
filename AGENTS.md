@@ -743,9 +743,14 @@ honestly: the checklist is a contract, not decoration.
     scored assuming the vulnerable component is in that configuration (per the
     CVSS version's own metric guidance), unless it deliberately weakens
     security or conflicts with vendor guidance; a non-default configuration is
-    not by itself grounds for Attack Complexity: High, and a chained-in bug
-    only pushes it to High if the chain itself is uncertain or effortful to
-    execute, not merely because more than one bug is involved.
+    not by itself grounds for Attack Complexity: High. Which metric carries
+    that precondition depends on the CVSS version: v3.1 folds a required
+    configuration into Attack Complexity, while v4.0 records it under the
+    separate Attack Requirements metric instead and narrows Attack Complexity
+    to built-in protections the attacker must evade or circumvent — the
+    already-configured assumption applies either way. A chained-in bug only
+    pushes Attack Complexity to High if the chain itself is uncertain or
+    effortful to execute, not merely because more than one bug is involved.
   - If the PoC only reproduces on one narrow, specific environment — one exact
     pinned patch version of an unrelated language runtime or framework (e.g.
     "only on Python 3.9.14", or one particular Django app's routing) — that is
