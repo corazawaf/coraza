@@ -735,11 +735,17 @@ honestly: the checklist is a contract, not decoration.
   drafting one, check what exploitation actually depends on:
   - If it fires from attacker-supplied input alone, on any deployment, Attack
     Complexity is Low.
-  - If it depends on something outside the attacker's direct control — a
+  - If it depends on something genuinely outside the attacker's control — a
     specific backend behavior (e.g. an application echoing input back into a
-    response), a non-default configuration, another vulnerability chained in —
-    Attack Complexity is High, and the advisory should say what that
-    precondition is.
+    response), or another vulnerability that must itself be reliably reached
+    and triggered as part of the chain — Attack Complexity is High, and the
+    advisory should say what that precondition is. A required configuration is
+    scored assuming the vulnerable component is in that configuration (per the
+    CVSS version's own metric guidance), unless it deliberately weakens
+    security or conflicts with vendor guidance; a non-default configuration is
+    not by itself grounds for Attack Complexity: High, and a chained-in bug
+    only pushes it to High if the chain itself is uncertain or effortful to
+    execute, not merely because more than one bug is involved.
   - If the PoC only reproduces on one narrow, specific environment — one exact
     pinned patch version of an unrelated language runtime or framework (e.g.
     "only on Python 3.9.14", or one particular Django app's routing) — that is
