@@ -316,6 +316,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.timeWday
 	case variables.TimeYear:
 		return tx.variables.timeYear
+	case variables.ArgumentsLimitReached:
+		return tx.variables.argumentsLimitReached
 	}
 
 	return collections.Noop
@@ -759,19 +761,23 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	tx.variables.serverPort.Set(p2)
 }
 
-// ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET
+// ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET.
+// Arguments are processed in the order they appear in the URI to ensure deterministic
+// behavior when the argument limit is reached.
 func (tx *Transaction) ExtractGetArguments(uri string) {
-	data := urlutil.ParseQuery(uri, '&')
-	for k, vs := range data {
-		for _, v := range vs {
-			tx.AddGetRequestArgument(k, v)
-		}
+	pairs, truncated := urlutil.ParseQueryOrdered(uri, '&', tx.WAF.ArgumentLimit)
+	for _, kv := range pairs {
+		tx.AddGetRequestArgument(kv.Key, kv.Value)
+	}
+	if truncated {
+		tx.variables.argumentsLimitReached.Set("1")
 	}
 }
 
 // AddGetRequestArgument
 func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsGet) {
+		tx.variables.argumentsLimitReached.Set("1")
 		tx.debugLogger.Warn().Msg("skipping get request argument, over limit")
 		return
 	}
@@ -781,6 +787,7 @@ func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 // AddPostRequestArgument
 func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsPost) {
+		tx.variables.argumentsLimitReached.Set("1")
 		tx.debugLogger.Warn().Msg("skipping post request argument, over limit")
 		return
 	}
@@ -790,19 +797,27 @@ func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 // AddPathRequestArgument
 func (tx *Transaction) AddPathRequestArgument(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsPath) {
+		tx.variables.argumentsLimitReached.Set("1")
 		tx.debugLogger.Warn().Msg("skipping path request argument, over limit")
 		return
 	}
 	tx.variables.argsPath.Add(key, value)
 }
 
+// checkArgumentLimit reports whether c already holds ArgumentLimit values.
+// It counts every individual value (TotalValues), not distinct keys (Len):
+// Map.Add appends repeated-key values into the same map entry without
+// growing Len, so a flood of identical keys ("a=1&a=1&a=1...") never tripped
+// this check when it compared against Len, no matter how large it grew. See
+// GHSA-3ww9-vw83-9w5x.
 func (tx *Transaction) checkArgumentLimit(c *collections.NamedCollection) bool {
-	return c.Len() >= tx.WAF.ArgumentLimit
+	return c.TotalValues() >= tx.WAF.ArgumentLimit
 }
 
 // AddResponseArgument
 func (tx *Transaction) AddResponseArgument(key string, value string) {
-	if tx.variables.responseArgs.Len() >= tx.WAF.ArgumentLimit {
+	if tx.variables.responseArgs.TotalValues() >= tx.WAF.ArgumentLimit {
+		tx.variables.argumentsLimitReached.Set("1")
 		tx.debugLogger.Warn().Msg("skipping response argument, over limit")
 		return
 	}
@@ -1135,6 +1150,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Mime:                      mimeType,
 		StoragePath:               tx.WAF.UploadDir,
 		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
+		ArgumentLimit:             tx.WAF.ArgumentLimit,
 	}); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
@@ -1364,7 +1380,9 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		}
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
-		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{}); err != nil {
+		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
+			ArgumentLimit: tx.WAF.ArgumentLimit,
+		}); err != nil {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 			tx.generateResponseBodyError(err)
 		}
@@ -1842,6 +1860,7 @@ type TransactionVariables struct {
 	uniqueID                 *collections.Single
 	urlencodedError          *collections.Single
 	uriParseError            *collections.Single
+	argumentsLimitReached    *collections.Single
 	xml                      *collections.Map
 	resBodyError             *collections.Single
 	resBodyErrorMsg          *collections.Single
@@ -1862,6 +1881,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v := &TransactionVariables{}
 	v.urlencodedError = collections.NewSingle(variables.UrlencodedError)
 	v.uriParseError = collections.NewSingle(variables.URIParseError)
+	v.argumentsLimitReached = collections.NewSingle(variables.ArgumentsLimitReached)
 	v.responseContentType = collections.NewSingle(variables.ResponseContentType)
 	v.uniqueID = collections.NewSingle(variables.UniqueID)
 	v.filesCombinedSize = collections.NewSingle(variables.FilesCombinedSize)
@@ -1977,6 +1997,10 @@ func (v *TransactionVariables) UrlencodedError() collection.Single {
 
 func (v *TransactionVariables) URIParseError() collection.Single {
 	return v.uriParseError
+}
+
+func (v *TransactionVariables) ArgumentsLimitReached() collection.Single {
+	return v.argumentsLimitReached
 }
 
 func (v *TransactionVariables) ResponseContentType() collection.Single {
@@ -2528,6 +2552,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.TimeYear, v.timeYear) {
+		return
+	}
+	if !f(variables.ArgumentsLimitReached, v.argumentsLimitReached) {
 		return
 	}
 }

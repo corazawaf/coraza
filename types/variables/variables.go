@@ -221,6 +221,8 @@ const (
 	TimeYear = variables.TimeYear
 	// URIParseError is set to 1 when the request URI could not be parsed
 	URIParseError = variables.URIParseError
+	// ArgumentsLimitReached is set to 1 when arguments were dropped due to SecArgumentsLimit
+	ArgumentsLimitReached = variables.ArgumentsLimitReached
 )
 
 // Parse returns the byte interpretation

@@ -2178,6 +2178,76 @@ func TestAddResponseArgsWithOverlimit(t *testing.T) {
 	}
 }
 
+// TestAddArgsRepeatedKeyOverlimit is a regression test for
+// GHSA-3ww9-vw83-9w5x: checkArgumentLimit used to compare against Len (the
+// number of distinct keys), so many values added under a single repeated key
+// never tripped the limit no matter how many times Add was called. It must
+// now be bounded by TotalValues (every individual value) instead.
+func TestAddArgsRepeatedKeyOverlimit(t *testing.T) {
+	const limit = 5
+	const attempts = 1000
+
+	adders := map[string]func(tx *Transaction, key, value string){
+		"get":      func(tx *Transaction, key, value string) { tx.AddGetRequestArgument(key, value) },
+		"post":     func(tx *Transaction, key, value string) { tx.AddPostRequestArgument(key, value) },
+		"path":     func(tx *Transaction, key, value string) { tx.AddPathRequestArgument(key, value) },
+		"response": func(tx *Transaction, key, value string) { tx.AddResponseArgument(key, value) },
+	}
+
+	for name, add := range adders {
+		t.Run(name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.WAF.ArgumentLimit = limit
+			for i := 0; i < attempts; i++ {
+				add(tx, "repeated", "samplevalue")
+			}
+
+			var total int
+			switch name {
+			case "get":
+				total = tx.variables.argsGet.TotalValues()
+			case "post":
+				total = tx.variables.argsPost.TotalValues()
+			case "path":
+				total = tx.variables.argsPath.TotalValues()
+			case "response":
+				total = tx.variables.responseArgs.TotalValues()
+			}
+			if total > limit {
+				t.Fatalf("expected at most %d total values under a repeated key, got %d", limit, total)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
+	}
+}
+
+// TestExtractGetArgumentsRepeatedKeyOverlimit confirms ExtractGetArguments
+// (the query-string entry point, as opposed to calling AddGetRequestArgument
+// directly) is bounded the same way, and sets ARGUMENTS_LIMIT_REACHED.
+func TestExtractGetArgumentsRepeatedKeyOverlimit(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.WAF.ArgumentLimit = 5
+
+	uri := "/x?" + strings.TrimSuffix(strings.Repeat("a=1&", 1000), "&")
+	tx.ExtractGetArguments(uri)
+
+	if got := tx.variables.argsGet.TotalValues(); got > 5 {
+		t.Fatalf("expected at most 5 total ARGS_GET values, got %d", got)
+	}
+	if tx.variables.argumentsLimitReached.Get() != "1" {
+		t.Error("expected ARGUMENTS_LIMIT_REACHED to be set")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestResponseBodyForceProcessing(t *testing.T) {
 	waf := NewWAF()
 	waf.ResponseBodyAccess = true

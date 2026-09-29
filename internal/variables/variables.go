@@ -717,4 +717,7 @@ const (
 	// url.ParseRequestURI (e.g. it contains raw control bytes). QUERY_STRING
 	// and ARGS_GET are populated from a best-effort split on "?" in that case.
 	URIParseError
+	// ArgumentsLimitReached is set to 1 when the number of arguments
+	// exceeds the configured SecArgumentsLimit and arguments were dropped.
+	ArgumentsLimitReached
 )

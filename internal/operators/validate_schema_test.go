@@ -438,6 +438,7 @@ func (m *mockTransaction) MatchedVarsNames() collection.Keyed              { ret
 func (m *mockTransaction) MultipartName() collection.Map                   { return nil }
 func (m *mockTransaction) MultipartFilename() collection.Map               { return nil }
 func (m *mockTransaction) MultipartStrictError() collection.Single         { return nil }
+func (m *mockTransaction) ArgumentsLimitReached() collection.Single        { return nil }
 func (m *mockTransaction) HighestSeverity() collection.Single              { return nil }
 func (m *mockTransaction) StatusLine() collection.Single                   { return nil }
 func (m *mockTransaction) ResponseStatus() collection.Single               { return nil }

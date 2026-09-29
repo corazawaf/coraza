@@ -116,4 +116,5 @@ type TransactionVariables interface {
 	ArgsGetNames() collection.Keyed
 	ArgsPostNames() collection.Keyed
 	MultipartStrictError() collection.Single
+	ArgumentsLimitReached() collection.Single
 }

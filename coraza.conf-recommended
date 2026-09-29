@@ -58,6 +58,20 @@ SecRule URI_PARSE_ERROR "@eq 1" \
 # Configures the maximum JSON recursion depth limit Coraza will accept.
 SecRequestBodyJsonDepthLimit 1024
 
+# Maximum number of arguments Coraza will parse per request, across the query
+# string, the path and the request body. Arguments beyond the limit are
+# dropped, which is why rules 200004 and 200005 below reject a request that
+# reaches it: silently dropped arguments are invisible to every ARGS rule.
+# Keep this as low as the applications behind Coraza allow.
+#
+# For JSON bodies, this same flag can also trip below the configured count:
+# the flattened form of a JSON body is capped at a multiple of the body's own
+# size, so a body whose fields share a few very long parent keys across many
+# leaves can hit that cap first. That is expected -- it bounds memory that the
+# argument count alone can't see -- but if legitimate JSON traffic denies here
+# without the argument count itself looking high, that byte cap is why.
+# SecArgumentsLimit 1000
+
 # Maximum request body size (bytes) Coraza will accept for buffering. When
 # supporting file uploads, this value has to be as large as the largest
 # file that should be accepted.
@@ -97,6 +111,18 @@ SecRule REQBODY_ERROR "!@eq 0" \
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, \
     msg:'Multipart request body failed strict validation.'"
+
+# Rejects requests when the argument limit has been reached and arguments
+# were silently dropped. Without this rule, an attacker can flood a request
+# with filler parameters to push a malicious payload past the limit,
+# causing it to be invisible to all ARGS-targeted rules.
+#
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" \
+    "id:'200004',phase:1,t:none,log,deny,status:400, \
+    msg:'Argument limit reached; request rejected (GET/PATH args)'"
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" \
+    "id:'200005',phase:2,t:none,log,deny,status:400, \
+    msg:'Argument limit reached; request rejected (POST args)'"
 
 
 # -- Response body handling --------------------------------------------------

@@ -226,6 +226,8 @@ func (v RuleVariable) Name() string {
 		return "IP"
 	case URIParseError:
 		return "URI_PARSE_ERROR"
+	case ArgumentsLimitReached:
+		return "ARGUMENTS_LIMIT_REACHED"
 
 	default:
 		return "INVALID_VARIABLE"
@@ -411,6 +413,7 @@ var rulemapRev = map[string]RuleVariable{
 	"USERID":                           Userid,
 	"IP":                               IP,
 	"URI_PARSE_ERROR":                  URIParseError,
+	"ARGUMENTS_LIMIT_REACHED":          ArgumentsLimitReached,
 }
 
 var errUnknownVariable = errors.New("unknown variable")

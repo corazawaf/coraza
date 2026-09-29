@@ -5,6 +5,7 @@ package bodyprocessors
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -183,7 +184,7 @@ func TestReadJSON(t *testing.T) {
 	for _, tc := range jsonTests {
 		tt := tc
 		t.Run(tt.name, func(t *testing.T) {
-			jsonMap, err := readJSON(tt.json, maxRecursion)
+			jsonMap, _, err := readJSON(tt.json, maxRecursion, 0)
 
 			// Special case for nested_empty - just check that the function doesn't error
 			if tt.name == "nested_empty" {
@@ -230,7 +231,7 @@ func mapKeys(m map[string]string) []string {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	_, err := readJSON(`{invalid json`, maxRecursion)
+	_, _, err := readJSON(`{invalid json`, maxRecursion, 0)
 	if err == nil {
 		// We expect an error for invalid JSON since we now validate
 		t.Error("Expected error for invalid JSON, got nil")
@@ -242,7 +243,7 @@ func BenchmarkReadJSON(b *testing.B) {
 		tt := tc
 		b.Run(tt.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				_, err := readJSON(tt.json, maxRecursion)
+				_, _, err := readJSON(tt.json, maxRecursion, 0)
 				if err != nil {
 					b.Error(err)
 				}
@@ -257,7 +258,7 @@ func readJSONNoValidation(s string, maxRecursion int) (map[string]string, error)
 	json := gjson.Parse(s)
 	res := make(map[string]string)
 	key := []byte("json")
-	err := readItems(json, key, maxRecursion, res)
+	_, err := readItems(json, key, maxRecursion, 0, 0, new(int), res)
 	return res, err
 }
 
@@ -303,7 +304,7 @@ func BenchmarkValidationOverhead(b *testing.B) {
 		b.Run("WithValidation/"+bc.name, func(b *testing.B) {
 			b.SetBytes(int64(len(bc.json)))
 			for i := 0; i < b.N; i++ {
-				if _, err := readJSON(bc.json, maxRecursion); err != nil {
+				if _, _, err := readJSON(bc.json, maxRecursion, 0); err != nil {
 					b.Fatal(err)
 				}
 			}
@@ -316,5 +317,187 @@ func BenchmarkValidationOverhead(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+// TestReadJSONArgumentLimit is a regression test for GHSA-3ww9-vw83-9w5x:
+// a small body decoding to a wide flat structure (e.g. a JSON array of
+// scalars) must not grow the flattened map without bound, regardless of
+// SecArgumentsLimit.
+func TestReadJSONArgumentLimit(t *testing.T) {
+	var sb strings.Builder
+	sb.WriteString("[")
+	for i := 0; i < 10000; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString("1")
+	}
+	sb.WriteString("]")
+
+	res, truncated, err := readJSON(sb.String(), maxRecursion, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !truncated {
+		t.Error("expected truncated to be true")
+	}
+	// +1 for the "json" key holding the array length summary entry.
+	if len(res) > 1001 {
+		t.Errorf("expected at most ~1000 entries, got %d", len(res))
+	}
+}
+
+func TestReadJSONArgumentLimitNested(t *testing.T) {
+	// A nested structure that is wide at a deep level: the limit must stop
+	// collection everywhere, not just at the top level.
+	var sb strings.Builder
+	sb.WriteString(`{"a":{"b":[`)
+	for i := 0; i < 10000; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString("1")
+	}
+	sb.WriteString(`]}}`)
+
+	res, truncated, err := readJSON(sb.String(), maxRecursion, 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !truncated {
+		t.Error("expected truncated to be true")
+	}
+	if len(res) > 1002 {
+		t.Errorf("expected at most ~1000 entries, got %d", len(res))
+	}
+}
+
+func TestReadJSONNoArgumentLimit(t *testing.T) {
+	res, truncated, err := readJSON(`{"a":1,"b":2,"c":3}`, maxRecursion, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if truncated {
+		t.Error("expected truncated to be false when argumentLimit is 0 (no limit)")
+	}
+	if len(res) != 3 {
+		t.Errorf("expected 3 entries, got %d: %v", len(res), res)
+	}
+}
+
+func BenchmarkReadJSONArgumentLimit(b *testing.B) {
+	var sb strings.Builder
+	sb.WriteString("[")
+	for i := 0; i < 100000; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString("1")
+	}
+	sb.WriteString("]")
+	json := sb.String()
+
+	b.Run("limit=1000", func(b *testing.B) {
+		b.SetBytes(int64(len(json)))
+		for i := 0; i < b.N; i++ {
+			if _, _, err := readJSON(json, maxRecursion, 1000); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("no_limit", func(b *testing.B) {
+		b.SetBytes(int64(len(json)))
+		for i := 0; i < b.N; i++ {
+			if _, _, err := readJSON(json, maxRecursion, 0); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
+// TestReadJSONArrayLengthRespectsArgumentLimit covers the entry written after
+// ForEach returns, outside the guards inside the callback. Every array level
+// added one entry past SecArgumentsLimit and left truncated false, so 1024
+// nested arrays in a 2 KB body produced 1025 arguments and the deny rule that
+// depends on the flag never fired.
+func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
+	const limit = 1000
+	depth := 1024
+	body := strings.Repeat("[", depth) + "1" + strings.Repeat("]", depth)
+
+	res, truncated, err := readJSON(body, 10000, limit)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res) > limit {
+		t.Errorf("argument limit %d exceeded: got %d arguments", limit, len(res))
+	}
+	if !truncated {
+		t.Error("truncated must be set when the argument limit stops the walk, or the deny rule cannot fire")
+	}
+}
+
+// TestReadJSONBoundsFlattenedBytes covers memory growth that the argument
+// count cannot see. Keys carry the full path and are rewritten per leaf, so a
+// body of long paths stays under the argument limit while retaining many times
+// its own size.
+func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
+	const limit = 1000
+	var sb strings.Builder
+	for i := 0; i < 8; i++ {
+		sb.WriteString(`{"` + strings.Repeat("p", 200) + strconv.Itoa(i) + `":`)
+	}
+	sb.WriteString("{")
+	for i := 0; i < 999; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(`"leaf` + strconv.Itoa(i) + `":"` + strings.Repeat("v", 20) + `"`)
+	}
+	sb.WriteString("}" + strings.Repeat("}", 8))
+	body := sb.String()
+
+	res, truncated, err := readJSON(body, 10000, limit)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	stored := 0
+	for k, v := range res {
+		stored += len(k) + len(v)
+	}
+	budget := len(body) * flattenBytesFactor
+	if stored > budget {
+		t.Errorf("flattened form retained %d bytes, over the %d byte budget for a %d byte body",
+			stored, budget, len(body))
+	}
+	if !truncated {
+		t.Error("truncated must be set when the byte budget stops the walk")
+	}
+	if len(res) >= limit {
+		t.Errorf("expected the byte budget to stop the walk before the argument limit, got %d arguments", len(res))
+	}
+}
+
+// TestReadJSONLeavesOrdinaryPayloadsIntact guards the byte budget against
+// truncating traffic it was never meant to touch.
+func TestReadJSONLeavesOrdinaryPayloadsIntact(t *testing.T) {
+	var sb strings.Builder
+	sb.WriteString(`{"users":[`)
+	for i := 0; i < 200; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(`{"id":` + strconv.Itoa(i) + `,"name":"user` + strconv.Itoa(i) +
+			`","email":"u` + strconv.Itoa(i) + `@example.com","active":true}`)
+	}
+	sb.WriteString(`]}`)
+
+	res, truncated, err := readJSON(sb.String(), 10000, 1000)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if truncated {
+		t.Errorf("a %d byte API-shaped payload must not be truncated, got %d arguments", sb.Len(), len(res))
 	}
 }
