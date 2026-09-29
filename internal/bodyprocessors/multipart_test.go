@@ -213,11 +213,13 @@ func TestMultipartUnmatchedBoundary(t *testing.T) {
 
 func TestIncompleteMultipartPayload(t *testing.T) {
 	testCases := []struct {
-		name  string
-		input string
+		name             string
+		input            string
+		expectStrictError bool
 	}{
 		{
-			name: "inMiddleOfBoundary",
+			name:             "inMiddleOfBoundary",
+			expectStrictError: true,
 			input: `
 -----------------------------9051914041544843365972754266
 Content-Disposition: form-data; name="text"
@@ -233,7 +235,8 @@ Content of a.txt.
 `,
 		},
 		{
-			name: "inMiddleOfHeader",
+			name:             "inMiddleOfHeader",
+			expectStrictError: false, // NextPart() returns io.EOF, not io.ErrUnexpectedEOF
 			input: `
 -----------------------------9051914041544843365972754266
 Content-Disposition: form-data; name="text"
@@ -249,7 +252,8 @@ Content of a.txt.
 Content-Disposition: form-data; name="fil`,
 		},
 		{
-			name: "inMiddleOfContent",
+			name:             "inMiddleOfContent",
+			expectStrictError: true,
 			input: `
 -----------------------------9051914041544843365972754266
 Content-Disposition: form-data; name="text"
@@ -295,6 +299,12 @@ Content-Type: text/html
 				}
 			}
 
+			// Verify MULTIPART_STRICT_ERROR is set for truncated bodies where io.ErrUnexpectedEOF is raised
+			strictError := v.MultipartStrictError()
+			if tc.expectStrictError && strictError.Get() != "1" {
+				t.Error("expected MULTIPART_STRICT_ERROR to be set for incomplete multipart payload")
+			}
+
 			// Verify form field data was correctly processed before the incomplete part
 			argsPost := v.ArgsPost()
 			if textValues := argsPost.Get("text"); len(textValues) == 0 {
@@ -320,6 +330,12 @@ text defa`)
 		Mime: "multipart/form-data; boundary=---------------------------9051914041544843365972754266",
 	}); err != nil {
 		t.Fatal(err)
+	}
+
+	// Verify MULTIPART_STRICT_ERROR is set for truncated bodies
+	strictError := v.MultipartStrictError()
+	if strictError.Get() != "1" {
+		t.Error("expected MULTIPART_STRICT_ERROR to be set for incomplete multipart payload")
 	}
 
 	// Verify the partial form field data was processed

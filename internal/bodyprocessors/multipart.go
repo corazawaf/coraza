@@ -73,6 +73,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 						v.MultipartStrictError().(*collections.Single).Set("1")
 						return err
 					}
+					v.MultipartStrictError().(*collections.Single).Set("1")
 					seenUnexpectedEOF = true
 				}
 				size = sz
@@ -84,6 +85,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 						v.MultipartStrictError().(*collections.Single).Set("1")
 						return err
 					}
+					v.MultipartStrictError().(*collections.Single).Set("1")
 					seenUnexpectedEOF = true
 				}
 				size = sz
@@ -104,6 +106,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
+				v.MultipartStrictError().(*collections.Single).Set("1")
 			}
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
