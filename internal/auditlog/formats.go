@@ -30,6 +30,18 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 )
 
+// logEscaper neutralizes CR/LF sequences in attacker-controlled fields
+// to prevent CRLF injection and log forgery in the Native audit log format.
+// See GHSA-prpw-wwv7-xjjr.
+//
+// The backslash is escaped first so the mapping stays reversible: without it a
+// real CR and the literal two-character input `\r` both render as `\r`, and a
+// consumer that unescapes would turn the literal back into a line break --
+// re-materialising the break this is meant to neutralise. Replacer makes a
+// single left-to-right pass and never re-scans its own output, so escaping the
+// backslash cannot double-escape.
+var logEscaper = strings.NewReplacer(`\`, `\\`, "\r", `\r`, "\n", `\n`)
+
 type nativeFormatter struct{}
 
 type auditLogWithErrMesg interface{ ErrorMessage() string }
@@ -39,7 +51,7 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		return nil, nil
 	}
 
-	boundaryPrefix := fmt.Sprintf("--%s-", utils.RandomString(10))
+	boundaryPrefix := fmt.Sprintf("--%s-", utils.RandomString(16))
 
 	var res strings.Builder
 
@@ -55,9 +67,9 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			// Part A: Audit log header containing only the timestamp and transaction info line
 			// Note: Part A does not have an empty line separator after it
 			_, _ = fmt.Fprintf(&res, "[%s] %s %s %d %s %d\n",
-				al.Transaction().Timestamp(), al.Transaction().ID(),
-				al.Transaction().ClientIP(), al.Transaction().ClientPort(),
-				al.Transaction().HostIP(), al.Transaction().HostPort())
+				al.Transaction().Timestamp(), logEscaper.Replace(al.Transaction().ID()),
+				logEscaper.Replace(al.Transaction().ClientIP()), al.Transaction().ClientPort(),
+				logEscaper.Replace(al.Transaction().HostIP()), al.Transaction().HostPort())
 			addSeparator = false
 		case types.AuditLogPartRequestHeaders:
 			// Part B: Request headers
@@ -65,16 +77,16 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 				_, _ = fmt.Fprintf(
 					&res,
 					"%s %s %s",
-					al.Transaction().Request().Method(),
-					al.Transaction().Request().URI(),
-					al.Transaction().Request().Protocol(),
+					logEscaper.Replace(al.Transaction().Request().Method()),
+					logEscaper.Replace(al.Transaction().Request().URI()),
+					logEscaper.Replace(al.Transaction().Request().Protocol()),
 				)
 				for k, vv := range al.Transaction().Request().Headers() {
 					for _, v := range vv {
 						res.WriteByte('\n')
-						res.WriteString(k)
+						res.WriteString(logEscaper.Replace(k))
 						res.WriteString(": ")
-						res.WriteString(v)
+						res.WriteString(logEscaper.Replace(v))
 					}
 				}
 				res.WriteByte('\n')
@@ -83,7 +95,7 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			// Part C: Request body
 			if al.Transaction().HasRequest() {
 				if body := al.Transaction().Request().Body(); body != "" {
-					res.WriteString(body)
+					res.WriteString(logEscaper.Replace(body))
 					res.WriteByte('\n')
 				}
 			}
@@ -91,7 +103,7 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			// Part E: Intermediary response body
 			if al.Transaction().HasResponse() {
 				if body := al.Transaction().Response().Body(); body != "" {
-					res.WriteString(body)
+					res.WriteString(logEscaper.Replace(body))
 					res.WriteByte('\n')
 				}
 			}
@@ -105,14 +117,14 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 				}
 				status := al.Transaction().Response().Status()
 				statusText := http.StatusText(status)
-				_, _ = fmt.Fprintf(&res, "%s %d %s\n", protocol, status, statusText)
+				_, _ = fmt.Fprintf(&res, "%s %d %s\n", logEscaper.Replace(protocol), status, statusText)
 
 				// Write headers
 				for k, vv := range al.Transaction().Response().Headers() {
 					for _, v := range vv {
-						res.WriteString(k)
+						res.WriteString(logEscaper.Replace(k))
 						res.WriteString(": ")
-						res.WriteString(v)
+						res.WriteString(logEscaper.Replace(v))
 						res.WriteByte('\n')
 					}
 				}
@@ -122,7 +134,7 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 			for _, alEntry := range al.Messages() {
 				alWithErrMsg, ok := alEntry.(auditLogWithErrMesg)
 				if ok && alWithErrMsg.ErrorMessage() != "" {
-					res.WriteString(alWithErrMsg.ErrorMessage())
+					res.WriteString(logEscaper.Replace(alWithErrMsg.ErrorMessage()))
 					res.WriteByte('\n')
 				}
 			}
@@ -148,7 +160,7 @@ func (nativeFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 		case types.AuditLogPartRulesMatched:
 			// Part K: Matched rules
 			for _, alEntry := range al.Messages() {
-				res.WriteString(alEntry.Data().Raw())
+				res.WriteString(logEscaper.Replace(alEntry.Data().Raw()))
 				res.WriteByte('\n')
 			}
 		case types.AuditLogPartEndMarker:
