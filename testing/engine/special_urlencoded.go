@@ -12,7 +12,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 		Author:      "jptosso",
 		Description: "Test if the body processors work",
 		Enabled:     true,
-		Name:        "posturlencoded.yaml",
+		Name:        "special_urlencoded.yaml",
 	},
 	Tests: []profile.Test{
 		{

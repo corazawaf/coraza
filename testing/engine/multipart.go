@@ -123,6 +123,59 @@ Therefore, the parser should fail and raise MULTIPART_STRICT_ERROR.
 				},
 			},
 		},
+		{
+			Title: "multipart error duplicate boundary parameter",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test.php",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000; boundary=--0001",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="_msg_body"
+
+Duplicate boundary parameters make the Content-Type header ambiguous.
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{200002},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "multipart error trailing junk parameter",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test.php",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000; junk",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="_msg_body"
+
+A trailing junk parameter still selects the MULTIPART processor, but
+the malformed header is rejected when the body is actually parsed.
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{200002},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecRuleEngine DetectionOnly

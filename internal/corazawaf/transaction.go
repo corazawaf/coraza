@@ -385,7 +385,7 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 	switch keyl {
 	case "content-type":
 		val := strings.ToLower(value)
-		if val == "application/x-www-form-urlencoded" {
+		if strings.HasPrefix(val, "application/x-www-form-urlencoded") {
 			tx.variables.reqbodyProcessor.Set("URLENCODED")
 		} else if strings.HasPrefix(val, "multipart/form-data") {
 			tx.variables.reqbodyProcessor.Set("MULTIPART")
