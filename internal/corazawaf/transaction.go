@@ -1381,7 +1381,8 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
 		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
-			ArgumentLimit: tx.WAF.ArgumentLimit,
+			ResponseBodyRecursionLimit: tx.WAF.ResponseBodyJsonDepthLimit,
+			ArgumentLimit:              tx.WAF.ArgumentLimit,
 		}); err != nil {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 			tx.generateResponseBodyError(err)

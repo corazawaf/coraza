@@ -238,6 +238,16 @@ func TestInvalidJSON(t *testing.T) {
 	}
 }
 
+// Not a jsonTests row: maxRecursion is shared across all rows in that table,
+// so a negative-limit case can't be expressed as one.
+func TestReadJSONNegativeRecursionLimit(t *testing.T) {
+	_, _, err := readJSON(`{"a": 1}`, -1, 0)
+	want := "max recursion reached while reading json object"
+	if err == nil || err.Error() != want {
+		t.Errorf("want error %q, got %v", want, err)
+	}
+}
+
 func BenchmarkReadJSON(b *testing.B) {
 	for _, tc := range jsonTests {
 		tt := tc

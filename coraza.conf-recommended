@@ -141,6 +141,10 @@ SecResponseBodyAccess On
 #
 SecResponseBodyMimeType text/plain text/html text/xml
 
+# Configures the maximum JSON recursion depth limit Coraza will accept in
+# response bodies (e.g. when SecResponseBodyMimeType includes application/json).
+SecResponseBodyJsonDepthLimit 1024
+
 # Maximum response body size (bytes) that Coraza will store in memory.
 # This default equals to 512 KB.
 # 

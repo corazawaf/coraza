@@ -52,8 +52,6 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	return nil
 }
 
-const ignoreJSONRecursionLimit = -1
-
 func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, bpo plugintypes.BodyProcessorOptions) error {
 	// Read the entire body to store it and process it
 	s := strings.Builder{}
@@ -61,9 +59,9 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 		return err
 	}
 	ss := s.String()
-	// Process with no recursion limit as we don't have a directive for response body
+	// Process with recursion limit
 	col := v.ResponseArgs()
-	data, truncated, err := readJSON(ss, ignoreJSONRecursionLimit, bpo.ArgumentLimit)
+	data, truncated, err := readJSON(ss, bpo.ResponseBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload
 	for key, value := range data {
 		col.SetIndex(key, 0, value)
@@ -157,7 +155,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 	arrayLen := 0
 	var iterationError error
 	iterationTruncated := false
-	if maxRecursion == 0 {
+	if maxRecursion <= 0 {
 		// We reached the limit of nesting we want to handle. This protects against
 		// DoS attacks using deeply nested JSON structures (e.g., {"a":{"a":{"a":...}}}).
 		return false, errors.New("max recursion reached while reading json object")

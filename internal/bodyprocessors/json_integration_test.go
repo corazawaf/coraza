@@ -60,7 +60,8 @@ func TestJSONProcessResponseArgumentLimit(t *testing.T) {
 	v := corazawaf.NewTransactionVariables()
 
 	if err := bp.ProcessResponse(strings.NewReader(wideJSONArray(10000)), v, plugintypes.BodyProcessorOptions{
-		ArgumentLimit: 1000,
+		ResponseBodyRecursionLimit: 100,
+		ArgumentLimit:              1000,
 	}); err != nil {
 		t.Fatal(err)
 	}

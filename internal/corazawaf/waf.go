@@ -33,6 +33,9 @@ const (
 	// DefaultRequestBodyJsonDepthLimit is the default limit for the depth of JSON objects in the request body
 	DefaultRequestBodyJsonDepthLimit = 1024
 
+	// DefaultResponseBodyJsonDepthLimit is the default limit for the depth of JSON objects in the response body
+	DefaultResponseBodyJsonDepthLimit = 1024
+
 	// defaultHighestSeverity is the default value for HIGHEST_SEVERITY when no rules
 	// with severity have been matched, aligning with ModSecurity behavior:
 	// - ModSec v2: apache2/msc_util.c highest_severity initialized to 255
@@ -72,6 +75,9 @@ type WAF struct {
 
 	// Response body memory limit
 	ResponseBodyLimit int64
+
+	// Response body JSON recursive depth limit
+	ResponseBodyJsonDepthLimit int
 
 	// Defines if rules are going to be evaluated
 	RuleEngine types.RuleEngineStatus
@@ -328,17 +334,18 @@ func NewWAF() *WAF {
 		// Initializing pool for transactions
 		txPool: sync.NewPool(func() any { return new(Transaction) }),
 		// These defaults are unavoidable as they are zero values for the variables
-		RuleEngine:                types.RuleEngineOn,
-		RequestBodyAccess:         false,
-		RequestBodyLimit:          134217728, // Hard limit equal to _1gib
-		RequestBodyLimitAction:    types.BodyLimitActionReject,
-		RequestBodyJsonDepthLimit: DefaultRequestBodyJsonDepthLimit,
-		ResponseBodyAccess:        false,
-		ResponseBodyLimit:         524288, // Hard limit equal to _1gib
-		ResponseBodyLimitAction:   types.BodyLimitActionProcessPartial,
-		auditLogWriter:            logWriter,
-		auditLogWriterInitialized: false,
-		AuditLogWriterConfig:      auditlog.NewConfig(),
+		RuleEngine:                 types.RuleEngineOn,
+		RequestBodyAccess:          false,
+		RequestBodyLimit:           134217728, // Hard limit equal to _1gib
+		RequestBodyLimitAction:     types.BodyLimitActionReject,
+		RequestBodyJsonDepthLimit:  DefaultRequestBodyJsonDepthLimit,
+		ResponseBodyAccess:         false,
+		ResponseBodyLimit:          524288, // Hard limit equal to _1gib
+		ResponseBodyLimitAction:    types.BodyLimitActionProcessPartial,
+		ResponseBodyJsonDepthLimit: DefaultResponseBodyJsonDepthLimit,
+		auditLogWriter:             logWriter,
+		auditLogWriterInitialized:  false,
+		AuditLogWriterConfig:       auditlog.NewConfig(),
 		AuditLogParts: types.AuditLogParts{
 			types.AuditLogPartRequestHeaders,
 			types.AuditLogPartRequestBody,
@@ -460,6 +467,10 @@ func (w *WAF) Validate() error {
 
 	if w.RequestBodyJsonDepthLimit <= 0 {
 		return errors.New("request body json depth limit should be bigger than 0")
+	}
+
+	if w.ResponseBodyJsonDepthLimit <= 0 {
+		return errors.New("response body json depth limit should be bigger than 0")
 	}
 
 	if environment.HasAccessToFS {
