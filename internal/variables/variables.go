@@ -402,14 +402,49 @@ const (
 	// **Note**: SecUploadKeepFiles must be set to 'On' in order to have this collection filled.
 	// **Note:** This variable is currently NOT implemented by Coraza
 	FilesTmpContent // CanBeSelected
-	// Description: This variable contains the multipart data from field FILENAME.
-	//
-	// **Note:** This variable is currently NOT implemented by Coraza
+	// Description: Contains the filename submitted for a multipart file upload part,
+	// keyed by the part's field name. When the part's Content-Disposition header carries
+	// an RFC 5987 extended "filename*" parameter, its (percent-decoded) value takes
+	// precedence over the plain "filename" parameter, per RFC 7578 section 4.2.
+	// ---
+	// ```seclang
+	// SecRule MULTIPART_FILENAME:upfile "@rx \.(?:php|jsp|exe)$" "id:198"
+	// ```
 	MultipartFilename // CanBeSelected
 	// Description: This variable contains the multipart data from field NAME.
 	//
 	// **Note:** This variable is currently NOT implemented by Coraza
 	MultipartName // CanBeSelected
+	// Description: Contains the RFC 5987 charset declared by a multipart part's
+	// Content-Disposition "filename*" parameter, keyed by the part's field name.
+	// Empty when the part has no "filename*" parameter. The charset is exposed
+	// as-is, without validation against the RFC 5987 grammar or the IANA charset
+	// registry -- use an operator such as @within to enforce an allowlist.
+	// ---
+	// ```seclang
+	// SecRule MULTIPART_FILENAME_CHARSET:upfile "!@within utf-8,iso-8859-1,us-ascii" "id:199"
+	// ```
+	MultipartFilenameCharset // CanBeSelected
+	// Description: Contains the RFC 5987 language tag declared by a multipart part's
+	// Content-Disposition "filename*" parameter, keyed by the part's field name. Empty
+	// when the part has no "filename*" parameter, or when the (optional) language
+	// segment was omitted.
+	// ---
+	// ```seclang
+	// SecRule MULTIPART_FILENAME_LANGUAGE:upfile "@rx ." "id:200"
+	// ```
+	MultipartFilenameLanguage // CanBeSelected
+	// Description: Set to 1 when a multipart part repeats a part header (for example two
+	// Content-Disposition headers), or repeats a parameter inside its Content-Disposition
+	// header (for example two "filename" parameters). Such a part is interpreted differently
+	// by different backends, so the duplicate itself is the signal. This variable also
+	// contributes to MULTIPART_STRICT_ERROR.
+	// ---
+	// ```seclang
+	// SecRule MULTIPART_STRICT_ERROR "@eq 1" "id:201,phase:2,deny,t:none,chain"
+	//   SecRule MULTIPART_DUPLICATE_PART_HEADER "@eq 1"
+	// ```
+	MultipartDuplicatePartHeader
 	// Description: Similar to MATCHED_VAR_NAME except that it is a collection of all variable
 	// names that matched during the current operator check.
 	// ---

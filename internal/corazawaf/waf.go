@@ -274,6 +274,8 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.variables.argumentsLimitReached.Set("0")
 	tx.variables.fullRequestLength.Set("0")
 	tx.variables.multipartDataAfter.Set("0")
+	tx.variables.multipartDuplicatePartHeader.Set("0")
+	tx.variables.multipartInvalidQuoting.Set("0")
 	tx.variables.outboundDataError.Set("0")
 	tx.variables.reqbodyError.Set("0")
 	tx.variables.reqbodyProcessorError.Set("0")

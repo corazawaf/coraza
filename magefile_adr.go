@@ -18,11 +18,17 @@ import (
 const adrDir = "docs/adr"
 
 var (
-	adrFileRe       = regexp.MustCompile(`^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$`)
-	adrTitleRe      = regexp.MustCompile(`(?m)^# ADR-(\d{4}): \S`)
-	adrFieldRe      = regexp.MustCompile(`(?m)^- \*\*([^*]+):\*\* *(.*)$`)
-	adrQuoteRe      = regexp.MustCompile(`(?m)^> — @[A-Za-z0-9_+.-]+ .*?\(\[[^\]]+\]\(([^)]+)\)\)`)
-	adrPermalink    = regexp.MustCompile(`^https://github\.com/corazawaf/coraza/(?:pull|issues)/\d+#(?:discussion_r|issuecomment-)\d+$`)
+	adrFileRe  = regexp.MustCompile(`^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$`)
+	adrTitleRe = regexp.MustCompile(`(?m)^# ADR-(\d{4}): \S`)
+	adrFieldRe = regexp.MustCompile(`(?m)^- \*\*([^*]+):\*\* *(.*)$`)
+	adrQuoteRe = regexp.MustCompile(`(?m)^> — @[A-Za-z0-9_+.-]+ .*?\(\[[^\]]+\]\(([^)]+)\)\)`)
+	// A permalink normally lives in the public repo, but an ADR written
+	// alongside embargoed security work quotes discussion on the private
+	// advisory fork instead (named "coraza-ghsa-xxxx-xxxx-xxxx", see
+	// SECURITY.md / AGENTS.md); that repo is real and reviewer-accessible,
+	// just not this one, so it is accepted under its own name rather than
+	// forcing a quote to wait until the advisory publishes.
+	adrPermalink    = regexp.MustCompile(`^https://github\.com/corazawaf/(?:coraza|coraza-ghsa-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4})/(?:pull|issues)/\d+#(?:discussion_r|issuecomment-)\d+$`)
 	adrIndexRowRe   = regexp.MustCompile(`(?m)^\| *\[?(?:ADR-)?(\d{4})[\]|(]`)
 	adrSupersededRe = regexp.MustCompile(`^superseded by ADR-\d{4}$`)
 	// A bare category, or one followed by a single parenthetical qualifier
@@ -147,7 +153,7 @@ func checkADR(name, num, body string) []string {
 
 	for _, q := range adrQuoteRe.FindAllStringSubmatch(body, -1) {
 		if !adrPermalink.MatchString(q[1]) {
-			bad("quote attribution links to %q, want a corazawaf/coraza comment permalink", q[1])
+			bad("quote attribution links to %q, want a corazawaf/coraza (or corazawaf/coraza-ghsa-xxxx-xxxx-xxxx advisory fork) comment permalink", q[1])
 		}
 	}
 	return out

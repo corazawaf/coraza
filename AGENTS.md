@@ -664,7 +664,10 @@ would have to ask "why this way?", write one.
    into this repository (one comment per blockquote, `[...]` for every omission), or
    a line starting with "No substantive technical discussion recorded". For an ADR
    written alongside the change, the marker sentence is the normal case; update it
-   with real quotes if review produces substantive discussion.
+   with real quotes if review produces substantive discussion. An ADR written
+   alongside embargoed security work may instead permalink into the matching
+   private advisory fork (see [Security](#security)); repoint it at the public
+   repository once the advisory publishes.
 5. Add a row to the index table in `docs/adr/README.md`.
 6. Run `go run mage.go adr`. CI runs the same check on any PR touching `docs/adr/`.
 
@@ -746,6 +749,12 @@ honestly: the checklist is a contract, not decoration.
   a missing PoC: the report is closed as invalid.
 - A fix for a reported vulnerability is developed on a private fork / advisory
   branch, not on a public PR, until the advisory is published.
+- An ADR required by that fix (see [Architecture Decision Records](#architecture-decision-records))
+  is drafted on the same branch and may quote review discussion from the private
+  advisory fork; `go run mage.go adr` accepts a permalink into that fork's own
+  repository (named `<repo>-ghsa-xxxx-xxxx-xxxx`) for exactly this case. Update
+  the quote and the `PR` field to point at the public repository once the
+  advisory publishes and the fix lands there.
 
 ### Secure coding
 

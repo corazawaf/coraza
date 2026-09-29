@@ -114,6 +114,12 @@ func (v RuleVariable) Name() string {
 		return "MULTIPART_FILENAME"
 	case MultipartName:
 		return "MULTIPART_NAME"
+	case MultipartFilenameCharset:
+		return "MULTIPART_FILENAME_CHARSET"
+	case MultipartFilenameLanguage:
+		return "MULTIPART_FILENAME_LANGUAGE"
+	case MultipartDuplicatePartHeader:
+		return "MULTIPART_DUPLICATE_PART_HEADER"
 	case MatchedVarsNames:
 		return "MATCHED_VARS_NAMES"
 	case MatchedVars:
@@ -259,6 +265,10 @@ func (v RuleVariable) CanBeSelected() bool {
 		return true
 	case MultipartName:
 		return true
+	case MultipartFilenameCharset:
+		return true
+	case MultipartFilenameLanguage:
+		return true
 	case MatchedVarsNames:
 		return true
 	case MatchedVars:
@@ -357,6 +367,9 @@ var rulemapRev = map[string]RuleVariable{
 	"FILES_TMP_CONTENT":                FilesTmpContent,
 	"MULTIPART_FILENAME":               MultipartFilename,
 	"MULTIPART_NAME":                   MultipartName,
+	"MULTIPART_FILENAME_CHARSET":       MultipartFilenameCharset,
+	"MULTIPART_FILENAME_LANGUAGE":      MultipartFilenameLanguage,
+	"MULTIPART_DUPLICATE_PART_HEADER":  MultipartDuplicatePartHeader,
 	"MATCHED_VARS_NAMES":               MatchedVarsNames,
 	"MATCHED_VARS":                     MatchedVars,
 	"FILES":                            Files,

@@ -108,9 +108,21 @@ SecRule REQBODY_ERROR "!@eq 0" \
 # too strict consider changing it to detection-only.
 # Do NOT remove it, as it will catch many evasion attempts.
 #
+# MULTIPART_DUPLICATE_PART_HEADER and MULTIPART_INVALID_QUOTING are the two
+# contributors to MULTIPART_STRICT_ERROR that Coraza reports separately, so
+# the rule logs both to say why validation failed.
+# MULTIPART_DUPLICATE_PART_HEADER is set when a part repeats a header (two
+# Content-Disposition headers), or repeats a parameter inside its
+# Content-Disposition (two "filename" parameters). Backends disagree about
+# which copy wins, so the duplicate itself is the signal.
+# MULTIPART_INVALID_QUOTING is set when a part's "filename*" parameter was
+# wrapped in a quoted-string, which RFC 5987 does not permit.
+#
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, \
-    msg:'Multipart request body failed strict validation.'"
+    msg:'Multipart request body failed strict validation.', \
+    logdata:'MULTIPART_DUPLICATE_PART_HEADER=%{MULTIPART_DUPLICATE_PART_HEADER}, \
+    MULTIPART_INVALID_QUOTING=%{MULTIPART_INVALID_QUOTING}'"
 
 # Rejects requests when the argument limit has been reached and arguments
 # were silently dropped. Without this rule, an attacker can flood a request

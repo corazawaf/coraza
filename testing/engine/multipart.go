@@ -186,3 +186,351 @@ SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, msg:'Multipart request body failed strict validation."
   `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "fzipi",
+		Description: "Content-Disposition filename* precedence, and the strict-error signals around it",
+		Enabled:     true,
+		Name:        "multipart_filename_star.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			// GHSA-3wr7-993q-jrff: the real filename rides in filename* under a
+			// charset the Go stdlib refuses to decode, with a benign decoy in
+			// the plain filename. Rule 933110 is CRS's own PHP-upload rule,
+			// transformations included, to show FILES carries what the backend
+			// would actually use.
+			Title: "filename* under a non-utf-8 charset reaches FILES",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename="safe.jpg"; filename*=iso-8859-1''shell.php
+
+<?php system($_GET['c']); ?>
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{933110},
+							NonTriggeredRules: []int{200003, 200004},
+						},
+					},
+				},
+			},
+		},
+		{
+			// Making filename* unconditionally authoritative closes the case
+			// above but relocates the same bypass to the opposite payload
+			// shape: swap which field carries the real name and a backend
+			// that resolves the plain "filename" instead would still be
+			// missed if only one reading reached FILES. Both readings are
+			// kept so 933110 fires either way.
+			Title: "fields swapped: real name in plain filename, decoy in filename* -- still reaches FILES",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename="shell.php"; filename*=iso-8859-1''safe.jpg
+
+<?php system($_GET['c']); ?>
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{933110},
+							NonTriggeredRules: []int{200003, 200004},
+						},
+					},
+				},
+			},
+		},
+		{
+			// A percent-encoded separator is decoded by every backend that
+			// implements RFC 5987, so FILES has to carry the decoded name for
+			// an extension rule to see it.
+			Title: "percent-encoded filename* still reaches FILES decoded",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename="safe.jpg"; filename*=UTF-8''shell%2Ephp
+
+<?php system($_GET['c']); ?>
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{933110},
+							NonTriggeredRules: []int{200003, 200004},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "a filename* that is not charset'language'value raises MULTIPART_STRICT_ERROR",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename*=noquoteshere
+
+file content
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{200003},
+							NonTriggeredRules: []int{933110, 200004},
+						},
+					},
+				},
+			},
+		},
+		{
+			// The advisory tells operators to police the declared charset with
+			// an allowlist rule of their own. That rule has to stay quiet on
+			// ordinary parts: the charset collection is only populated when a
+			// part actually carries a filename*, so a plain upload leaves
+			// nothing for "!@within" to match. Setting it to an empty string
+			// for every part instead would make the anchored-regex form of the
+			// rule fire on every form field. Both forms are checked because
+			// they disagree: "" is trivially within any haystack, so the
+			// "!@within" form stays quiet either way, while "!@rx ^(...)$"
+			// does not match "" and so fires. Only the regex form actually
+			// distinguishes the two behaviours.
+			Title: "the recommended charset allowlist rule stays quiet without filename*",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename="holiday.jpg"
+
+file content
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{200010, 200011},
+						},
+					},
+				},
+			},
+		},
+		{
+			// And it has to fire when a filename* declares a charset outside
+			// the allowlist, or it protects nothing.
+			Title: "the recommended charset allowlist rule fires on an unlisted charset",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename*=shift_jis''shell.php
+
+file content
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{200010, 200011},
+						},
+					},
+				},
+			},
+		},
+		{
+			// A filename* that declares no charset at all. The advisory used
+			// to recommend "!@within", which never fires here: @within treats
+			// its parameter as the haystack, so an empty value is trivially
+			// contained and the negation is always false. The anchored regex
+			// catches it. This is why the advisory recommends the regex form.
+			Title: "an empty charset is caught by the regex allowlist, not by @within",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename*=''shell.php
+
+file content
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{200011},
+							NonTriggeredRules: []int{200010},
+						},
+					},
+				},
+			},
+		},
+		{
+			// RFC 5987 does not permit filename* to be a quoted-string. Coraza
+			// still unwraps it (so FILES/933110 sees what a backend such as
+			// Go's mime.ParseMediaType resolves), but the quoting itself is
+			// invalid and must not be absorbed silently.
+			Title: "a quoted filename* raises MULTIPART_INVALID_QUOTING but still reaches FILES",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename*="UTF-8''shell.php"
+
+<?php system($_GET['c']); ?>
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{200003, 200005, 933110},
+							NonTriggeredRules: []int{200004},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "a repeated filename parameter raises MULTIPART_DUPLICATE_PART_HEADER",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename="safe.jpg"; filename="shell.php"
+
+file content
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{200003, 200004},
+							NonTriggeredRules: []int{933110},
+						},
+					},
+				},
+			},
+		},
+		{
+			// M4tteoP's review: MULTIPART_INVALID_QUOTING was never defaulted
+			// to "0" the way MULTIPART_DUPLICATE_PART_HEADER is, so logdata
+			// referencing it (as coraza.conf-recommended's rule 200003 does)
+			// printed an empty value here instead of "0" for a part that
+			// never had a quoted filename* at all.
+			Title: "MULTIPART_INVALID_QUOTING defaults to 0 without a quoted filename*",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: `
+----0000
+Content-Disposition: form-data; name="upload"; filename="holiday.jpg"
+
+file content
+----0000--
+`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{200012},
+							LogContains:    "MULTIPART_INVALID_QUOTING=0",
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRuleEngine DetectionOnly
+SecRequestBodyAccess On
+SecRule FILES|REQUEST_HEADERS:X-Filename "@rx .*\.ph(?:p\d*|tml|ar|ps|t|pt)\.*$" \
+    "id:933110,phase:2,block,capture,t:none,t:lowercase,t:removeWhitespace,msg:'PHP Injection Attack: PHP Script File Upload Found'"
+SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
+    "id:'200003',phase:2,t:none,log,pass,msg:'Multipart request body failed strict validation'"
+SecRule MULTIPART_DUPLICATE_PART_HEADER "@eq 1" \
+    "id:'200004',phase:2,t:none,log,pass,msg:'Multipart part repeats a header or a Content-Disposition parameter'"
+SecRule MULTIPART_INVALID_QUOTING "@eq 1" \
+    "id:'200005',phase:2,t:none,log,pass,msg:'filename* was wrapped in a quoted-string'"
+SecRule MULTIPART_FILENAME_CHARSET "!@within utf-8,iso-8859-1,us-ascii" \
+    "id:'200010',phase:2,t:none,t:lowercase,log,pass,msg:'filename* declares a charset outside the allowlist'"
+SecRule MULTIPART_FILENAME_CHARSET "!@rx ^(?:utf-8|iso-8859-1|us-ascii)$" \
+    "id:'200011',phase:2,t:none,t:lowercase,log,pass,msg:'same allowlist, anchored-regex form'"
+SecRule REQBODY_PROCESSOR "@streq MULTIPART" \
+    "id:'200012',phase:2,t:none,log,pass,logdata:'MULTIPART_INVALID_QUOTING=%{MULTIPART_INVALID_QUOTING}'"
+`,
+})

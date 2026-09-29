@@ -245,6 +245,10 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.filesTmpContent
 	case variables.MultipartFilename:
 		return tx.variables.multipartFilename
+	case variables.MultipartFilenameCharset:
+		return tx.variables.multipartFilenameCharset
+	case variables.MultipartFilenameLanguage:
+		return tx.variables.multipartFilenameLanguage
 	case variables.MultipartName:
 		return tx.variables.multipartName
 	case variables.MatchedVarsNames:
@@ -298,6 +302,10 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.multipartPartHeaders
 	case variables.MultipartStrictError:
 		return tx.variables.multipartStrictError
+	case variables.MultipartDuplicatePartHeader:
+		return tx.variables.multipartDuplicatePartHeader
+	case variables.MultipartInvalidQuoting:
+		return tx.variables.multipartInvalidQuoting
 	case variables.Time:
 		return tx.variables.time
 	case variables.TimeDay:
@@ -1789,93 +1797,97 @@ func (tx *Transaction) setTimeVariables() {
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
-	args                     *collections.ConcatKeyed
-	argsCombinedSize         *collections.SizeCollection
-	argsGet                  *collections.NamedCollection
-	argsGetNames             collection.Keyed
-	argsNames                *collections.ConcatKeyed
-	argsPath                 *collections.NamedCollection
-	argsPost                 *collections.NamedCollection
-	argsPostNames            collection.Keyed
-	duration                 *collections.Single
-	env                      *collections.Map
-	files                    *collections.Map
-	filesCombinedSize        *collections.Single
-	filesNames               *collections.Map
-	filesSizes               *collections.Map
-	filesTmpContent          *collections.Map
-	filesTmpNames            *collections.Map
-	fullRequestLength        *collections.Single
-	geo                      *collections.Map
-	highestSeverity          *collections.Single
-	inboundDataError         *collections.Single
-	matchedVar               *collections.Single
-	matchedVarName           *collections.Single
-	matchedVars              *collections.NamedCollection
-	matchedVarsNames         collection.Keyed
-	multipartDataAfter       *collections.Single
-	multipartFilename        *collections.Map
-	multipartName            *collections.Map
-	multipartPartHeaders     *collections.Map
-	multipartStrictError     *collections.Single
-	outboundDataError        *collections.Single
-	queryString              *collections.Single
-	remoteAddr               *collections.Single
-	remoteHost               *collections.Single
-	remotePort               *collections.Single
-	reqbodyError             *collections.Single
-	reqbodyErrorMsg          *collections.Single
-	reqbodyProcessor         *collections.Single
-	reqbodyProcessorError    *collections.Single
-	reqbodyProcessorErrorMsg *collections.Single
-	requestBasename          *collections.Single
-	requestBody              *collections.Single
-	requestBodyLength        *collections.Single
-	requestCookies           *collections.NamedCollection
-	requestCookiesNames      collection.Keyed
-	requestFilename          *collections.Single
-	requestHeaders           *collections.NamedCollection
-	requestHeadersNames      collection.Keyed
-	requestLine              *collections.Single
-	requestMethod            *collections.Single
-	requestProtocol          *collections.Single
-	requestURI               *collections.Single
-	requestURIRaw            *collections.Single
-	requestXML               *collections.Map
-	responseBody             *collections.Single
-	responseContentLength    *collections.Single
-	responseContentType      *collections.Single
-	responseHeaders          *collections.NamedCollection
-	responseHeadersNames     collection.Keyed
-	responseProtocol         *collections.Single
-	responseStatus           *collections.Single
-	responseXML              *collections.Map
-	responseArgs             *collections.Map
-	resBodyProcessor         *collections.Single
-	rule                     *collections.Map
-	serverAddr               *collections.Single
-	serverName               *collections.Single
-	serverPort               *collections.Single
-	statusLine               *collections.Single
-	tx                       *collections.Map
-	uniqueID                 *collections.Single
-	urlencodedError          *collections.Single
-	uriParseError            *collections.Single
-	argumentsLimitReached    *collections.Single
-	xml                      *collections.Map
-	resBodyError             *collections.Single
-	resBodyErrorMsg          *collections.Single
-	resBodyProcessorError    *collections.Single
-	resBodyProcessorErrorMsg *collections.Single
-	time                     *collections.Single
-	timeDay                  *collections.Single
-	timeEpoch                *collections.Single
-	timeHour                 *collections.Single
-	timeMin                  *collections.Single
-	timeMon                  *collections.Single
-	timeSec                  *collections.Single
-	timeWday                 *collections.Single
-	timeYear                 *collections.Single
+	args                         *collections.ConcatKeyed
+	argsCombinedSize             *collections.SizeCollection
+	argsGet                      *collections.NamedCollection
+	argsGetNames                 collection.Keyed
+	argsNames                    *collections.ConcatKeyed
+	argsPath                     *collections.NamedCollection
+	argsPost                     *collections.NamedCollection
+	argsPostNames                collection.Keyed
+	duration                     *collections.Single
+	env                          *collections.Map
+	files                        *collections.Map
+	filesCombinedSize            *collections.Single
+	filesNames                   *collections.Map
+	filesSizes                   *collections.Map
+	filesTmpContent              *collections.Map
+	filesTmpNames                *collections.Map
+	fullRequestLength            *collections.Single
+	geo                          *collections.Map
+	highestSeverity              *collections.Single
+	inboundDataError             *collections.Single
+	matchedVar                   *collections.Single
+	matchedVarName               *collections.Single
+	matchedVars                  *collections.NamedCollection
+	matchedVarsNames             collection.Keyed
+	multipartDataAfter           *collections.Single
+	multipartFilename            *collections.Map
+	multipartFilenameCharset     *collections.Map
+	multipartFilenameLanguage    *collections.Map
+	multipartName                *collections.Map
+	multipartPartHeaders         *collections.Map
+	multipartStrictError         *collections.Single
+	multipartDuplicatePartHeader *collections.Single
+	multipartInvalidQuoting      *collections.Single
+	outboundDataError            *collections.Single
+	queryString                  *collections.Single
+	remoteAddr                   *collections.Single
+	remoteHost                   *collections.Single
+	remotePort                   *collections.Single
+	reqbodyError                 *collections.Single
+	reqbodyErrorMsg              *collections.Single
+	reqbodyProcessor             *collections.Single
+	reqbodyProcessorError        *collections.Single
+	reqbodyProcessorErrorMsg     *collections.Single
+	requestBasename              *collections.Single
+	requestBody                  *collections.Single
+	requestBodyLength            *collections.Single
+	requestCookies               *collections.NamedCollection
+	requestCookiesNames          collection.Keyed
+	requestFilename              *collections.Single
+	requestHeaders               *collections.NamedCollection
+	requestHeadersNames          collection.Keyed
+	requestLine                  *collections.Single
+	requestMethod                *collections.Single
+	requestProtocol              *collections.Single
+	requestURI                   *collections.Single
+	requestURIRaw                *collections.Single
+	requestXML                   *collections.Map
+	responseBody                 *collections.Single
+	responseContentLength        *collections.Single
+	responseContentType          *collections.Single
+	responseHeaders              *collections.NamedCollection
+	responseHeadersNames         collection.Keyed
+	responseProtocol             *collections.Single
+	responseStatus               *collections.Single
+	responseXML                  *collections.Map
+	responseArgs                 *collections.Map
+	resBodyProcessor             *collections.Single
+	rule                         *collections.Map
+	serverAddr                   *collections.Single
+	serverName                   *collections.Single
+	serverPort                   *collections.Single
+	statusLine                   *collections.Single
+	tx                           *collections.Map
+	uniqueID                     *collections.Single
+	urlencodedError              *collections.Single
+	uriParseError                *collections.Single
+	argumentsLimitReached        *collections.Single
+	xml                          *collections.Map
+	resBodyError                 *collections.Single
+	resBodyErrorMsg              *collections.Single
+	resBodyProcessorError        *collections.Single
+	resBodyProcessorErrorMsg     *collections.Single
+	time                         *collections.Single
+	timeDay                      *collections.Single
+	timeEpoch                    *collections.Single
+	timeHour                     *collections.Single
+	timeMin                      *collections.Single
+	timeMon                      *collections.Single
+	timeSec                      *collections.Single
+	timeWday                     *collections.Single
+	timeYear                     *collections.Single
 }
 
 func NewTransactionVariables() *TransactionVariables {
@@ -1929,6 +1941,8 @@ func NewTransactionVariables() *TransactionVariables {
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
 	v.multipartFilename = collections.NewMap(variables.MultipartFilename)
+	v.multipartFilenameCharset = collections.NewMap(variables.MultipartFilenameCharset)
+	v.multipartFilenameLanguage = collections.NewMap(variables.MultipartFilenameLanguage)
 	v.multipartName = collections.NewMap(variables.MultipartName)
 	v.matchedVars = collections.NewNamedCollection(variables.MatchedVars)
 	v.matchedVarsNames = v.matchedVars.Names(variables.MatchedVarsNames)
@@ -1950,6 +1964,8 @@ func NewTransactionVariables() *TransactionVariables {
 	v.requestXML = collections.NewMap(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
+	v.multipartDuplicatePartHeader = collections.NewSingle(variables.MultipartDuplicatePartHeader)
+	v.multipartInvalidQuoting = collections.NewSingle(variables.MultipartInvalidQuoting)
 	v.time = collections.NewSingle(variables.Time)
 	v.timeDay = collections.NewSingle(variables.TimeDay)
 	v.timeEpoch = collections.NewSingle(variables.TimeEpoch)
@@ -2220,6 +2236,14 @@ func (v *TransactionVariables) MatchedVarsNames() collection.Keyed {
 	return v.matchedVarsNames
 }
 
+func (v *TransactionVariables) MultipartFilenameCharset() collection.Map {
+	return v.multipartFilenameCharset
+}
+
+func (v *TransactionVariables) MultipartFilenameLanguage() collection.Map {
+	return v.multipartFilenameLanguage
+}
+
 func (v *TransactionVariables) MultipartFilename() collection.Map {
 	return v.multipartFilename
 }
@@ -2302,6 +2326,14 @@ func (v *TransactionVariables) ResBodyProcessorErrorMsg() collection.Single {
 
 func (v *TransactionVariables) MultipartStrictError() collection.Single {
 	return v.multipartStrictError
+}
+
+func (v *TransactionVariables) MultipartDuplicatePartHeader() collection.Single {
+	return v.multipartDuplicatePartHeader
+}
+
+func (v *TransactionVariables) MultipartInvalidQuoting() collection.Single {
+	return v.multipartInvalidQuoting
 }
 
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
@@ -2387,10 +2419,22 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 	if !f(variables.MultipartFilename, v.multipartFilename) {
 		return
 	}
+	if !f(variables.MultipartFilenameCharset, v.multipartFilenameCharset) {
+		return
+	}
+	if !f(variables.MultipartFilenameLanguage, v.multipartFilenameLanguage) {
+		return
+	}
 	if !f(variables.MultipartName, v.multipartName) {
 		return
 	}
 	if !f(variables.MultipartPartHeaders, v.multipartPartHeaders) {
+		return
+	}
+	if !f(variables.MultipartDuplicatePartHeader, v.multipartDuplicatePartHeader) {
+		return
+	}
+	if !f(variables.MultipartInvalidQuoting, v.multipartInvalidQuoting) {
 		return
 	}
 	if !f(variables.MultipartStrictError, v.multipartStrictError) {
