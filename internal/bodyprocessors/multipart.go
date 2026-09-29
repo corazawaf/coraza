@@ -66,8 +66,14 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
-				defer temp.Close()
 				sz, err := io.Copy(temp, p)
+				if cerr := temp.Close(); cerr != nil && err == nil {
+					err = cerr
+				}
+				// Record the temp file before checking the copy/close error: it is
+				// already on disk at this point on every path, and only a name in
+				// FILES_TMPNAMES gets cleaned up when the transaction closes.
+				filesTmpNamesCol.Add("", temp.Name())
 				if err != nil {
 					if !errors.Is(err, io.ErrUnexpectedEOF) {
 						v.MultipartStrictError().(*collections.Single).Set("1")
@@ -77,7 +83,6 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					seenUnexpectedEOF = true
 				}
 				size = sz
-				filesTmpNamesCol.Add("", temp.Name())
 			} else {
 				sz, err := io.Copy(io.Discard, p)
 				if err != nil {

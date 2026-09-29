@@ -4,12 +4,21 @@
 package bodyprocessors_test
 
 import (
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"runtime"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/environment"
 )
 
 func multipartProcessor(t *testing.T) plugintypes.BodyProcessor {
@@ -93,6 +102,54 @@ text default
 	}); err == nil {
 		t.Error("multipart processor should fail for invalid content-type")
 	}
+}
+
+// errAfterReader always fails with err once its wrapped reader is exhausted,
+// simulating a hard I/O error (as opposed to a clean truncation, which
+// surfaces as io.ErrUnexpectedEOF instead).
+type errAfterReader struct {
+	err error
+}
+
+func (e errAfterReader) Read([]byte) (int, error) {
+	return 0, e.err
+}
+
+// TestMultipartTempFileRecordedOnCopyError ensures a temp file created for a
+// file part is still recorded in FILES_TMPNAMES when io.Copy into it fails
+// with a hard error, not just on the success path. Otherwise the file is
+// leaked: it exists on disk, but transaction close only removes names it
+// finds in FILES_TMPNAMES.
+func TestMultipartTempFileRecordedOnCopyError(t *testing.T) {
+	if !environment.HasAccessToFS {
+		t.Skip("skipping test as it requires access to filesystem")
+	}
+	payload := "--a\r\n" +
+		"Content-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\n" +
+		"Content-Type: text/plain\r\n" +
+		"\r\n" +
+		"some file content"
+	// No closing boundary: once the valid payload is exhausted, the reader
+	// hits a hard error instead of a clean EOF.
+	copyErr := errors.New("simulated disk write failure")
+	r := io.MultiReader(strings.NewReader(payload), errAfterReader{err: copyErr})
+
+	mp := multipartProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+	if err := mp.ProcessRequest(r, v, plugintypes.BodyProcessorOptions{
+		Mime: "multipart/form-data; boundary=a",
+	}); err == nil {
+		t.Fatal("expected an error from the truncated body")
+	}
+
+	names := v.FilesTmpNames().(*collections.Map).Get("")
+	if len(names) != 1 {
+		t.Fatalf("expected exactly one recorded temp file, got %d", len(names))
+	}
+	if _, err := os.Stat(names[0]); err != nil {
+		t.Fatalf("recorded temp file %q not found on disk: %v", names[0], err)
+	}
+	t.Cleanup(func() { os.Remove(names[0]) })
 }
 
 func TestMultipartErrorSetsMultipartStrictError(t *testing.T) {
@@ -213,12 +270,12 @@ func TestMultipartUnmatchedBoundary(t *testing.T) {
 
 func TestIncompleteMultipartPayload(t *testing.T) {
 	testCases := []struct {
-		name             string
-		input            string
+		name              string
+		input             string
 		expectStrictError bool
 	}{
 		{
-			name:             "inMiddleOfBoundary",
+			name:              "inMiddleOfBoundary",
 			expectStrictError: true,
 			input: `
 -----------------------------9051914041544843365972754266
@@ -235,7 +292,7 @@ Content of a.txt.
 `,
 		},
 		{
-			name:             "inMiddleOfHeader",
+			name:              "inMiddleOfHeader",
 			expectStrictError: false, // NextPart() returns io.EOF, not io.ErrUnexpectedEOF
 			input: `
 -----------------------------9051914041544843365972754266
@@ -252,7 +309,7 @@ Content of a.txt.
 Content-Disposition: form-data; name="fil`,
 		},
 		{
-			name:             "inMiddleOfContent",
+			name:              "inMiddleOfContent",
 			expectStrictError: true,
 			input: `
 -----------------------------9051914041544843365972754266
@@ -344,5 +401,71 @@ text defa`)
 		t.Fatal("expected ArgsPost to contain 'text' field")
 	} else if textValues[0] != "text defa" {
 		t.Fatalf("expected ArgsPost 'text' to be 'text defa', got %q", textValues[0])
+	}
+}
+
+// TestMultipartDoesNotAccumulateOpenFileDescriptors asserts a resource-lifetime property (each
+// part's temp file is closed as soon as it is copied, not deferred to function return), which
+// needs a live open-fd count rather than a parsed-variable assertion, so it can't be a profile
+// or a table row.
+func TestMultipartDoesNotAccumulateOpenFileDescriptors(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("requires /proc/self/fd to observe live open file descriptors")
+	}
+
+	const parts = 200
+	boundary := "fdleakboundary"
+	var payload strings.Builder
+	for i := 0; i < parts; i++ {
+		fmt.Fprintf(&payload, "--%s\r\nContent-Disposition: form-data; name=\"f%d\"; filename=\"f%d.txt\"\r\n\r\nX\r\n", boundary, i, i)
+	}
+	fmt.Fprintf(&payload, "--%s--\r\n", boundary)
+
+	openFDs := func() int {
+		entries, err := os.ReadDir("/proc/self/fd")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(entries)
+	}
+
+	baseline := int64(openFDs())
+	var peak int64
+	done := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				n := int64(openFDs())
+				for {
+					cur := atomic.LoadInt64(&peak)
+					if n <= cur || atomic.CompareAndSwapInt64(&peak, cur, n) {
+						break
+					}
+				}
+			}
+		}
+	}()
+
+	mp := multipartProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+	err := mp.ProcessRequest(strings.NewReader(payload.String()), v, plugintypes.BodyProcessorOptions{
+		Mime:        "multipart/form-data; boundary=" + boundary,
+		StoragePath: t.TempDir(),
+	})
+	close(done)
+	wg.Wait()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if spike := atomic.LoadInt64(&peak) - baseline; spike >= parts/2 {
+		t.Fatalf("temp files were not closed as they were processed: baseline=%d peak=%d spike=+%d across %d parts", baseline, atomic.LoadInt64(&peak), spike, parts)
 	}
 }
