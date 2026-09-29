@@ -264,6 +264,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	// Some defaults
 	tx.variables.filesCombinedSize.Set("0")
 	tx.variables.urlencodedError.Set("0")
+	tx.variables.uriParseError.Set("0")
 	tx.variables.fullRequestLength.Set("0")
 	tx.variables.multipartDataAfter.Set("0")
 	tx.variables.outboundDataError.Set("0")

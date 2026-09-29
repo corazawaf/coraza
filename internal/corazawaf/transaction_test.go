@@ -2413,10 +2413,11 @@ func TestRequestFilename(t *testing.T) {
 			uri:      "///foo/bar",
 			expected: "///foo/bar",
 		},
-		{ // This is a bug. This test should be adapted when the issue is fixed.
+		{ // url.ParseRequestURI fails on invalid percent-encoding; the "?" fallback
+			// split still recovers the path/query boundary. See GHSA-x26q-wvhg-fh4m.
 			name:     "invalid encoding",
 			uri:      "/foo%zz?a=b",
-			expected: "/foo%zz?a=b",
+			expected: "/foo%zz",
 		},
 		{
 			name:     "valid encoding",
@@ -2444,6 +2445,29 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+// GHSA-x26q-wvhg-fh4m: a URI containing raw control bytes (e.g. a NUL, as a
+// non-net/http integration like coraza-spoa or coraza-proxy-wasm might forward)
+// fails url.ParseRequestURI, and previously left QUERY_STRING/ARGS_GET empty,
+// silently dropping the entire attack payload from GET-side rule matching.
+func TestProcessURIFallbackOnParseError(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.ProcessURI("/search?q=ATTACK_HERE_XYZ\x00&y=1", http.MethodGet, "HTTP/1.1")
+
+	if got := tx.variables.uriParseError.Get(); got != "1" {
+		t.Errorf("Expected URI_PARSE_ERROR to be \"1\", got %q", got)
+	}
+	if got := tx.variables.queryString.Get(); got != "q=ATTACK_HERE_XYZ\x00&y=1" {
+		t.Errorf("Expected QUERY_STRING to be recovered from the raw URI, got %q", got)
+	}
+	if got := tx.variables.argsGet.Get("q"); len(got) == 0 || got[0] != "ATTACK_HERE_XYZ\x00" {
+		t.Errorf("Expected ARGS_GET q to be populated on best effort, got %v", got)
+	}
+	if got := tx.variables.requestURIRaw.Get(); got != "/search?q=ATTACK_HERE_XYZ\x00&y=1" {
+		t.Errorf("Expected REQUEST_URI_RAW to hold the untouched URI, got %q", got)
 	}
 }
 

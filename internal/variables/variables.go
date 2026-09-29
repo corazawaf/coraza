@@ -542,6 +542,13 @@ const (
 	// the parsing of a query string (on every request) or during the parsing of an
 	// application/x-www-form-urlencoded request body (only on the requests that use the
 	// URLENCODED request body processor).
+	//
+	// **Note:** This variable is currently NOT implemented by Coraza. Coraza's query and
+	// body decoder (internal/url) is deliberately non-strict -- it mirrors what backends
+	// accept rather than rejecting malformed percent-encoding -- so no invalid-encoding
+	// condition is ever detected to set this from. It was previously set on a different
+	// condition entirely, a structural URI parse failure, which URI_PARSE_ERROR now
+	// reports. CRS does not consume it either: coreruleset/coreruleset#482.
 	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
 	ResponseArgs // CanBeSelected
@@ -706,4 +713,8 @@ const (
 	Userid
 	// IP is kept for compatibility
 	IP
+	// URIParseError is set to 1 when the request URI could not be parsed by
+	// url.ParseRequestURI (e.g. it contains raw control bytes). QUERY_STRING
+	// and ARGS_GET are populated from a best-effort split on "?" in that case.
+	URIParseError
 )

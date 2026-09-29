@@ -44,6 +44,17 @@ SecRule REQUEST_HEADERS:Content-Type "^application/json" \
 SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
+# Enforces strict validation for requests whose URI could not be parsed
+# (for example, because it contains raw control bytes). This mainly affects
+# non-net/http integrations, as net/http servers already reject such URIs
+# with a 400 response before Coraza ever sees them.
+# Even when URI_PARSE_ERROR is flagged, QUERY_STRING/ARGS_GET are still
+# populated on a best-effort basis and REQUEST_URI_RAW always
+# holds the untouched URI regardless.
+#
+SecRule URI_PARSE_ERROR "@eq 1" \
+    "id:'200009',phase:1,t:none,log,deny,status:400,msg:'URI failed to parse.'"
+
 # Configures the maximum JSON recursion depth limit Coraza will accept.
 SecRequestBodyJsonDepthLimit 1024
 

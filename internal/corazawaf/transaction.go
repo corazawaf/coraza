@@ -284,6 +284,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.env
 	case variables.UrlencodedError:
 		return tx.variables.urlencodedError
+	case variables.URIParseError:
+		return tx.variables.uriParseError
 	case variables.ResponseArgs:
 		return tx.variables.responseArgs
 	case variables.ResponseXML:
@@ -834,21 +836,21 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	parsedURL, err := url.ParseRequestURI(uri)
 	query := ""
 	if err != nil {
-		tx.variables.urlencodedError.Set(err.Error())
-		path = uri
+		// url.ParseRequestURI rejects raw control bytes (NUL, bare CR/LF, tab, etc.)
+		// that some non-net/http integrations (coraza-spoa, coraza-proxy-wasm) forward
+		// as-is. Falling back to a plain split on "?" still recovers QUERY_STRING and
+		// ARGS_GET on a best-effort basis instead of silently dropping them -- see
+		// GHSA-x26q-wvhg-fh4m. REQUEST_URI_RAW (set above, before the parse) always
+		// has the untouched URI regardless of this fallback.
+		tx.variables.uriParseError.Set("1")
 		tx.variables.requestURI.Set(uri)
-		/*
-			tx.Variables.VARIABLE_URI_PARSE_ERROR.Set("1")
-			posRawQuery := strings.Index(uri, "?")
-			if posRawQuery != -1 {
-				tx.ExtractArguments("GET", uri[posRawQuery+1:])
-				path = uri[:posRawQuery]
-				query = uri[posRawQuery+1:]
-			} else {
-				path = uri
-			}
-			tx.Variables.RequestUri.Set(uri)
-		*/
+		if posRawQuery := strings.Index(uri, "?"); posRawQuery != -1 {
+			path = uri[:posRawQuery]
+			query = uri[posRawQuery+1:]
+			tx.ExtractGetArguments(query)
+		} else {
+			path = uri
+		}
 	} else {
 		tx.ExtractGetArguments(parsedURL.RawQuery)
 		tx.variables.requestURI.Set(parsedURL.String())
@@ -1839,6 +1841,7 @@ type TransactionVariables struct {
 	tx                       *collections.Map
 	uniqueID                 *collections.Single
 	urlencodedError          *collections.Single
+	uriParseError            *collections.Single
 	xml                      *collections.Map
 	resBodyError             *collections.Single
 	resBodyErrorMsg          *collections.Single
@@ -1858,6 +1861,7 @@ type TransactionVariables struct {
 func NewTransactionVariables() *TransactionVariables {
 	v := &TransactionVariables{}
 	v.urlencodedError = collections.NewSingle(variables.UrlencodedError)
+	v.uriParseError = collections.NewSingle(variables.URIParseError)
 	v.responseContentType = collections.NewSingle(variables.ResponseContentType)
 	v.uniqueID = collections.NewSingle(variables.UniqueID)
 	v.filesCombinedSize = collections.NewSingle(variables.FilesCombinedSize)
@@ -1969,6 +1973,10 @@ func NewTransactionVariables() *TransactionVariables {
 
 func (v *TransactionVariables) UrlencodedError() collection.Single {
 	return v.urlencodedError
+}
+
+func (v *TransactionVariables) URIParseError() collection.Single {
+	return v.uriParseError
 }
 
 func (v *TransactionVariables) ResponseContentType() collection.Single {
@@ -2487,6 +2495,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.UrlencodedError, v.urlencodedError) {
+		return
+	}
+	if !f(variables.URIParseError, v.uriParseError) {
 		return
 	}
 	if !f(variables.XML, v.xml) {

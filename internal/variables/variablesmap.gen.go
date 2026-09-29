@@ -224,6 +224,8 @@ func (v RuleVariable) Name() string {
 		return "USERID"
 	case IP:
 		return "IP"
+	case URIParseError:
+		return "URI_PARSE_ERROR"
 
 	default:
 		return "INVALID_VARIABLE"
@@ -408,6 +410,7 @@ var rulemapRev = map[string]RuleVariable{
 	"SESSIONID":                        Sessionid,
 	"USERID":                           Userid,
 	"IP":                               IP,
+	"URI_PARSE_ERROR":                  URIParseError,
 }
 
 var errUnknownVariable = errors.New("unknown variable")

@@ -219,6 +219,8 @@ const (
 	TimeWday = variables.TimeWday
 	// TimeYear the current four-digit year value
 	TimeYear = variables.TimeYear
+	// URIParseError is set to 1 when the request URI could not be parsed
+	URIParseError = variables.URIParseError
 )
 
 // Parse returns the byte interpretation
