@@ -257,6 +257,7 @@ type httpTest struct {
 	http2                   bool
 	reqURI                  string
 	reqBody                 string
+	reqContentType          string
 	echoReqBody             bool
 	reqBodyLimit            int
 	shouldRejectOnBodyLimit bool
@@ -311,6 +312,19 @@ func TestHttpServer(t *testing.T) {
 			expectedStatus:          201,
 			expectedRespHeadersKeys: expectedNoBlockingHeaders,
 			expectedRespBody:        "eval('cat /etc/passwd')",
+		},
+		"multipart body larger than limit (process partial)": {
+			reqURI:         "/hello",
+			reqContentType: "multipart/form-data; boundary=a",
+			reqBody:        "--a\nContent-Disposition: form-data; name=\"t\"\n\nsomething\n--a--\n",
+			echoReqBody:    true,
+			// Coraza cuts the part's value; the strict error rule must not fire,
+			// and the backend still gets the whole body.
+			reqBodyLimit:            50,
+			expectedProto:           "HTTP/1.1",
+			expectedStatus:          201,
+			expectedRespHeadersKeys: expectedNoBlockingHeaders,
+			expectedRespBody:        "--a\nContent-Disposition: form-data; name=\"t\"\n\nsomething\n--a--\n",
 		},
 		"request body larger than limit (reject)": {
 			reqURI:                  "/hello",
@@ -387,6 +401,7 @@ func TestHttpServer(t *testing.T) {
 	SecRequestBodyLimitAction ` + limitAction + `
 	SecRule ARGS:id "@eq 0" "id:10, phase:1,deny, status:403,msg:'Invalid id',log,auditlog"
 	SecRule REQUEST_BODY "@contains eval" "id:100, phase:2,deny, status:403,msg:'Invalid request body',log,auditlog"
+	SecRule MULTIPART_STRICT_ERROR "!@eq 0" "id:101, phase:2,deny, status:400,msg:'Multipart strict error',log,auditlog"
 	SecRule RESPONSE_HEADERS:Foo "@pm bar" "id:199,phase:3,deny,t:lowercase,deny, status:401,msg:'Invalid response header',log,auditlog"
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
@@ -508,7 +523,11 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	// When sending a POST request, the "application/x-www-form-urlencoded" content-type header is needed
 	// being the only content-type for which by default Coraza enforces the request body processing.
 	// See https://github.com/corazawaf/coraza/issues/438
-	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+	contentType := "application/x-www-form-urlencoded"
+	if tCase.reqContentType != "" {
+		contentType = tCase.reqContentType
+	}
+	req.Header.Add("content-type", contentType)
 	res, err := ts.Client().Do(req)
 	if err != nil {
 		t.Fatalf("unexpected error when performing the request: %v", err)

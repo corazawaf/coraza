@@ -535,10 +535,12 @@ SecRule REQBODY_PROCESSOR "@streq MULTIPART" \
 `,
 })
 
-// SecRequestBodyLimit 150 cuts both bodies below inside a part's content, where
-// the multipart reader returns io.ErrUnexpectedEOF: the file part's headers are
-// 89 bytes and the form field's are 46, so the cut lands 61 and 104 bytes into
-// their values. The two tests cover the file and the form-field branches.
+// SecRequestBodyLimit 150 cuts the first two bodies below inside a part's
+// content, where the multipart reader returns io.ErrUnexpectedEOF: the file
+// part's headers are 89 bytes and the form field's are 46, so the cut lands 61
+// and 104 bytes into their values. The two tests cover the file and the
+// form-field branches. The third body is exactly 150 bytes and arrives already
+// cut: it reaches the limit, so INBOUND_DATA_ERROR is set, but nothing is dropped.
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "M4tteoP",
@@ -586,6 +588,32 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{100, 102},
 							NonTriggeredRules: []int{200002, 200003},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "a form field that arrives cut, in a body exactly at the limit, is rejected",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "multipart/form-data; boundary=a",
+							},
+							Data: "--a\nContent-Disposition: form-data; name=\"t\"\n\n" +
+								"CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{100, 200003},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 400,
+								RuleID: 200003,
+								Action: "deny",
+							},
 						},
 					},
 				},

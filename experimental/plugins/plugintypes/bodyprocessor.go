@@ -28,6 +28,11 @@ type BodyProcessorOptions struct {
 	// ArgumentLimit is the maximum number of arguments accepted per collection.
 	// When exceeded, additional arguments are dropped and ArgumentsLimitReached is set.
 	ArgumentLimit int
+	// RequestBodyTruncated reports that SecRequestBodyLimitAction ProcessPartial
+	// cut the request body at SecRequestBodyLimit and dropped the bytes after it,
+	// so the reader holds only a prefix of the body. A body that merely reaches
+	// the limit is not truncated.
+	RequestBodyTruncated bool
 }
 
 // BodyProcessor interface is used to create

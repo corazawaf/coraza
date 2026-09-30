@@ -223,6 +223,8 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.HashEngine = false
 	tx.HashEnforcement = false
 	tx.lastPhase = 0
+	tx.requestBodyTruncated = false
+	tx.requestBodyOverflow = nil
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveByIDRanges = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}

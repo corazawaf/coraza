@@ -59,6 +59,10 @@ type Transaction interface {
 	// RequestBodyReader returns a reader for content that has been written by
 	// request body buffer. This can be useful for buffering the request body
 	// within the Transaction while also passing it further in an HTTP framework.
+	// When ReadRequestBodyFrom stops at the request body limit under
+	// ProcessPartial, it may have read one byte past the limit from its reader;
+	// that byte is returned last, so the buffered body followed by the rest of
+	// the reader is the original body.
 	RequestBodyReader() (io.Reader, error)
 
 	// AddGetRequestArgument add arguments GET, this will feed ARGS_GET, ARGS_GET_NAMES,

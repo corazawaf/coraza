@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -94,6 +95,17 @@ type Transaction struct {
 
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
+
+	// requestBodyTruncated is true when ProcessPartial dropped request body
+	// bytes past RequestBodyLimit, as opposed to the body merely reaching it.
+	requestBodyTruncated bool
+
+	// requestBodyOverflow holds the byte ReadRequestBodyFrom reads past
+	// RequestBodyLimit to tell those two cases apart on a reader of unknown
+	// length. RequestBodyReader returns it after the buffered body, so a
+	// connector that forwards RequestBodyReader followed by the rest of its
+	// reader still passes the whole body on.
+	requestBodyOverflow []byte
 
 	// Handles response body buffers
 	responseBodyBuffer *BodyBuffer
@@ -377,7 +389,11 @@ func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
 }
 
 func (tx *Transaction) RequestBodyReader() (io.Reader, error) {
-	return tx.requestBodyBuffer.Reader()
+	r, err := tx.requestBodyBuffer.Reader()
+	if err != nil || len(tx.requestBodyOverflow) == 0 {
+		return r, err
+	}
+	return io.MultiReader(r, bytes.NewReader(tx.requestBodyOverflow)), nil
 }
 
 // AddRequestHeader Adds a request header
@@ -980,6 +996,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
+			tx.requestBodyTruncated = tx.requestBodyBuffer.length+writingBytes > tx.RequestBodyLimit
 			writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 			runProcessRequestBody = true
 		}
@@ -1029,6 +1046,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	var (
 		writingBytes          int64
 		runProcessRequestBody = false
+		unknownLength         = false
 	)
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
@@ -1045,11 +1063,13 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 			}
 
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
+				tx.requestBodyTruncated = tx.requestBodyBuffer.length+writingBytes > tx.RequestBodyLimit
 				writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 				runProcessRequestBody = true
 			}
 		}
 	} else {
+		unknownLength = true
 		writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 	}
 
@@ -1065,6 +1085,15 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		}
 
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
+			if unknownLength {
+				// Only reading past the limit tells a body cut here from one
+				// that ends exactly at it. RequestBodyReader hands the byte back.
+				var overflow [1]byte
+				if n, _ := io.ReadFull(r, overflow[:]); n == 1 {
+					tx.requestBodyOverflow = overflow[:]
+					tx.requestBodyTruncated = true
+				}
+			}
 			runProcessRequestBody = true
 		}
 	}
@@ -1159,6 +1188,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		StoragePath:               tx.WAF.UploadDir,
 		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 		ArgumentLimit:             tx.WAF.ArgumentLimit,
+		RequestBodyTruncated:      tx.requestBodyTruncated,
 	}); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
