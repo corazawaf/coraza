@@ -48,6 +48,14 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		if err == io.EOF {
 			break
 		}
+		// A body cut by SecRequestBodyLimit under ProcessPartial can also end
+		// inside a boundary line, where NextPart wraps io.EOF: that is the end
+		// of what was buffered, not a malformed body (see flagUnexpectedEOF).
+		// Other errors, like a malformed part header, are flagged even then:
+		// parsing stops there, so the rest of the body would go uninspected.
+		if errors.Is(err, io.EOF) && v.InboundDataError().Get() == "1" {
+			break
+		}
 		if err != nil {
 			v.MultipartStrictError().(*collections.Single).Set("1")
 			return err
@@ -127,7 +135,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 						v.MultipartStrictError().(*collections.Single).Set("1")
 						return err
 					}
-					flagUnexpectedEOF(v, options.RequestBodyTruncated)
+					flagUnexpectedEOF(v)
 					seenUnexpectedEOF = true
 				}
 				size = sz
@@ -138,7 +146,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 						v.MultipartStrictError().(*collections.Single).Set("1")
 						return err
 					}
-					flagUnexpectedEOF(v, options.RequestBodyTruncated)
+					flagUnexpectedEOF(v)
 					seenUnexpectedEOF = true
 				}
 				size = sz
@@ -168,7 +176,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
-				flagUnexpectedEOF(v, options.RequestBodyTruncated)
+				flagUnexpectedEOF(v)
 			}
 			totalSize += int64(len(data))
 			postCol.Add(p.FormName(), string(data))
@@ -182,17 +190,19 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 }
 
 // flagUnexpectedEOF records that a part ended mid-content (io.ErrUnexpectedEOF)
-// by setting MULTIPART_STRICT_ERROR, unless ProcessPartial cut the request body
-// at SecRequestBodyLimit and dropped the bytes after it. A body that arrives
-// truncated is a parser-disagreement risk and must fail rule 200003, but a body
-// the WAF truncated itself is not: the backend still receives it in full, and
-// ProcessPartial already accepts that the bytes past the limit go uninspected.
+// by setting MULTIPART_STRICT_ERROR, unless the request body was cut by
+// SecRequestBodyLimit under ProcessPartial (INBOUND_DATA_ERROR=1). A body
+// that arrives truncated is a parser-disagreement risk and must fail rule
+// 200003, but a body the WAF truncated itself is not: the backend still receives
+// it in full, and ProcessPartial already accepts that the bytes past the limit go uninspected.
 // Flagging it would make rule 200003 reject most oversized multipart bodies,
 // since a limit set in bytes usually lands inside a part's content.
-// INBOUND_DATA_ERROR is not enough to tell the two apart: it is also set by a
-// body that ends exactly at the limit, with nothing dropped.
-func flagUnexpectedEOF(v plugintypes.TransactionVariables, truncated bool) {
-	if truncated {
+// INBOUND_DATA_ERROR is also set by a body that ends exactly at the limit with
+// nothing cut. That body is not flagged either: telling the two apart would need
+// a read past the limit, and would gain nothing, since the same malformed body
+// padded by one byte is cut by the limit and not flagged anyway.
+func flagUnexpectedEOF(v plugintypes.TransactionVariables) {
+	if v.InboundDataError().Get() == "1" {
 		return
 	}
 	v.MultipartStrictError().(*collections.Single).Set("1")
