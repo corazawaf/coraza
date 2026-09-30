@@ -1386,6 +1386,41 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	}
 }
 
+// TestDuplicateContentTypeHeaderUsesFirstForBodyProcessorSelection is a
+// regression test for GHSA-w253-m66g-rx24: it needs two Content-Type headers
+// on one request, which testing/profile's StageInput.Headers
+// (map[string]string) cannot express, so it cannot be a profile.
+//
+// Only the first Content-Type header may select the body processor, matching
+// ProcessRequestBody's mimeType and a typical backend's Header.Get. Otherwise
+// e.g. a genuine multipart body gets the URLENCODED processor, which parses
+// it without error and leaves ARGS_POST and FILES empty.
+func TestDuplicateContentTypeHeaderUsesFirstForBodyProcessorSelection(t *testing.T) {
+	tests := []struct {
+		name    string
+		headers []string
+		want    string
+	}{
+		{"single urlencoded", []string{"application/x-www-form-urlencoded"}, "URLENCODED"},
+		{"multipart then urlencoded", []string{"multipart/form-data; boundary=XyZ", "application/x-www-form-urlencoded"}, "MULTIPART"},
+		{"urlencoded then multipart", []string{"application/x-www-form-urlencoded", "multipart/form-data; boundary=XyZ"}, "URLENCODED"},
+		{"unrecognized then multipart", []string{"text/plain", "multipart/form-data; boundary=XyZ"}, ""},
+		{"json then urlencoded", []string{"application/json", "application/x-www-form-urlencoded"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := NewWAF().NewTransaction()
+			defer func() { _ = tx.Close() }()
+			for _, h := range tt.headers {
+				tx.AddRequestHeader("Content-Type", h)
+			}
+			if got := tx.variables.reqbodyProcessor.Get(); got != tt.want {
+				t.Errorf("reqbodyProcessor = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestProcessBodiesSkippedIfHeadersPhasesNotReached(t *testing.T) {
 	logBuffer := &bytes.Buffer{}
 	waf := NewWAF()
