@@ -110,6 +110,16 @@ func TestHasDuplicateParam(t *testing.T) {
 			want:  false,
 		},
 		{
+			name:  "a single empty parameter name is not a duplicate",
+			input: `form-data; name="upload"; =x`,
+			want:  false,
+		},
+		{
+			name:  "a repeated empty parameter name is a duplicate",
+			input: `form-data; name="upload"; =x; =y`,
+			want:  true,
+		},
+		{
 			name:  "empty input",
 			input: "",
 			want:  false,
