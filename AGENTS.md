@@ -742,18 +742,23 @@ honestly: the checklist is a contract, not decoration.
     specific backend behavior (e.g. an application echoing input back into a
     response), or another vulnerability that must itself be reliably reached
     and triggered as part of the chain — Attack Complexity is High, and the
-    advisory should say what that precondition is. A required configuration is
-    scored assuming the vulnerable component is in that configuration (per the
-    CVSS version's own metric guidance), unless it deliberately weakens
-    security or conflicts with vendor guidance; a non-default configuration is
-    not by itself grounds for Attack Complexity: High. Which metric carries
-    that precondition depends on the CVSS version: v3.1 folds a required
-    configuration into Attack Complexity, while v4.0 records it under the
-    separate Attack Requirements metric instead and narrows Attack Complexity
-    to built-in protections the attacker must evade or circumvent — the
-    already-configured assumption applies either way. A chained-in bug only
-    pushes Attack Complexity to High if the chain itself is uncertain or
-    effortful to execute, not merely because more than one bug is involved.
+    advisory should say what that precondition is. Both CVSS v3.1 and v4.0 say
+    explicitly that a required configuration is scored as if the vulnerable
+    component is already in that configuration, unless it deliberately
+    weakens security or conflicts with vendor guidance; a non-default
+    configuration is not by itself grounds for Attack Complexity: High (v3.1)
+    or Attack Requirements: Present (v4.0) — neither metric is about the
+    system's own configuration. What each metric covers differs by version:
+    v3.1's Attack Complexity covers conditions beyond the attacker's control
+    that make exploitation itself harder (gathering target-specific
+    information, winning a race condition). v4.0 splits that in two instead:
+    Attack Complexity narrows to built-in protections the attacker must evade
+    or circumvent (e.g. defeating ASLR), while Attack Requirements covers
+    deployment/execution conditions that arise naturally from how the system
+    runs (a race condition, an on-path network position) — not a
+    configuration choice. A chained-in bug only pushes Attack Complexity to
+    High if the chain itself is uncertain or effortful to execute, not merely
+    because more than one bug is involved.
   - If the PoC only reproduces on one narrow, specific environment — one exact
     pinned patch version of an unrelated language runtime or framework (e.g.
     "only on Python 3.9.14", or one particular Django app's routing) — that is
