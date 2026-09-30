@@ -458,6 +458,69 @@ func TestReadJSONArgumentLimitCountsCollidedValues(t *testing.T) {
 	}
 }
 
+// TestJSONNestingExceedsLimit covers jsonNestingExceedsLimit directly: an
+// iterative bracket-depth count with no recursion, added for
+// GHSA-6gcq-wc29-5xf2 to bound input before gjson.Valid's recursive descent
+// ever sees it.
+func TestJSONNestingExceedsLimit(t *testing.T) {
+	tests := []struct {
+		name  string
+		json  string
+		limit int
+		want  bool
+	}{
+		{name: "flat_object_within_limit", json: `{"a":1,"b":2}`, limit: 10, want: false},
+		{name: "nesting_exactly_at_limit", json: strings.Repeat("[", 10) + "1" + strings.Repeat("]", 10), limit: 10, want: false},
+		{name: "nesting_one_over_limit", json: strings.Repeat("[", 11) + "1" + strings.Repeat("]", 11), limit: 10, want: true},
+		{name: "brackets_inside_string_value_not_counted", json: `{"a":"[[[[[[[[[[[["}`, limit: 10, want: false},
+		{name: "escaped_quote_does_not_end_string_early", json: `{"a":"\"[[[[[[[[[[["}`, limit: 10, want: false},
+		{name: "unterminated_deep_nesting_still_detected", json: strings.Repeat("[", 11), limit: 10, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := jsonNestingExceedsLimit(tt.json, tt.limit); got != tt.want {
+				t.Errorf("jsonNestingExceedsLimit(%q, %d) = %v, want %v", tt.json, tt.limit, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestReadJSONArgumentLimitTruncationEnforcesRecursionLimit is a regression
+// test for GHSA-6gcq-wc29-5xf2: when argumentLimit truncates the walk before
+// it ever reaches a deeply nested tail, readItems's own recursion guard
+// never fires for that tail (it is simply never visited). Before the fix,
+// readJSON then fell through to an unconditional gjson.Valid(s) call, which
+// recurses with no depth bound and -- on a sufficiently deep tail --
+// crashes the process with an unrecoverable stack overflow instead of
+// returning an error. Here the nesting is kept small enough to stay safe to
+// run in the normal suite; the mechanism is identical regardless of depth.
+func TestReadJSONArgumentLimitTruncationEnforcesRecursionLimit(t *testing.T) {
+	const limit = 50
+	depth := limit*2 + 20 // comfortably past the recursion limit
+
+	var sb strings.Builder
+	sb.WriteString("[")
+	for i := 0; i < limit; i++ {
+		sb.WriteString("1,")
+	}
+	// A single element that is itself nested past the limit, hidden right
+	// after the scalars that exhaust argumentLimit: readItems's ForEach
+	// stops before ever recursing into it.
+	sb.WriteString(strings.Repeat("[", depth))
+	sb.WriteString("1")
+	sb.WriteString(strings.Repeat("]", depth))
+	sb.WriteString("]")
+
+	_, truncated, err := readJSON(sb.String(), limit, limit)
+	if !truncated {
+		t.Error("expected truncated to be true")
+	}
+	want := "max recursion reached while reading json object"
+	if err == nil || err.Error() != want {
+		t.Errorf("want error %q, got %v", want, err)
+	}
+}
+
 func TestReadJSONNoArgumentLimit(t *testing.T) {
 	res, truncated, err := readJSON(`{"a":1,"b":2,"c":3}`, maxRecursion, 0)
 	if err != nil {

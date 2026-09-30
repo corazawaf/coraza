@@ -58,19 +58,14 @@ SecRule URI_PARSE_ERROR "@eq 1" \
 # Configures the maximum JSON recursion depth limit Coraza will accept.
 SecRequestBodyJsonDepthLimit 1024
 
-# Maximum number of arguments Coraza will parse per request, across the query
-# string, the path and the request body. Arguments beyond the limit are
-# dropped, which is why rules 200004 and 200005 below reject a request that
-# reaches it: silently dropped arguments are invisible to every ARGS rule.
-# Keep this as low as the applications behind Coraza allow.
-#
-# For JSON bodies, this same flag can also trip below the configured count:
-# the flattened form of a JSON body is capped at a multiple of the body's own
-# size, so a body whose fields share a few very long parent keys across many
-# leaves can hit that cap first. That is expected -- it bounds memory that the
-# argument count alone can't see -- but if legitimate JSON traffic denies here
-# without the argument count itself looking high, that byte cap is why.
-# SecArgumentsLimit 1000
+# Maximum number of arguments Coraza keeps from each source, counted
+# separately: the query string (ARGS_GET), the path (ARGS_PATH), and
+# urlencoded or JSON request bodies (ARGS_POST). JSON response bodies
+# (RESPONSE_ARGS) use the same limit.
+# Arguments beyond it are dropped and ARGUMENTS_LIMIT_REACHED is set.
+# Rules 200004 and 200005 are enforcing this limit, rejecting requests that exceed it.
+# If legitimate requests send more values, raise this value rather than removing those rules.
+SecArgumentsLimit 1000
 
 # Maximum request body size (bytes) Coraza will accept for buffering. When
 # supporting file uploads, this value has to be as large as the largest
@@ -128,6 +123,11 @@ SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
 # were silently dropped. Without this rule, an attacker can flood a request
 # with filler parameters to push a malicious payload past the limit,
 # causing it to be invisible to all ARGS-targeted rules.
+#
+# Rule 200005 can also fire for JSON bodies below the configured count: the
+# flattened form of a JSON body is capped at a multiple of the body's own
+# size, so a body whose fields share a few very long parent keys across many
+# leaves can hit that cap first.
 #
 SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" \
     "id:'200004',phase:1,t:none,log,deny,status:400, \
@@ -262,6 +262,6 @@ SecAuditLogFormat Native
 # SecCookieFormat 0
 # SecArgumentSeparator &
 # SecRule MULTIPART_UNMATCHED_BOUNDARY "@eq 1" \
-#    "id:'200004',phase:2,t:none,log,deny,msg:'Multipart parser detected a possible unmatched boundary.'"
+#    "id:'20000x',phase:2,t:none,log,deny,msg:'Multipart parser detected a possible unmatched boundary.'"
 # SecRule TX:/^COR_/ "!@streq 0" \
-#       "id:'200005',phase:2,t:none,deny,msg:'Coraza internal error flagged: %{MATCHED_VAR_NAME}'"
+#       "id:'20000x',phase:2,t:none,deny,msg:'Coraza internal error flagged: %{MATCHED_VAR_NAME}'"

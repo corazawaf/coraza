@@ -1763,12 +1763,16 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	return nil
 }
 
-// Description: Configures the maximum number of ARGS that will be accepted for processing.
+// Description: Configures the maximum number of arguments Coraza keeps from each source.
 // Default: 1000
 // Syntax: SecArgumentsLimit [LIMIT]
 // ---
-// Exceeding the limit will not be included.
-// With JSON body processing, there is nothing to do when exceed the limit.
+// The query string (ARGS_GET), the path (ARGS_PATH), and urlencoded or JSON request
+// bodies (ARGS_POST) are each counted separately; JSON response bodies (RESPONSE_ARGS)
+// use the same limit. Arguments beyond the limit are dropped and ARGUMENTS_LIMIT_REACHED
+// is set to 1, so a rule can reject the request (see rules 200004 and 200005 in
+// coraza.conf-recommended). The value must be greater than 0.
+//
 // Example:
 // ```seclang
 // SecArgumentsLimit 1000
