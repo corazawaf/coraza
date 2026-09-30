@@ -136,10 +136,60 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]s
 	if err != nil {
 		return res, truncated, err
 	}
+	// readItems's own recursion guard never fires when argumentLimit or
+	// byteBudget truncates the walk before it reaches a deeply nested tail:
+	// the ForEach loop stops (truncated=true, err=nil) without ever
+	// recursing into that tail, so maxRecursion is never checked against it.
+	// gjson.Valid recurses with no depth bound at all (validany ->
+	// validarray/validobject in gjson v1.18.0), so calling it unconditionally
+	// on such a tail crashes the process with an unrecoverable
+	// "fatal error: stack overflow" -- see GHSA-6gcq-wc29-5xf2. This iterative
+	// check bounds that recursion before Valid ever runs.
+	if jsonNestingExceedsLimit(s, maxRecursion) {
+		return res, truncated, errors.New("max recursion reached while reading json object")
+	}
 	if !gjson.Valid(s) {
 		return res, truncated, errors.New("invalid JSON")
 	}
 	return res, truncated, nil
+}
+
+// jsonNestingExceedsLimit reports whether s, read as raw JSON text, ever
+// nests object/array containers deeper than limit. It is a single pass over
+// the bytes with a depth counter -- no recursion -- so unlike gjson.Valid's
+// recursive descent it cannot itself stack-overflow regardless of how deep
+// (or how long) the input actually nests. It does not fully validate JSON
+// syntax; that is still gjson.Valid's job once nesting is known to be safe.
+func jsonNestingExceedsLimit(s string, limit int) bool {
+	depth := 0
+	inString := false
+	escaped := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if inString {
+			switch {
+			case escaped:
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == '"':
+				inString = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inString = true
+		case '{', '[':
+			depth++
+			if depth > limit {
+				return true
+			}
+		case '}', ']':
+			depth--
+		}
+	}
+	return false
 }
 
 // Transform JSON to a map[string][]string.
