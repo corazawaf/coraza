@@ -460,7 +460,10 @@ func findParam(s, key string) (rawValue string, ok bool) {
 // repeated parameter name as a parse error -- so its allocation stays off the
 // path taken by well-formed parts.
 func hasDuplicateParam(s string) bool {
-	var seen []string
+	// A set, not a slice: the header is attacker-controlled and can carry
+	// hundreds of thousands of parameters, so a linear scan per key is
+	// quadratic CPU.
+	seen := map[string]struct{}{}
 	duplicate := false
 	forEachParam(s, func(seg string) bool {
 		key, _, found := strings.Cut(seg, "=")
@@ -468,13 +471,11 @@ func hasDuplicateParam(s string) bool {
 			return true
 		}
 		key = strings.ToLower(strings.TrimSpace(key))
-		for _, k := range seen {
-			if k == key {
-				duplicate = true
-				return false
-			}
+		if _, ok := seen[key]; ok {
+			duplicate = true
+			return false
 		}
-		seen = append(seen, key)
+		seen[key] = struct{}{}
 		return true
 	})
 	return duplicate
