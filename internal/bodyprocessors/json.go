@@ -32,8 +32,10 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	col := v.ArgsPost()
 	data, truncated, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload
-	for key, value := range data {
-		col.SetIndex(key, 0, value)
+	for key, values := range data {
+		for i, value := range values {
+			col.SetIndex(key, i, value)
+		}
 	}
 	if truncated {
 		v.ArgumentsLimitReached().(*collections.Single).Set("1")
@@ -63,8 +65,10 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	col := v.ResponseArgs()
 	data, truncated, err := readJSON(ss, bpo.ResponseBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload
-	for key, value := range data {
-		col.SetIndex(key, 0, value)
+	for key, values := range data {
+		for i, value := range values {
+			col.SetIndex(key, i, value)
+		}
 	}
 	if truncated {
 		v.ArgumentsLimitReached().(*collections.Single).Set("1")
@@ -83,7 +87,7 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	return nil
 }
 
-// readJSON flattens s into a map[string]string, stopping once argumentLimit
+// readJSON flattens s into a map[string][]string, stopping once argumentLimit
 // entries have been collected (argumentLimit <= 0 means no limit). Without
 // this, a small body decoding to a wide flat structure (e.g. a JSON array of
 // millions of scalars) grows this map -- and, through it, ARGS_POST/
@@ -106,8 +110,8 @@ const flattenBytesFactor = 8
 // legitimately outweigh the input.
 const flattenBytesFloor = 4096
 
-func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string]string, truncated bool, err error) {
-	res = make(map[string]string)
+func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]string, truncated bool, err error) {
+	res = make(map[string][]string)
 	key := []byte("json")
 
 	byteBudget := len(s) * flattenBytesFactor
@@ -123,7 +127,12 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string]str
 	// rejected -- byteBudget is what keeps that walk short.
 	json := gjson.Parse(s)
 	usedBytes := 0
-	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, res)
+	// argCount tracks the total number of values collected, not len(res):
+	// a key collision (see GHSA-5gj4-9gm7-2fx2) appends more than one value
+	// under the same flattened key, so counting distinct keys would let
+	// SecArgumentsLimit undercount and admit more values than configured.
+	argCount := 0
+	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, res)
 	if err != nil {
 		return res, truncated, err
 	}
@@ -133,19 +142,30 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string]str
 	return res, truncated, nil
 }
 
-// Transform JSON to a map[string]string
+// Transform JSON to a map[string][]string.
 // This function is recursive and will call itself for nested objects.
 // The limit in recursion is defined by maxItems.
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
-// Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
+// Example output: map[string][]string{"json.data.name": {"John"}, "json.data.age": {"30"}, "json.items.0": {"1"}, "json.items.1": {"2"}, "json.items.2": {"3"}}
 // Example input: [{"data": {"name": "John", "age": 30}, "items": [1,2,3]}]
-// Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
-func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, res map[string]string) (truncated bool, err error) {
+// Example output: map[string][]string{"json.0.data.name": {"John"}, "json.0.data.age": {"30"}, "json.0.items.0": {"1"}, "json.0.items.1": {"2"}, "json.0.items.2": {"3"}}
+//
+// A nested path and a literal property name can flatten to the identical
+// string (e.g. {"account":{"role":"x"}} and {"account.role":"y"} both
+// produce "json.account.role"). Values are appended rather than overwritten
+// on such a collision, so every value stays visible to rule inspection
+// instead of a later property silently erasing an earlier one -- see
+// GHSA-5gj4-9gm7-2fx2. The flattened key text itself is left unescaped:
+// CRS rules such as 944130 match suspicious literal property names (e.g.
+// Java class names used in deserialization attacks) as a substring of the
+// generated key, and escaping would break that detection for the common,
+// non-colliding case.
+func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, res map[string][]string) (truncated bool, err error) {
 	if byteBudget > 0 && *usedBytes >= byteBudget {
 		// The flattened form has outgrown its budget; see flattenBytesFactor.
 		return true, nil
 	}
-	if argumentLimit > 0 && len(res) >= argumentLimit {
+	if argumentLimit > 0 && *argCount >= argumentLimit {
 		// Already at the configured SecArgumentsLimit: every recursive call
 		// rechecks this up front, so once the limit is hit no further level
 		// does any more work, regardless of how deeply nested the remainder
@@ -161,7 +181,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 		return false, errors.New("max recursion reached while reading json object")
 	}
 	json.ForEach(func(key, value gjson.Result) bool {
-		if argumentLimit > 0 && len(res) >= argumentLimit {
+		if argumentLimit > 0 && *argCount >= argumentLimit {
 			iterationTruncated = true
 			return false
 		}
@@ -180,7 +200,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 		case gjson.JSON:
 			// call recursively with one less item to avoid doing infinite recursion
 			var nestedTruncated bool
-			nestedTruncated, iterationError = readItems(value, objKey, maxRecursion-1, argumentLimit, byteBudget, usedBytes, res)
+			nestedTruncated, iterationError = readItems(value, objKey, maxRecursion-1, argumentLimit, byteBudget, usedBytes, argCount, res)
 			iterationTruncated = iterationTruncated || nestedTruncated
 			if iterationError != nil {
 				return false
@@ -205,8 +225,10 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 			return false
 		}
 
-		res[string(objKey)] = val
+		k := string(objKey)
+		res[k] = append(res[k], val)
 		*usedBytes += len(objKey) + len(val)
+		*argCount++
 		objKey = objKey[:prevParentLength]
 
 		return true
@@ -217,12 +239,14 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 		// the cap for every array level -- 1024 nested arrays in a 2 KB body
 		// yield 1025 arguments -- and, because the flag stayed false, the
 		// deny rule never fires and the request is allowed.
-		if argumentLimit > 0 && len(res) >= argumentLimit {
+		if argumentLimit > 0 && *argCount >= argumentLimit {
 			iterationTruncated = true
 		} else {
+			k := string(objKey)
 			lenStr := strconv.Itoa(arrayLen)
-			res[string(objKey)] = lenStr
+			res[k] = append(res[k], lenStr)
 			*usedBytes += len(objKey) + len(lenStr)
+			*argCount++
 		}
 	}
 	return iterationTruncated, iterationError

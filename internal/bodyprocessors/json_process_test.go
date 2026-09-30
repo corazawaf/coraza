@@ -69,6 +69,36 @@ func TestJSONProcessRequestPopulatesArgsPost(t *testing.T) {
 	}
 }
 
+// TestJSONProcessRequestDottedKeyDoesNotHideNestedValue is the ARGS_POST-level
+// regression for GHSA-5gj4-9gm7-2fx2: a literal dot in a property name used to
+// flatten to the same key as a nested path, so a later, harmless top-level
+// property silently overwrote an earlier, attacker-controlled nested value in
+// the collection every rule inspects -- while a standard JSON parser still
+// exposed both properties to the backend. Both values must now be present
+// under the same ARGS_POST key.
+func TestJSONProcessRequestDottedKeyDoesNotHideNestedValue(t *testing.T) {
+	bp := jsonProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	body := `{"account":{"role":"1' OR '1'='1"},"account.role":"safe"}`
+	if err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
+		RequestBodyRecursionLimit: jsonRecursionLimit,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := v.ArgsPost().Get("json.account.role")
+	want := []string{"1' OR '1'='1", "safe"}
+	if len(got) != len(want) {
+		t.Fatalf("ARGS_POST json.account.role = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("ARGS_POST json.account.role[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
 func TestJSONProcessRequestStoresRawBodyInTX(t *testing.T) {
 	bp := jsonProcessor(t)
 	v := corazawaf.NewTransactionVariables()

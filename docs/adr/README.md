@@ -126,6 +126,7 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0055](0055-accuracy-rule-action.md) | [#1693](https://github.com/corazawaf/coraza/pull/1693) | 2026-08-27 | unreleased | P | `accuracy` metadata action |
 | [0056](0056-fips-140-3-support.md) | [#1678](https://github.com/corazawaf/coraza/pull/1678) | 2026-08-28 | unreleased | F | Runtime FIPS 140-3 support for `t:md5`/`t:sha1` |
 | [0057](0057-multipart-filename-star-variables.md) | [#1](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1) | 2026-09-05 (expected) | unreleased | P | `filename*` (RFC 5987) precedence and new multipart filename variables |
+| [0058](0058-json-flattened-key-collision.md) | GHSA-5gj4-9gm7-2fx2 | 2026-09-29 | unreleased | P | Preserve both values on a JSON-flattened key collision |
 | [0059](0059-secresponsebodyjsondepthlimit.md) | GHSA-3c6w-j9xm-8h2h | 2026-09-26 | unreleased | F | `SecResponseBodyJsonDepthLimit` directive |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

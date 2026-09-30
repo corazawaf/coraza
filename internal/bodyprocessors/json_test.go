@@ -178,6 +178,46 @@ var jsonTests = []struct {
 		json: `{"a": {}, "b": []}`,
 		want: map[string]string{},
 	},
+	{
+		// CRS rule 944130 matches suspicious literal Java class names (e.g.
+		// "com.opensymphony.xwork2", a known Struts2/OGNL injection vector)
+		// as a substring of the flattened key. Escaping literal dots to fix
+		// GHSA-5gj4-9gm7-2fx2 would break this detection for the common,
+		// non-colliding case, so the flattened key text must stay unescaped.
+		name: "literal_dotted_key_stays_unescaped_when_it_does_not_collide",
+		json: `{"com.opensymphony.xwork2": "test"}`,
+		want: map[string]string{
+			"json.com.opensymphony.xwork2": "test",
+		},
+	},
+}
+
+// TestReadJSONKeyCollisionPreservesBothValues is a dedicated function rather
+// than a jsonTests row: it asserts multiple values under one key, a shape
+// TestReadJSON's single-value want map doesn't express.
+//
+// GHSA-5gj4-9gm7-2fx2: a nested path and a literal property name containing a
+// dot can flatten to the identical key -- {"account":{"role":"ATTACK"}} and
+// {"account.role":"SAFE"} both produce "json.account.role". Overwriting the
+// first value with the second would hide "ATTACK" from every rule that
+// inspects ARGS_POST, while a standard JSON parser still exposes both
+// properties to the backend. Both values must survive under the same key.
+func TestReadJSONKeyCollisionPreservesBothValues(t *testing.T) {
+	json := `{"account":{"role":"ATTACK"},"account.role":"SAFE"}`
+	got, _, err := readJSON(json, maxRecursion, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"ATTACK", "SAFE"}
+	have := got["json.account.role"]
+	if len(have) != len(want) {
+		t.Fatalf("json.account.role = %v, want %v", have, want)
+	}
+	for i := range want {
+		if have[i] != want[i] {
+			t.Errorf("json.account.role[%d] = %q, want %q", i, have[i], want[i])
+		}
+	}
 }
 
 func TestReadJSON(t *testing.T) {
@@ -205,8 +245,8 @@ func TestReadJSON(t *testing.T) {
 
 			for k, want := range tt.want {
 				if have, ok := jsonMap[k]; ok {
-					if want != have {
-						t.Errorf("key=%s, want %s, have %s", k, want, have)
+					if len(have) != 1 || have[0] != want {
+						t.Errorf("key=%s, want [%s], have %v", k, want, have)
 					}
 				} else {
 					t.Errorf("missing key: %s", k)
@@ -222,7 +262,7 @@ func TestReadJSON(t *testing.T) {
 }
 
 // Helper function to get map keys
-func mapKeys(m map[string]string) []string {
+func mapKeys(m map[string][]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
@@ -264,11 +304,11 @@ func BenchmarkReadJSON(b *testing.B) {
 
 // readJSONNoValidation is readJSON without the gjson.Valid pre-check.
 // Used only in benchmarks to measure the overhead of validation.
-func readJSONNoValidation(s string, maxRecursion int) (map[string]string, error) {
+func readJSONNoValidation(s string, maxRecursion int) (map[string][]string, error) {
 	json := gjson.Parse(s)
-	res := make(map[string]string)
+	res := make(map[string][]string)
 	key := []byte("json")
-	_, err := readItems(json, key, maxRecursion, 0, 0, new(int), res)
+	_, err := readItems(json, key, maxRecursion, 0, 0, new(int), new(int), res)
 	return res, err
 }
 
@@ -380,6 +420,41 @@ func TestReadJSONArgumentLimitNested(t *testing.T) {
 	}
 	if len(res) > 1002 {
 		t.Errorf("expected at most ~1000 entries, got %d", len(res))
+	}
+}
+
+// TestReadJSONArgumentLimitCountsCollidedValues is a regression test for the
+// merge of GHSA-5gj4-9gm7-2fx2 (values preserved on a key collision) with
+// GHSA-3ww9-vw83-9w5x's argument limit: counting distinct keys (len(res))
+// instead of total values would let repeated colliding keys pile up
+// unboundedly many values under one key without ever tripping
+// SecArgumentsLimit, since gjson.ForEach surfaces every literal duplicate
+// key in the raw JSON text.
+func TestReadJSONArgumentLimitCountsCollidedValues(t *testing.T) {
+	const limit = 1000
+	var sb strings.Builder
+	sb.WriteString("{")
+	for i := 0; i < 10000; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(`"a":1`)
+	}
+	sb.WriteString("}")
+
+	res, truncated, err := readJSON(sb.String(), maxRecursion, limit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !truncated {
+		t.Error("expected truncated to be true")
+	}
+	total := 0
+	for _, values := range res {
+		total += len(values)
+	}
+	if total > limit {
+		t.Errorf("argument limit %d exceeded: got %d values across %d key(s)", limit, total, len(res))
 	}
 }
 
