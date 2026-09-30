@@ -534,3 +534,153 @@ SecRule REQBODY_PROCESSOR "@streq MULTIPART" \
     "id:'200012',phase:2,t:none,log,pass,logdata:'MULTIPART_INVALID_QUOTING=%{MULTIPART_INVALID_QUOTING}'"
 `,
 })
+
+// SecRequestBodyLimit 150 cuts the first two bodies below inside a part's
+// content, where the multipart reader returns io.ErrUnexpectedEOF: the file
+// part's headers are 89 bytes and the form field's are 46, so the cut lands 61
+// and 104 bytes into their values. The two tests cover the file and the
+// form-field branches. The third body is exactly 150 bytes and arrives already
+// cut: nothing is dropped, but it reaches the limit, so INBOUND_DATA_ERROR is set
+// and it is treated like a body the limit cut (see flagUnexpectedEOF). The fourth
+// body is cut inside its closing boundary, 100 bytes after the field's value,
+// where NextPart fails instead of the part's read. The last body is cut the same
+// way by the client, below the limit, and must still be rejected.
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "a multipart body cut by ProcessPartial at the body limit does not raise MULTIPART_STRICT_ERROR",
+		Enabled:     true,
+		Name:        "multipart_process_partial.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "a file part cut inside its content by the limit is inspected, not rejected",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "multipart/form-data; boundary=a",
+							},
+							Data: "--a\nContent-Disposition: form-data; name=\"f\"; filename=\"x.txt\"\nContent-Type: text/plain\n\n" +
+								"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n--a--\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 101},
+							NonTriggeredRules: []int{200002, 200003},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "a form field cut inside its value by the limit is inspected, not rejected",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "multipart/form-data; boundary=a",
+							},
+							Data: "--a\nContent-Disposition: form-data; name=\"t\"\n\n" +
+								"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n--a--\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 102},
+							NonTriggeredRules: []int{200002, 200003},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "a form field ending cut exactly at the limit is treated as cut by the limit",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "multipart/form-data; boundary=a",
+							},
+							Data: "--a\nContent-Disposition: form-data; name=\"t\"\n\n" +
+								"CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 102},
+							NonTriggeredRules: []int{200002, 200003},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "a body cut inside its closing boundary by the limit is inspected, not rejected",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "multipart/form-data; boundary=a",
+							},
+							Data: "--a\nContent-Disposition: form-data; name=\"u\"\n\n" +
+								"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD\n--a--\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 103},
+							NonTriggeredRules: []int{104, 200002, 200003},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "a body the client cut inside its closing boundary, below the limit, is rejected",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/upload",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "multipart/form-data; boundary=a",
+							},
+							Data: "--a\nContent-Disposition: form-data; name=\"u\"\n\nDDDD\n--a",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{104, 200002},
+							NonTriggeredRules: []int{100},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 400,
+								RuleID: 200002,
+								Action: "deny",
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRuleEngine On
+SecRequestBodyAccess On
+SecRequestBodyLimit 150
+SecRequestBodyLimitAction ProcessPartial
+SecRule INBOUND_DATA_ERROR "@eq 1" "id:100,phase:2,t:none,log,pass"
+SecRule FILES "@streq x.txt" "id:101,phase:2,t:none,log,pass"
+SecRule ARGS_POST:t "@rx ^[BC]{104}$" "id:102,phase:2,t:none,log,pass"
+SecRule ARGS_POST:u "@rx ^D{100}$" "id:103,phase:2,t:none,log,pass"
+SecRule MULTIPART_STRICT_ERROR "@eq 1" "id:104,phase:2,t:none,log,pass"
+SecRule REQBODY_ERROR "!@eq 0" \
+    "id:'200002',phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.'"
+SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
+    "id:'200003',phase:2,t:none,log,deny,status:400,msg:'Multipart request body failed strict validation.'"
+`,
+})
