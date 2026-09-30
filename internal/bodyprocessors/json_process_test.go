@@ -69,33 +69,84 @@ func TestJSONProcessRequestPopulatesArgsPost(t *testing.T) {
 	}
 }
 
-// TestJSONProcessRequestDottedKeyDoesNotHideNestedValue is the ARGS_POST-level
-// regression for GHSA-5gj4-9gm7-2fx2: a literal dot in a property name used to
-// flatten to the same key as a nested path, so a later, harmless top-level
-// property silently overwrote an earlier, attacker-controlled nested value in
-// the collection every rule inspects -- while a standard JSON parser still
-// exposed both properties to the backend. Both values must now be present
-// under the same ARGS_POST key.
-func TestJSONProcessRequestDottedKeyDoesNotHideNestedValue(t *testing.T) {
-	bp := jsonProcessor(t)
-	v := corazawaf.NewTransactionVariables()
-
-	body := `{"account":{"role":"1' OR '1'='1"},"account.role":"safe"}`
-	if err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-		RequestBodyRecursionLimit: jsonRecursionLimit,
-	}); err != nil {
-		t.Fatal(err)
+// TestJSONProcessRequestKeyCollisionDoesNotHideNestedValue is the
+// ARGS_POST-level regression for GHSA-5gj4-9gm7-2fx2: two JSON properties
+// that flatten to the same ARGS_POST key used to leave only one value, so a
+// harmless property could hide an attacker-controlled one from every rule,
+// while a standard JSON parser still exposed both to the backend. Every value
+// must now be present.
+func TestJSONProcessRequestKeyCollisionDoesNotHideNestedValue(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		// keys are read and their values unioned, so a row holds whether or
+		// not the keys fold to one bucket (see case_sensitive_args_keys).
+		keys []string
+		want []string
+		// ordered asserts want in document order on a single key; otherwise
+		// the values are compared as a set.
+		ordered bool
+	}{
+		{
+			// A literal dot in a property name flattens to the same key as a
+			// nested path, and the later top-level value used to overwrite
+			// the earlier nested one.
+			name:    "dotted property name",
+			body:    `{"account":{"role":"1' OR '1'='1"},"account.role":"safe"}`,
+			keys:    []string{"json.account.role"},
+			want:    []string{"1' OR '1'='1", "safe"},
+			ordered: true,
+		},
+		{
+			// Keys differing only by case are distinct in readJSON's map but
+			// fold to one bucket in the case-insensitive ARGS_POST, where
+			// SetIndex let whichever key map iteration visited last
+			// overwrite the other. Add always appends.
+			name: "case-variant property name",
+			body: `{"account":{"role":"1' OR '1'='1","Role":"safe"}}`,
+			keys: []string{"json.account.role", "json.account.Role"},
+			want: []string{"1' OR '1'='1", "safe"},
+		},
 	}
 
-	got := v.ArgsPost().Get("json.account.role")
-	want := []string{"1' OR '1'='1", "safe"}
-	if len(got) != len(want) {
-		t.Fatalf("ARGS_POST json.account.role = %v, want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("ARGS_POST json.account.role[%d] = %q, want %q", i, got[i], want[i])
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := jsonProcessor(t)
+			v := corazawaf.NewTransactionVariables()
+			if err := bp.ProcessRequest(strings.NewReader(tt.body), v, plugintypes.BodyProcessorOptions{
+				RequestBodyRecursionLimit: jsonRecursionLimit,
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.ordered {
+				got := v.ArgsPost().Get(tt.keys[0])
+				if len(got) != len(tt.want) {
+					t.Fatalf("ARGS_POST %s = %v, want %v", tt.keys[0], got, tt.want)
+				}
+				for i := range tt.want {
+					if got[i] != tt.want[i] {
+						t.Errorf("ARGS_POST %s[%d] = %q, want %q", tt.keys[0], i, got[i], tt.want[i])
+					}
+				}
+				return
+			}
+
+			got := map[string]bool{}
+			for _, k := range tt.keys {
+				for _, val := range v.ArgsPost().Get(k) {
+					got[val] = true
+				}
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("ARGS_POST %v = %v, want (any order) %v", tt.keys, got, tt.want)
+			}
+			for _, w := range tt.want {
+				if !got[w] {
+					t.Errorf("ARGS_POST %v missing %q, got %v", tt.keys, w, got)
+				}
+			}
+		})
 	}
 }
 

@@ -31,10 +31,19 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	// Process with recursion limit
 	col := v.ArgsPost()
 	data, truncated, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
-	// The collection is populated before checking the error to still perform a best effort inspection of the payload
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload.
+	//
+	// Add, not SetIndex: col is case-insensitive by default (and RESPONSE_ARGS
+	// always is, regardless of build tags), so two flattened keys that differ
+	// only by case -- e.g. "json.account.role" and "json.account.Role" --
+	// fold to the same collection entry. SetIndex(key, i, value) lets each
+	// one's independent index-0 write silently overwrite the other, since
+	// neither call knows about the other key. Add always appends, so both
+	// values survive under the collision exactly like a same-case collision
+	// already does. See GHSA-5gj4-9gm7-2fx2.
 	for key, values := range data {
-		for i, value := range values {
-			col.SetIndex(key, i, value)
+		for _, value := range values {
+			col.Add(key, value)
 		}
 	}
 	if truncated {
@@ -64,10 +73,12 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	// Process with recursion limit
 	col := v.ResponseArgs()
 	data, truncated, err := readJSON(ss, bpo.ResponseBodyRecursionLimit, bpo.ArgumentLimit)
-	// The collection is populated before checking the error to still perform a best effort inspection of the payload
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload.
+	// See the comment in ProcessRequest: Add rather than SetIndex avoids a
+	// case-insensitive collision silently overwriting one value (GHSA-5gj4-9gm7-2fx2).
 	for key, values := range data {
-		for i, value := range values {
-			col.SetIndex(key, i, value)
+		for _, value := range values {
+			col.Add(key, value)
 		}
 	}
 	if truncated {
@@ -285,18 +296,21 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 	})
 	if arrayLen > 0 {
 		// This write happens after ForEach has returned, so neither guard
-		// inside the callback covers it. Without the check an entry escapes
-		// the cap for every array level -- 1024 nested arrays in a 2 KB body
-		// yield 1025 arguments -- and, because the flag stayed false, the
-		// deny rule never fires and the request is allowed.
+		// inside the callback covers it. It needs both: argumentLimit, since
+		// every array level adds an entry, and byteBudget, since each of those
+		// entries repeats the full path. See GHSA-6r3q-mjv7-xr8m.
 		if argumentLimit > 0 && *argCount >= argumentLimit {
 			iterationTruncated = true
 		} else {
-			k := string(objKey)
 			lenStr := strconv.Itoa(arrayLen)
-			res[k] = append(res[k], lenStr)
-			*usedBytes += len(objKey) + len(lenStr)
-			*argCount++
+			if byteBudget > 0 && *usedBytes+len(objKey)+len(lenStr) > byteBudget {
+				iterationTruncated = true
+			} else {
+				k := string(objKey)
+				res[k] = append(res[k], lenStr)
+				*usedBytes += len(objKey) + len(lenStr)
+				*argCount++
+			}
 		}
 	}
 	return iterationTruncated, iterationError

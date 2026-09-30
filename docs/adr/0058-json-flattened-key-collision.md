@@ -103,6 +103,38 @@ to `len(res)` made a new regression test, `TestReadJSONArgumentLimitCountsCollid
 fail with 10,000 values under one key against a limit of 1,000) before
 confirming the fix closes it.
 
+**2026-09-30 follow-up: case-folding collision.** This ADR's Decision Outcome
+says `ProcessRequest`/`ProcessResponse` copy every value into
+`ARGS_POST`/`RESPONSE_ARGS` "via `SetIndex(key, i, value)` for each index".
+That closes the collision this ADR set out to fix (two flattened keys with
+byte-identical text), but a second, distinct collision shares the same
+failure mode: `ARGS_POST` and `RESPONSE_ARGS` are case-insensitive
+(`RESPONSE_ARGS` always is, `ARGS_POST` unless built with
+`coraza.rule.case_sensitive_args_keys`), so two flattened keys that differ
+only by case -- `json.account.role` vs `json.account.Role` -- are distinct
+entries in `readJSON`'s own case-sensitive intermediate map but fold to the
+*same* collection bucket. Each `SetIndex(key, i, value)` call thinks it owns
+index `i` of that bucket without knowing the other key also writes there, so
+whichever key Go's randomized map iteration visits second overwrites index 0
+of whichever visited first -- deterministically leaving exactly one
+survivor every request, just an unpredictable one (confirmed empirically:
+over 200 trials of `{"account":{"role":"1' OR '1'='1","Role":"safe"}}`, the
+attack value survived only 22 times).
+
+Fix: use `col.Add(key, value)` instead of `SetIndex(key, i, value)`. `Add`
+always appends regardless of any index, so both a same-case collision (this
+ADR's original case, one `data` key with an ordered slice of values) and a
+case-folding collision (two different `data` keys landing in the same
+bucket) end up with every value preserved, in whichever order the writes
+happen to occur. Both cases are rows of
+`TestJSONProcessRequestKeyCollisionDoesNotHideNestedValue`. The same-case row
+(order-sensitive) still passes unchanged, since a single `data` key's own
+value order is unaffected by switching from indexed writes to appends. The
+case-folding row (order-independent) fails deterministically against the
+pre-fix code and passes after it. It unions the values of both key spellings,
+so it also holds under `coraza.rule.case_sensitive_args_keys`, where the keys
+never collide.
+
 ## Participants
 
 - @fzipi — author
@@ -127,4 +159,5 @@ confirming the fix closes it.
 
 - Advisory: https://github.com/corazawaf/coraza/security/advisories/GHSA-5gj4-9gm7-2fx2
 - Advisory PR (private fork): https://github.com/corazawaf/coraza-ghsa-5gj4-9gm7-2fx2/pull/1
+- Case-folding collision follow-up PR (private fork): https://github.com/corazawaf/coraza-ghsa-5gj4-9gm7-2fx2/pull/2
 - Related ADRs: ADR-0057 (`filename*`/`filename` dual-value precedent for the same "preserve both readings" pattern)
