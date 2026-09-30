@@ -296,18 +296,21 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 	})
 	if arrayLen > 0 {
 		// This write happens after ForEach has returned, so neither guard
-		// inside the callback covers it. Without the check an entry escapes
-		// the cap for every array level -- 1024 nested arrays in a 2 KB body
-		// yield 1025 arguments -- and, because the flag stayed false, the
-		// deny rule never fires and the request is allowed.
+		// inside the callback covers it. It needs both: argumentLimit, since
+		// every array level adds an entry, and byteBudget, since each of those
+		// entries repeats the full path. See GHSA-6r3q-mjv7-xr8m.
 		if argumentLimit > 0 && *argCount >= argumentLimit {
 			iterationTruncated = true
 		} else {
-			k := string(objKey)
 			lenStr := strconv.Itoa(arrayLen)
-			res[k] = append(res[k], lenStr)
-			*usedBytes += len(objKey) + len(lenStr)
-			*argCount++
+			if byteBudget > 0 && *usedBytes+len(objKey)+len(lenStr) > byteBudget {
+				iterationTruncated = true
+			} else {
+				k := string(objKey)
+				res[k] = append(res[k], lenStr)
+				*usedBytes += len(objKey) + len(lenStr)
+				*argCount++
+			}
 		}
 	}
 	return iterationTruncated, iterationError

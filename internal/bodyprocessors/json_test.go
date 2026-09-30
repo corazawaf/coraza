@@ -592,38 +592,63 @@ func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 // its own size.
 func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 	const limit = 1000
-	var sb strings.Builder
+
+	var longPaths strings.Builder
 	for i := 0; i < 8; i++ {
-		sb.WriteString(`{"` + strings.Repeat("p", 200) + strconv.Itoa(i) + `":`)
+		longPaths.WriteString(`{"` + strings.Repeat("p", 200) + strconv.Itoa(i) + `":`)
 	}
-	sb.WriteString("{")
+	longPaths.WriteString("{")
 	for i := 0; i < 999; i++ {
 		if i > 0 {
-			sb.WriteString(",")
+			longPaths.WriteString(",")
 		}
-		sb.WriteString(`"leaf` + strconv.Itoa(i) + `":"` + strings.Repeat("v", 20) + `"`)
+		longPaths.WriteString(`"leaf` + strconv.Itoa(i) + `":"` + strings.Repeat("v", 20) + `"`)
 	}
-	sb.WriteString("}" + strings.Repeat("}", 8))
-	body := sb.String()
+	longPaths.WriteString("}" + strings.Repeat("}", 8))
 
-	res, truncated, err := readJSON(body, 10000, limit)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "long paths rewritten per leaf",
+			body: longPaths.String(),
+		},
+		{
+			// GHSA-6r3q-mjv7-xr8m: the array-length entry written after each
+			// ForEach checked argumentLimit but not byteBudget. Every nesting
+			// level adds one argument but repeats the full ~20 KB path, so
+			// this ~20 KB body retained ~4 MB with truncated=false.
+			name: "long key under many single-element arrays",
+			body: `{"` + strings.Repeat("a", 20000) + `":` + strings.Repeat("[", 200) + strings.Repeat("]", 200) + `}`,
+		},
 	}
-	stored := 0
-	for k, v := range res {
-		stored += len(k) + len(v)
-	}
-	budget := len(body) * flattenBytesFactor
-	if stored > budget {
-		t.Errorf("flattened form retained %d bytes, over the %d byte budget for a %d byte body",
-			stored, budget, len(body))
-	}
-	if !truncated {
-		t.Error("truncated must be set when the byte budget stops the walk")
-	}
-	if len(res) >= limit {
-		t.Errorf("expected the byte budget to stop the walk before the argument limit, got %d arguments", len(res))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, truncated, err := readJSON(tt.body, 10000, limit)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			stored := 0
+			for k, values := range res {
+				stored += len(k)
+				for _, v := range values {
+					stored += len(v)
+				}
+			}
+			budget := len(tt.body) * flattenBytesFactor
+			if stored > budget {
+				t.Errorf("flattened form retained %d bytes, over the %d byte budget for a %d byte body",
+					stored, budget, len(tt.body))
+			}
+			if !truncated {
+				t.Error("truncated must be set when the byte budget stops the walk")
+			}
+			if len(res) >= limit {
+				t.Errorf("expected the byte budget to stop the walk before the argument limit, got %d arguments", len(res))
+			}
+		})
 	}
 }
 
