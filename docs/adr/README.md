@@ -128,5 +128,6 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0057](0057-multipart-filename-star-variables.md) | [#1](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1) | 2026-09-05 (expected) | unreleased | P | `filename*` (RFC 5987) precedence and new multipart filename variables |
 | [0058](0058-json-flattened-key-collision.md) | GHSA-5gj4-9gm7-2fx2 | 2026-09-29 | unreleased | P | Preserve both values on a JSON-flattened key collision |
 | [0059](0059-secresponsebodyjsondepthlimit.md) | GHSA-3c6w-j9xm-8h2h | 2026-09-26 | unreleased | F | `SecResponseBodyJsonDepthLimit` directive |
+| [0060](0060-json-bounded-recursion-prescan.md) | GHSA-6gcq-wc29-5xf2 | 2026-09-30 | unreleased | P | Iterative depth pre-scan before `gjson.Valid` in the JSON body processor |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
