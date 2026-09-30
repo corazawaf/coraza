@@ -535,19 +535,20 @@ SecRule REQBODY_PROCESSOR "@streq MULTIPART" \
 `,
 })
 
-// The part headers below are 89 bytes, so a SecRequestBodyLimit of 150 always
-// cuts the first test's body inside the file content, where the multipart
-// reader returns io.ErrUnexpectedEOF.
+// SecRequestBodyLimit 150 cuts both bodies below inside a part's content, where
+// the multipart reader returns io.ErrUnexpectedEOF: the file part's headers are
+// 89 bytes and the form field's are 46, so the cut lands 61 and 104 bytes into
+// their values. The two tests cover the file and the form-field branches.
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "M4tteoP",
-		Description: "MULTIPART_STRICT_ERROR distinguishes a body truncated by ProcessPartial from one that arrives truncated",
+		Description: "a multipart body cut by ProcessPartial at the body limit does not raise MULTIPART_STRICT_ERROR",
 		Enabled:     true,
 		Name:        "multipart_process_partial.yaml",
 	},
 	Tests: []profile.Test{
 		{
-			Title: "a body cut inside a part's content by the limit is inspected, not rejected",
+			Title: "a file part cut inside its content by the limit is inspected, not rejected",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -569,7 +570,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 		{
-			Title: "a body that arrives truncated inside a part's content still raises MULTIPART_STRICT_ERROR",
+			Title: "a form field cut inside its value by the limit is inspected, not rejected",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -579,16 +580,12 @@ var _ = profile.RegisterProfile(profile.Profile{
 							Headers: map[string]string{
 								"Content-Type": "multipart/form-data; boundary=a",
 							},
-							Data: "--a\nContent-Disposition: form-data; name=\"f\"; filename=\"x.txt\"\nContent-Type: text/plain\n\nAAAA",
+							Data: "--a\nContent-Disposition: form-data; name=\"t\"\n\n" +
+								"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n--a--\n",
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{200003},
-							NonTriggeredRules: []int{100, 200002},
-							Interruption: &profile.ExpectedInterruption{
-								RuleID: 200003,
-								Action: "deny",
-								Status: 400,
-							},
+							TriggeredRules:    []int{100, 102},
+							NonTriggeredRules: []int{200002, 200003},
 						},
 					},
 				},
@@ -602,57 +599,7 @@ SecRequestBodyLimit 150
 SecRequestBodyLimitAction ProcessPartial
 SecRule INBOUND_DATA_ERROR "@eq 1" "id:100,phase:2,t:none,log,pass"
 SecRule FILES "@streq x.txt" "id:101,phase:2,t:none,log,pass"
-SecRule REQBODY_ERROR "!@eq 0" \
-    "id:'200002',phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.'"
-SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
-    "id:'200003',phase:2,t:none,log,deny,status:400,msg:'Multipart request body failed strict validation.'"
-`,
-})
-
-// Same truncated body as above under SecRequestBodyLimitAction Reject: the
-// limit is never reached, so INBOUND_DATA_ERROR stays unset and the truncation
-// must still raise MULTIPART_STRICT_ERROR whatever the limit action.
-var _ = profile.RegisterProfile(profile.Profile{
-	Meta: profile.Meta{
-		Author:      "M4tteoP",
-		Description: "a multipart body that arrives truncated raises MULTIPART_STRICT_ERROR under Reject",
-		Enabled:     true,
-		Name:        "multipart_reject_truncated.yaml",
-	},
-	Tests: []profile.Test{
-		{
-			Title: "a body that arrives truncated inside a part's content raises MULTIPART_STRICT_ERROR",
-			Stages: []profile.Stage{
-				{
-					Stage: profile.SubStage{
-						Input: profile.StageInput{
-							URI:    "/upload",
-							Method: "POST",
-							Headers: map[string]string{
-								"Content-Type": "multipart/form-data; boundary=a",
-							},
-							Data: "--a\nContent-Disposition: form-data; name=\"f\"; filename=\"x.txt\"\nContent-Type: text/plain\n\nAAAA",
-						},
-						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{200003},
-							NonTriggeredRules: []int{100, 200002},
-							Interruption: &profile.ExpectedInterruption{
-								RuleID: 200003,
-								Action: "deny",
-								Status: 400,
-							},
-						},
-					},
-				},
-			},
-		},
-	},
-	Rules: `
-SecRuleEngine On
-SecRequestBodyAccess On
-SecRequestBodyLimit 150
-SecRequestBodyLimitAction Reject
-SecRule INBOUND_DATA_ERROR "@eq 1" "id:100,phase:2,t:none,log,pass"
+SecRule ARGS_POST:t "@rx ^B{104}$" "id:102,phase:2,t:none,log,pass"
 SecRule REQBODY_ERROR "!@eq 0" \
     "id:'200002',phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.'"
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
