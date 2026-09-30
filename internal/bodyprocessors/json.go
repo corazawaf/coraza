@@ -12,6 +12,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 )
 
 type jsonBodyProcessor struct{}
@@ -29,10 +30,15 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	ss := s.String()
 	// Process with recursion limit
 	col := v.ArgsPost()
-	data, err := readJSON(ss, bpo.RequestBodyRecursionLimit)
+	data, truncated, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload
-	for key, value := range data {
-		col.SetIndex(key, 0, value)
+	for key, values := range data {
+		for i, value := range values {
+			col.SetIndex(key, i, value)
+		}
+	}
+	if truncated {
+		v.ArgumentsLimitReached().(*collections.Single).Set("1")
 	}
 	if err != nil {
 		return err
@@ -48,21 +54,24 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	return nil
 }
 
-const ignoreJSONRecursionLimit = -1
-
-func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, bpo plugintypes.BodyProcessorOptions) error {
 	// Read the entire body to store it and process it
 	s := strings.Builder{}
 	if _, err := io.Copy(&s, reader); err != nil {
 		return err
 	}
 	ss := s.String()
-	// Process with no recursion limit as we don't have a directive for response body
+	// Process with recursion limit
 	col := v.ResponseArgs()
-	data, err := readJSON(ss, ignoreJSONRecursionLimit)
+	data, truncated, err := readJSON(ss, bpo.ResponseBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload
-	for key, value := range data {
-		col.SetIndex(key, 0, value)
+	for key, values := range data {
+		for i, value := range values {
+			col.SetIndex(key, i, value)
+		}
+	}
+	if truncated {
+		v.ArgumentsLimitReached().(*collections.Single).Set("1")
 	}
 	if err != nil {
 		return err
@@ -78,37 +87,154 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	return nil
 }
 
-func readJSON(s string, maxRecursion int) (map[string]string, error) {
-	res := make(map[string]string)
+// readJSON flattens s into a map[string][]string, stopping once argumentLimit
+// entries have been collected (argumentLimit <= 0 means no limit). Without
+// this, a small body decoding to a wide flat structure (e.g. a JSON array of
+// millions of scalars) grows this map -- and, through it, ARGS_POST/
+// RESPONSE_ARGS -- without bound regardless of SecArgumentsLimit, exhausting
+// memory on a single request. See GHSA-3ww9-vw83-9w5x.
+// flattenBytesFactor bounds the flattened form relative to the body that
+// produced it. SecArgumentsLimit counts entries, not bytes, and the flattened
+// key is the full path rewritten for every leaf, so memory grows with
+// depth x leaves while the entry count grows only with leaves. A body that
+// stays comfortably under the argument limit can therefore still retain many
+// times its own size: a 34 KB body of long paths measured 1.6 MB of keys at
+// 999 arguments, roughly 48x, with no limit reached and no flag set.
+//
+// The factor is a judgement call rather than a derived number. Eight leaves
+// room for genuinely nested documents -- measured well under 2x on ordinary
+// API payloads -- while stopping the amplification well before it matters.
+const flattenBytesFactor = 8
+
+// flattenBytesFloor keeps small bodies unaffected, where a few long keys can
+// legitimately outweigh the input.
+const flattenBytesFloor = 4096
+
+func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]string, truncated bool, err error) {
+	res = make(map[string][]string)
 	key := []byte("json")
 
+	byteBudget := len(s) * flattenBytesFactor
+	if byteBudget < flattenBytesFloor {
+		byteBudget = flattenBytesFloor
+	}
+
+	// The walk runs before the validity check on purpose: a body with a valid
+	// prefix still populates ARGS on a best-effort basis, which rules can act
+	// on even though an error is returned (see the best-effort tests, and
+	// corazawaf/coraza#1615). What that ordering must not do is spend
+	// unbounded time and memory flattening a body that is about to be
+	// rejected -- byteBudget is what keeps that walk short.
 	json := gjson.Parse(s)
-	err := readItems(json, key, maxRecursion, res)
+	usedBytes := 0
+	// argCount tracks the total number of values collected, not len(res):
+	// a key collision (see GHSA-5gj4-9gm7-2fx2) appends more than one value
+	// under the same flattened key, so counting distinct keys would let
+	// SecArgumentsLimit undercount and admit more values than configured.
+	argCount := 0
+	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, res)
 	if err != nil {
-		return res, err
+		return res, truncated, err
+	}
+	// readItems's own recursion guard never fires when argumentLimit or
+	// byteBudget truncates the walk before it reaches a deeply nested tail:
+	// the ForEach loop stops (truncated=true, err=nil) without ever
+	// recursing into that tail, so maxRecursion is never checked against it.
+	// gjson.Valid recurses with no depth bound at all (validany ->
+	// validarray/validobject in gjson v1.18.0), so calling it unconditionally
+	// on such a tail crashes the process with an unrecoverable
+	// "fatal error: stack overflow" -- see GHSA-6gcq-wc29-5xf2. This iterative
+	// check bounds that recursion before Valid ever runs.
+	if jsonNestingExceedsLimit(s, maxRecursion) {
+		return res, truncated, errors.New("max recursion reached while reading json object")
 	}
 	if !gjson.Valid(s) {
-		return res, errors.New("invalid JSON")
+		return res, truncated, errors.New("invalid JSON")
 	}
-	return res, nil
+	return res, truncated, nil
 }
 
-// Transform JSON to a map[string]string
+// jsonNestingExceedsLimit reports whether s, read as raw JSON text, ever
+// nests object/array containers deeper than limit. It is a single pass over
+// the bytes with a depth counter -- no recursion -- so unlike gjson.Valid's
+// recursive descent it cannot itself stack-overflow regardless of how deep
+// (or how long) the input actually nests. It does not fully validate JSON
+// syntax; that is still gjson.Valid's job once nesting is known to be safe.
+func jsonNestingExceedsLimit(s string, limit int) bool {
+	depth := 0
+	inString := false
+	escaped := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if inString {
+			switch {
+			case escaped:
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == '"':
+				inString = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inString = true
+		case '{', '[':
+			depth++
+			if depth > limit {
+				return true
+			}
+		case '}', ']':
+			depth--
+		}
+	}
+	return false
+}
+
+// Transform JSON to a map[string][]string.
 // This function is recursive and will call itself for nested objects.
 // The limit in recursion is defined by maxItems.
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
-// Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
+// Example output: map[string][]string{"json.data.name": {"John"}, "json.data.age": {"30"}, "json.items.0": {"1"}, "json.items.1": {"2"}, "json.items.2": {"3"}}
 // Example input: [{"data": {"name": "John", "age": 30}, "items": [1,2,3]}]
-// Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
-func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[string]string) error {
+// Example output: map[string][]string{"json.0.data.name": {"John"}, "json.0.data.age": {"30"}, "json.0.items.0": {"1"}, "json.0.items.1": {"2"}, "json.0.items.2": {"3"}}
+//
+// A nested path and a literal property name can flatten to the identical
+// string (e.g. {"account":{"role":"x"}} and {"account.role":"y"} both
+// produce "json.account.role"). Values are appended rather than overwritten
+// on such a collision, so every value stays visible to rule inspection
+// instead of a later property silently erasing an earlier one -- see
+// GHSA-5gj4-9gm7-2fx2. The flattened key text itself is left unescaped:
+// CRS rules such as 944130 match suspicious literal property names (e.g.
+// Java class names used in deserialization attacks) as a substring of the
+// generated key, and escaping would break that detection for the common,
+// non-colliding case.
+func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, res map[string][]string) (truncated bool, err error) {
+	if byteBudget > 0 && *usedBytes >= byteBudget {
+		// The flattened form has outgrown its budget; see flattenBytesFactor.
+		return true, nil
+	}
+	if argumentLimit > 0 && *argCount >= argumentLimit {
+		// Already at the configured SecArgumentsLimit: every recursive call
+		// rechecks this up front, so once the limit is hit no further level
+		// does any more work, regardless of how deeply nested the remainder
+		// of the structure is.
+		return true, nil
+	}
 	arrayLen := 0
 	var iterationError error
-	if maxRecursion == 0 {
+	iterationTruncated := false
+	if maxRecursion <= 0 {
 		// We reached the limit of nesting we want to handle. This protects against
 		// DoS attacks using deeply nested JSON structures (e.g., {"a":{"a":{"a":...}}}).
-		return errors.New("max recursion reached while reading json object")
+		return false, errors.New("max recursion reached while reading json object")
 	}
 	json.ForEach(func(key, value gjson.Result) bool {
+		if argumentLimit > 0 && *argCount >= argumentLimit {
+			iterationTruncated = true
+			return false
+		}
 		// Avoid string concatenation to maintain a single buffer for key aggregation.
 		prevParentLength := len(objKey)
 		objKey = append(objKey, '.')
@@ -123,7 +249,9 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[strin
 		switch value.Type {
 		case gjson.JSON:
 			// call recursively with one less item to avoid doing infinite recursion
-			iterationError = readItems(value, objKey, maxRecursion-1, res)
+			var nestedTruncated bool
+			nestedTruncated, iterationError = readItems(value, objKey, maxRecursion-1, argumentLimit, byteBudget, usedBytes, argCount, res)
+			iterationTruncated = iterationTruncated || nestedTruncated
 			if iterationError != nil {
 				return false
 			}
@@ -138,15 +266,40 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, res map[strin
 			val = value.Raw
 		}
 
-		res[string(objKey)] = val
+		// Checked per leaf, not only on entry to readItems: a wide object is
+		// walked entirely inside one ForEach, so a guard at the top of the
+		// function is never re-evaluated while these writes accumulate.
+		if byteBudget > 0 && *usedBytes+len(objKey)+len(val) > byteBudget {
+			iterationTruncated = true
+			objKey = objKey[:prevParentLength]
+			return false
+		}
+
+		k := string(objKey)
+		res[k] = append(res[k], val)
+		*usedBytes += len(objKey) + len(val)
+		*argCount++
 		objKey = objKey[:prevParentLength]
 
 		return true
 	})
 	if arrayLen > 0 {
-		res[string(objKey)] = strconv.Itoa(arrayLen)
+		// This write happens after ForEach has returned, so neither guard
+		// inside the callback covers it. Without the check an entry escapes
+		// the cap for every array level -- 1024 nested arrays in a 2 KB body
+		// yield 1025 arguments -- and, because the flag stayed false, the
+		// deny rule never fires and the request is allowed.
+		if argumentLimit > 0 && *argCount >= argumentLimit {
+			iterationTruncated = true
+		} else {
+			k := string(objKey)
+			lenStr := strconv.Itoa(arrayLen)
+			res[k] = append(res[k], lenStr)
+			*usedBytes += len(objKey) + len(lenStr)
+			*argCount++
+		}
 	}
-	return iterationError
+	return iterationTruncated, iterationError
 }
 
 func init() {

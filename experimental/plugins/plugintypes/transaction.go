@@ -102,6 +102,8 @@ type TransactionVariables interface {
 	MultipartName() collection.Map
 	MatchedVarsNames() collection.Keyed
 	MultipartFilename() collection.Map
+	MultipartFilenameCharset() collection.Map
+	MultipartFilenameLanguage() collection.Map
 	MatchedVars() collection.Map
 	FilesSizes() collection.Map
 	FilesNames() collection.Map
@@ -116,4 +118,13 @@ type TransactionVariables interface {
 	ArgsGetNames() collection.Keyed
 	ArgsPostNames() collection.Keyed
 	MultipartStrictError() collection.Single
+
+	// MultipartDuplicatePartHeader is 1 when a multipart part repeated a part header or a
+	// Content-Disposition parameter
+	MultipartDuplicatePartHeader() collection.Single
+
+	// MultipartInvalidQuoting is 1 when a multipart part's "filename*" Content-Disposition
+	// parameter was quoted, which RFC 5987 does not permit
+	MultipartInvalidQuoting() collection.Single
+	ArgumentsLimitReached() collection.Single
 }

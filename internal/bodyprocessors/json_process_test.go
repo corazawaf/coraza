@@ -17,7 +17,8 @@ import (
 // jsonRecursionLimit is a generous nesting limit used by tests that are not
 // specifically exercising the recursion guard. A limit of 0 (the zero value of
 // BodyProcessorOptions) would trip the guard immediately, so a real limit is
-// required, mirroring how the WAF populates it from RequestBodyJsonDepthLimit.
+// required, mirroring how the WAF populates it from RequestBodyJsonDepthLimit
+// and ResponseBodyJsonDepthLimit.
 const jsonRecursionLimit = 3
 
 func jsonProcessor(t *testing.T) plugintypes.BodyProcessor {
@@ -64,6 +65,36 @@ func TestJSONProcessRequestPopulatesArgsPost(t *testing.T) {
 		}
 		if got[0] != expected {
 			t.Errorf("ARGS_POST key %q: want %q, got %q", key, expected, got[0])
+		}
+	}
+}
+
+// TestJSONProcessRequestDottedKeyDoesNotHideNestedValue is the ARGS_POST-level
+// regression for GHSA-5gj4-9gm7-2fx2: a literal dot in a property name used to
+// flatten to the same key as a nested path, so a later, harmless top-level
+// property silently overwrote an earlier, attacker-controlled nested value in
+// the collection every rule inspects -- while a standard JSON parser still
+// exposed both properties to the backend. Both values must now be present
+// under the same ARGS_POST key.
+func TestJSONProcessRequestDottedKeyDoesNotHideNestedValue(t *testing.T) {
+	bp := jsonProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+
+	body := `{"account":{"role":"1' OR '1'='1"},"account.role":"safe"}`
+	if err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
+		RequestBodyRecursionLimit: jsonRecursionLimit,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := v.ArgsPost().Get("json.account.role")
+	want := []string{"1' OR '1'='1", "safe"}
+	if len(got) != len(want) {
+		t.Fatalf("ARGS_POST json.account.role = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("ARGS_POST json.account.role[%d] = %q, want %q", i, got[i], want[i])
 		}
 	}
 }
@@ -164,7 +195,9 @@ func TestJSONProcessResponsePopulatesResponseArgs(t *testing.T) {
 	v := corazawaf.NewTransactionVariables()
 
 	body := `{"a": 1, "b": "two", "c": [10, 20]}`
-	if err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{}); err != nil {
+	if err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
+		ResponseBodyRecursionLimit: jsonRecursionLimit,
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -193,7 +226,9 @@ func TestJSONProcessResponseStoresRawBodyInTX(t *testing.T) {
 	v := corazawaf.NewTransactionVariables()
 
 	body := `{"user": "coraza"}`
-	if err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{}); err != nil {
+	if err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
+		ResponseBodyRecursionLimit: jsonRecursionLimit,
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -222,7 +257,9 @@ func TestJSONProcessResponseBestEffortOnInvalidJSON(t *testing.T) {
 	// Valid prefix followed by garbage: the collection should still be
 	// populated on a best-effort basis even though an error is returned.
 	body := `{"a": 1} trailing garbage`
-	err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{})
+	err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
+		ResponseBodyRecursionLimit: jsonRecursionLimit,
+	})
 	if err == nil {
 		t.Fatal("expected an error for invalid JSON, got nil")
 	}
@@ -231,18 +268,23 @@ func TestJSONProcessResponseBestEffortOnInvalidJSON(t *testing.T) {
 	}
 }
 
-func TestJSONProcessResponseIgnoresRecursionLimit(t *testing.T) {
+func TestJSONProcessResponseRecursionLimit(t *testing.T) {
 	bp := jsonProcessor(t)
 	v := corazawaf.NewTransactionVariables()
 
-	// ProcessResponse uses no recursion limit (there is no directive for the
-	// response body), so deeply nested JSON must be accepted even when the
-	// options carry a small limit that would trip ProcessRequest.
-	body := strings.Repeat(`{"a":`, 10) + "1" + strings.Repeat(`}`, 10)
-	if err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-		RequestBodyRecursionLimit: 3,
-	}); err != nil {
-		t.Fatalf("expected deeply nested response body to be accepted, got %v", err)
+	// Nesting deeper than the configured limit must be rejected. Regression
+	// test for GHSA-3c6w-j9xm-8h2h: ProcessResponse used to ignore any
+	// recursion limit (there was no directive for the response body), so a
+	// deeply nested response body was processed in full regardless of depth.
+	body := strings.Repeat(`{"a":`, 5) + "1" + strings.Repeat(`}`, 5)
+	err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
+		ResponseBodyRecursionLimit: 3,
+	})
+	if err == nil {
+		t.Fatal("expected a recursion limit error, got nil")
+	}
+	if !strings.Contains(err.Error(), "max recursion reached") {
+		t.Errorf("expected max recursion error, got %v", err)
 	}
 }
 
@@ -263,7 +305,9 @@ func TestJSONProcessResponseEmptyObject(t *testing.T) {
 	bp := jsonProcessor(t)
 	v := corazawaf.NewTransactionVariables()
 
-	if err := bp.ProcessResponse(strings.NewReader(`{}`), v, plugintypes.BodyProcessorOptions{}); err != nil {
+	if err := bp.ProcessResponse(strings.NewReader(`{}`), v, plugintypes.BodyProcessorOptions{
+		ResponseBodyRecursionLimit: jsonRecursionLimit,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if got := v.TX().Get("json_response_body"); len(got) != 1 || got[0] != `{}` {

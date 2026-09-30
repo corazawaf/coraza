@@ -138,6 +138,12 @@ const (
 	FilesTmpContent = variables.FilesTmpContent
 	// MultipartFilename contains the multipart data from field FILENAME
 	MultipartFilename = variables.MultipartFilename
+	// MultipartFilenameCharset contains the RFC 5987 charset declared by a
+	// multipart part's filename* parameter, if any.
+	MultipartFilenameCharset = variables.MultipartFilenameCharset
+	// MultipartFilenameLanguage contains the RFC 5987 language tag declared
+	// by a multipart part's filename* parameter, if any.
+	MultipartFilenameLanguage = variables.MultipartFilenameLanguage
 	// MultipartName contains the multipart data from field NAME.
 	MultipartName = variables.MultipartName
 	// MatchedVarsNames is similar to MATCHED_VAR_NAME except that it is
@@ -201,6 +207,12 @@ const (
 	ResBodyProcessorErrorMsg = variables.ResBodyProcessorErrorMsg
 	// MultipartStrictError will be set to 1 when there is an error parsing multipart
 	MultipartStrictError = variables.MultipartStrictError
+	// MultipartDuplicatePartHeader will be set to 1 when a multipart part repeats a part
+	// header, or repeats a parameter inside its Content-Disposition header
+	MultipartDuplicatePartHeader = variables.MultipartDuplicatePartHeader
+	// MultipartInvalidQuoting will be set to 1 when a multipart part's "filename*"
+	// Content-Disposition parameter was quoted, which RFC 5987 does not permit
+	MultipartInvalidQuoting = variables.MultipartInvalidQuoting
 	// Time holds a formatted string representing the time (hour:minute:second).
 	Time = variables.Time
 	// TimeDay holds the current day of the month (1-31)
@@ -219,6 +231,10 @@ const (
 	TimeWday = variables.TimeWday
 	// TimeYear the current four-digit year value
 	TimeYear = variables.TimeYear
+	// URIParseError is set to 1 when the request URI could not be parsed
+	URIParseError = variables.URIParseError
+	// ArgumentsLimitReached is set to 1 when arguments were dropped due to SecArgumentsLimit
+	ArgumentsLimitReached = variables.ArgumentsLimitReached
 )
 
 // Parse returns the byte interpretation

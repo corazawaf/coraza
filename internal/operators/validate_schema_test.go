@@ -437,7 +437,12 @@ func (m *mockTransaction) MatchedVars() collection.Map                     { ret
 func (m *mockTransaction) MatchedVarsNames() collection.Keyed              { return nil }
 func (m *mockTransaction) MultipartName() collection.Map                   { return nil }
 func (m *mockTransaction) MultipartFilename() collection.Map               { return nil }
+func (m *mockTransaction) MultipartFilenameCharset() collection.Map        { return nil }
+func (m *mockTransaction) MultipartFilenameLanguage() collection.Map       { return nil }
 func (m *mockTransaction) MultipartStrictError() collection.Single         { return nil }
+func (m *mockTransaction) MultipartDuplicatePartHeader() collection.Single { return nil }
+func (m *mockTransaction) MultipartInvalidQuoting() collection.Single      { return nil }
+func (m *mockTransaction) ArgumentsLimitReached() collection.Single        { return nil }
 func (m *mockTransaction) HighestSeverity() collection.Single              { return nil }
 func (m *mockTransaction) StatusLine() collection.Single                   { return nil }
 func (m *mockTransaction) ResponseStatus() collection.Single               { return nil }

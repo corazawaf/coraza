@@ -2178,6 +2178,76 @@ func TestAddResponseArgsWithOverlimit(t *testing.T) {
 	}
 }
 
+// TestAddArgsRepeatedKeyOverlimit is a regression test for
+// GHSA-3ww9-vw83-9w5x: checkArgumentLimit used to compare against Len (the
+// number of distinct keys), so many values added under a single repeated key
+// never tripped the limit no matter how many times Add was called. It must
+// now be bounded by TotalValues (every individual value) instead.
+func TestAddArgsRepeatedKeyOverlimit(t *testing.T) {
+	const limit = 5
+	const attempts = 1000
+
+	adders := map[string]func(tx *Transaction, key, value string){
+		"get":      func(tx *Transaction, key, value string) { tx.AddGetRequestArgument(key, value) },
+		"post":     func(tx *Transaction, key, value string) { tx.AddPostRequestArgument(key, value) },
+		"path":     func(tx *Transaction, key, value string) { tx.AddPathRequestArgument(key, value) },
+		"response": func(tx *Transaction, key, value string) { tx.AddResponseArgument(key, value) },
+	}
+
+	for name, add := range adders {
+		t.Run(name, func(t *testing.T) {
+			waf := NewWAF()
+			tx := waf.NewTransaction()
+			tx.WAF.ArgumentLimit = limit
+			for i := 0; i < attempts; i++ {
+				add(tx, "repeated", "samplevalue")
+			}
+
+			var total int
+			switch name {
+			case "get":
+				total = tx.variables.argsGet.TotalValues()
+			case "post":
+				total = tx.variables.argsPost.TotalValues()
+			case "path":
+				total = tx.variables.argsPath.TotalValues()
+			case "response":
+				total = tx.variables.responseArgs.TotalValues()
+			}
+			if total > limit {
+				t.Fatalf("expected at most %d total values under a repeated key, got %d", limit, total)
+			}
+
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
+	}
+}
+
+// TestExtractGetArgumentsRepeatedKeyOverlimit confirms ExtractGetArguments
+// (the query-string entry point, as opposed to calling AddGetRequestArgument
+// directly) is bounded the same way, and sets ARGUMENTS_LIMIT_REACHED.
+func TestExtractGetArgumentsRepeatedKeyOverlimit(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.WAF.ArgumentLimit = 5
+
+	uri := "/x?" + strings.TrimSuffix(strings.Repeat("a=1&", 1000), "&")
+	tx.ExtractGetArguments(uri)
+
+	if got := tx.variables.argsGet.TotalValues(); got > 5 {
+		t.Fatalf("expected at most 5 total ARGS_GET values, got %d", got)
+	}
+	if tx.variables.argumentsLimitReached.Get() != "1" {
+		t.Error("expected ARGUMENTS_LIMIT_REACHED to be set")
+	}
+
+	if err := tx.Close(); err != nil {
+		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
 func TestResponseBodyForceProcessing(t *testing.T) {
 	waf := NewWAF()
 	waf.ResponseBodyAccess = true
@@ -2413,10 +2483,11 @@ func TestRequestFilename(t *testing.T) {
 			uri:      "///foo/bar",
 			expected: "///foo/bar",
 		},
-		{ // This is a bug. This test should be adapted when the issue is fixed.
+		{ // url.ParseRequestURI fails on invalid percent-encoding; the "?" fallback
+			// split still recovers the path/query boundary. See GHSA-x26q-wvhg-fh4m.
 			name:     "invalid encoding",
 			uri:      "/foo%zz?a=b",
-			expected: "/foo%zz?a=b",
+			expected: "/foo%zz",
 		},
 		{
 			name:     "valid encoding",
@@ -2444,6 +2515,29 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+// GHSA-x26q-wvhg-fh4m: a URI containing raw control bytes (e.g. a NUL, as a
+// non-net/http integration like coraza-spoa or coraza-proxy-wasm might forward)
+// fails url.ParseRequestURI, and previously left QUERY_STRING/ARGS_GET empty,
+// silently dropping the entire attack payload from GET-side rule matching.
+func TestProcessURIFallbackOnParseError(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.ProcessURI("/search?q=ATTACK_HERE_XYZ\x00&y=1", http.MethodGet, "HTTP/1.1")
+
+	if got := tx.variables.uriParseError.Get(); got != "1" {
+		t.Errorf("Expected URI_PARSE_ERROR to be \"1\", got %q", got)
+	}
+	if got := tx.variables.queryString.Get(); got != "q=ATTACK_HERE_XYZ\x00&y=1" {
+		t.Errorf("Expected QUERY_STRING to be recovered from the raw URI, got %q", got)
+	}
+	if got := tx.variables.argsGet.Get("q"); len(got) == 0 || got[0] != "ATTACK_HERE_XYZ\x00" {
+		t.Errorf("Expected ARGS_GET q to be populated on best effort, got %v", got)
+	}
+	if got := tx.variables.requestURIRaw.Get(); got != "/search?q=ATTACK_HERE_XYZ\x00&y=1" {
+		t.Errorf("Expected REQUEST_URI_RAW to hold the untouched URI, got %q", got)
 	}
 }
 
