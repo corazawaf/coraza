@@ -149,7 +149,12 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]s
 	// under the same flattened key, so counting distinct keys would let
 	// SecArgumentsLimit undercount and admit more values than configured.
 	argCount := 0
-	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, res)
+	// lenCount tracks the synthetic array-length entries separately, so an
+	// array of exactly argumentLimit elements is not truncated by its own
+	// length entry. It has the same cap, so the flattened map holds at most
+	// 2*argumentLimit entries.
+	lenCount := 0
+	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, &lenCount, res)
 	if errors.Is(err, errFlattenBudget) {
 		return res, truncated, fmt.Errorf("flattened form exceeds the %d byte budget for a %d byte body", byteBudget, len(s))
 	}
@@ -230,7 +235,7 @@ func jsonNestingExceedsLimit(s string, limit int) bool {
 // Java class names used in deserialization attacks) as a substring of the
 // generated key, and escaping would break that detection for the common,
 // non-colliding case.
-func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, res map[string][]string) (truncated bool, err error) {
+func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, lenCount *int, res map[string][]string) (truncated bool, err error) {
 	if argumentLimit > 0 && *argCount >= argumentLimit {
 		// Already at the configured SecArgumentsLimit: every recursive call
 		// rechecks this up front, so once the limit is hit no further level
@@ -266,7 +271,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 		case gjson.JSON:
 			// call recursively with one less item to avoid doing infinite recursion
 			var nestedTruncated bool
-			nestedTruncated, iterationError = readItems(value, objKey, maxRecursion-1, argumentLimit, byteBudget, usedBytes, argCount, res)
+			nestedTruncated, iterationError = readItems(value, objKey, maxRecursion-1, argumentLimit, byteBudget, usedBytes, argCount, lenCount, res)
 			iterationTruncated = iterationTruncated || nestedTruncated
 			if iterationError != nil {
 				return false
@@ -301,10 +306,16 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 	})
 	if arrayLen > 0 && iterationError == nil {
 		// This write happens after ForEach has returned, so neither guard
-		// inside the callback covers it. It needs both: argumentLimit, since
+		// inside the callback covers it. It needs both: a count cap, since
 		// every array level adds an entry, and byteBudget, since each of those
 		// entries repeats the full path. See GHSA-6r3q-mjv7-xr8m.
-		if argumentLimit > 0 && *argCount >= argumentLimit {
+		//
+		// The cap is lenCount, not argCount: length entries are not arguments
+		// the client sent, so they must not use up SecArgumentsLimit. Running
+		// out of them still sets truncated, or a body padded with [{}] could
+		// silently hide the length of a later array from rules such as
+		// ARGS_POST:json.items "@gt 100".
+		if argumentLimit > 0 && *lenCount >= argumentLimit {
 			iterationTruncated = true
 		} else {
 			lenStr := strconv.Itoa(arrayLen)
@@ -314,7 +325,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 				k := string(objKey)
 				res[k] = append(res[k], lenStr)
 				*usedBytes += len(objKey) + len(lenStr)
-				*argCount++
+				*lenCount++
 			}
 		}
 	}
