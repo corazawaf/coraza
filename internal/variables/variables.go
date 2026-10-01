@@ -403,26 +403,25 @@ const (
 	// **Note:** This variable is currently NOT implemented by Coraza
 	FilesTmpContent // CanBeSelected
 	// Description: Contains the filename submitted for a multipart file upload part,
-	// keyed by the part's field name. When the part's Content-Disposition header carries
-	// an RFC 5987 extended "filename*" parameter, its (percent-decoded) value takes
-	// precedence over the plain "filename" parameter, per RFC 7578 section 4.2.
+	// keyed by the part's field name. When a part carries both an RFC 5987 "filename*"
+	// (percent-decoded) and a plain "filename" with different values, both are added,
+	// since backends disagree on which one wins.
 	// ---
 	// ```seclang
 	// SecRule MULTIPART_FILENAME:upfile "@rx \.(?:php|jsp|exe)$" "id:198"
 	// ```
 	MultipartFilename // CanBeSelected
-	// Description: This variable contains the multipart data from field NAME.
-	//
-	// **Note:** This variable is currently NOT implemented by Coraza
+	// Description: Contains the field name of each multipart part, keyed by that name.
 	MultipartName // CanBeSelected
 	// Description: Contains the RFC 5987 charset declared by a multipart part's
 	// Content-Disposition "filename*" parameter, keyed by the part's field name.
-	// Empty when the part has no "filename*" parameter. The charset is exposed
+	// Absent when the part has no "filename*" parameter. The charset is exposed
 	// as-is, without validation against the RFC 5987 grammar or the IANA charset
-	// registry -- use an operator such as @within to enforce an allowlist.
+	// registry, and may be empty: enforce an allowlist with an anchored @rx, since
+	// !@within never matches an empty value.
 	// ---
 	// ```seclang
-	// SecRule MULTIPART_FILENAME_CHARSET:upfile "!@within utf-8,iso-8859-1,us-ascii" "id:199"
+	// SecRule MULTIPART_FILENAME_CHARSET "!@rx ^(?:utf-8|iso-8859-1|us-ascii)$" "id:199,t:lowercase"
 	// ```
 	MultipartFilenameCharset // CanBeSelected
 	// Description: Contains the RFC 5987 language tag declared by a multipart part's
