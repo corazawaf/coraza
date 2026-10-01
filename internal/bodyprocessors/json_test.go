@@ -590,9 +590,11 @@ func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 		wantValues    int // total values in the result; 0 skips the check
 	}{
 		{
+			// One real value plus the limit length entries the cap admits.
 			name:          "deeply nested arrays",
 			body:          strings.Repeat("[", 20) + "1" + strings.Repeat("]", 20),
 			wantTruncated: true,
+			wantValues:    limit + 1,
 		},
 		{
 			// The length entry must not count toward the limit: an array of
@@ -603,12 +605,23 @@ func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 			wantValues:    limit + 1,
 		},
 		{
+			// The walk stops after limit elements, so the length it counted is
+			// not the array's length and must not be written.
+			name:          "array longer than the limit",
+			body:          "[" + strings.Repeat("1,", limit) + "1]",
+			wantTruncated: true,
+			wantValues:    limit,
+		},
+		{
 			// Padding with arrays that carry no values exhausts the length
 			// entries. The length of the real array is then dropped, and that
 			// must still set truncated rather than hide it from rules.
+			// Expect exactly limit length entries, all from the padding,
+			// plus the 3 real values.
 			name:          "length entries padded by empty-object arrays",
 			body:          padded.String(),
 			wantTruncated: true,
+			wantValues:    limit + 3,
 		},
 	}
 

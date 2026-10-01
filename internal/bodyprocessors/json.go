@@ -99,12 +99,6 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	return nil
 }
 
-// readJSON flattens s into a map[string][]string, stopping once argumentLimit
-// entries have been collected (argumentLimit <= 0 means no limit). Without
-// this, a small body decoding to a wide flat structure (e.g. a JSON array of
-// millions of scalars) grows this map -- and, through it, ARGS_POST/
-// RESPONSE_ARGS -- without bound regardless of SecArgumentsLimit, exhausting
-// memory on a single request. See GHSA-3ww9-vw83-9w5x.
 // flattenBytesFactor bounds the flattened form relative to the body that
 // produced it. SecArgumentsLimit counts entries, not bytes, and the flattened
 // key is the full path rewritten for every leaf, so memory grows with
@@ -125,8 +119,17 @@ const flattenBytesFloor = 4096
 // errFlattenBudget stops the walk once the flattened form outgrows its budget.
 var errFlattenBudget = errors.New("flattened json exceeds its byte budget")
 
-// truncated only reports argumentLimit. Outgrowing the byte budget is an
-// error, since raising SecArgumentsLimit does not help with it.
+// readJSON flattens s into a map[string][]string, stopping once argumentLimit
+// values have been collected (argumentLimit <= 0 means no limit). Without
+// this, a small body decoding to a wide flat structure (e.g. a JSON array of
+// millions of scalars) grows this map -- and, through it, ARGS_POST/
+// RESPONSE_ARGS -- without bound regardless of SecArgumentsLimit, exhausting
+// memory on a single request. See GHSA-3ww9-vw83-9w5x.
+//
+// Array-length entries are capped separately at argumentLimit, so the map
+// holds at most 2*argumentLimit entries. truncated only reports these two
+// caps. Outgrowing the byte budget is an error, since raising
+// SecArgumentsLimit does not help with it.
 func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]string, truncated bool, err error) {
 	res = make(map[string][]string)
 	key := []byte("json")
@@ -304,7 +307,12 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 
 		return true
 	})
-	if arrayLen > 0 && iterationError == nil {
+	// A truncated or failed walk stopped before the end of this array (or of
+	// something inside it), so arrayLen may be short of the real length.
+	// Writing it would show rules a believable but wrong value; leave it out,
+	// as truncated or the error already reports that the body was not fully
+	// read.
+	if arrayLen > 0 && !iterationTruncated && iterationError == nil {
 		// This write happens after ForEach has returned, so neither guard
 		// inside the callback covers it. It needs both: a count cap, since
 		// every array level adds an entry, and byteBudget, since each of those
