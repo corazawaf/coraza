@@ -570,8 +570,9 @@ func BenchmarkReadJSONArgumentLimit(b *testing.B) {
 // nested arrays in a 2 KB body produced 1025 arguments and the deny rule that
 // depends on the flag never fired.
 func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
-	const limit = 1000
-	depth := 1024
+	// Small enough to stay under the byte budget.
+	const limit = 5
+	depth := 20
 	body := strings.Repeat("[", depth) + "1" + strings.Repeat("]", depth)
 
 	res, truncated, err := readJSON(body, 10000, limit)
@@ -589,7 +590,7 @@ func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 // TestReadJSONBoundsFlattenedBytes covers memory growth that the argument
 // count cannot see. Keys carry the full path and are rewritten per leaf, so a
 // body of long paths stays under the argument limit while retaining many times
-// its own size.
+// its own size. Outgrowing the budget is an error, not a truncation.
 func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 	const limit = 1000
 
@@ -627,8 +628,8 @@ func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, truncated, err := readJSON(tt.body, 10000, limit)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			if err == nil || !strings.Contains(err.Error(), "flattened form exceeds") {
+				t.Fatalf("expected the byte budget error, got %v", err)
 			}
 			stored := 0
 			for k, values := range res {
@@ -638,12 +639,18 @@ func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 				}
 			}
 			budget := len(tt.body) * flattenBytesFactor
+			if budget < flattenBytesFloor {
+				budget = flattenBytesFloor
+			}
 			if stored > budget {
 				t.Errorf("flattened form retained %d bytes, over the %d byte budget for a %d byte body",
 					stored, budget, len(tt.body))
 			}
-			if !truncated {
-				t.Error("truncated must be set when the byte budget stops the walk")
+			if truncated {
+				t.Error("truncated is reserved for the argument limit, the byte budget must not set it")
+			}
+			if len(res) == 0 {
+				t.Error("expected the values flattened before the budget ran out to be kept for inspection")
 			}
 			if len(res) >= limit {
 				t.Errorf("expected the byte budget to stop the walk before the argument limit, got %d arguments", len(res))
