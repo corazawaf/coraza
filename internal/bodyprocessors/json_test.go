@@ -308,7 +308,7 @@ func readJSONNoValidation(s string, maxRecursion int) (map[string][]string, erro
 	json := gjson.Parse(s)
 	res := make(map[string][]string)
 	key := []byte("json")
-	_, err := readItems(json, key, maxRecursion, 0, 0, new(int), new(int), res)
+	_, err := readItems(json, key, maxRecursion, 0, 0, new(int), new(int), new(int), res)
 	return res, err
 }
 
@@ -572,18 +572,73 @@ func BenchmarkReadJSONArgumentLimit(b *testing.B) {
 func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 	// Small enough to stay under the byte budget.
 	const limit = 5
-	depth := 20
-	body := strings.Repeat("[", depth) + "1" + strings.Repeat("]", depth)
 
-	res, truncated, err := readJSON(body, 10000, limit)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	exactArray := "[" + strings.Repeat("1,", limit-1) + "1]"
+
+	var padded strings.Builder
+	padded.WriteString("{")
+	for i := 0; i < limit; i++ {
+		padded.WriteString(`"p` + strconv.Itoa(i) + `":[{}],`)
 	}
-	if len(res) > limit {
-		t.Errorf("argument limit %d exceeded: got %d arguments", limit, len(res))
+	padded.WriteString(`"items":[1,2,3]}`)
+
+	tests := []struct {
+		name          string
+		body          string
+		wantTruncated bool
+		wantValues    int // total values in the result; 0 skips the check
+	}{
+		{
+			// 1 value plus limit length entries.
+			name:          "deeply nested arrays",
+			body:          strings.Repeat("[", 20) + "1" + strings.Repeat("]", 20),
+			wantTruncated: true,
+			wantValues:    limit + 1,
+		},
+		{
+			// The length entry does not count toward the limit.
+			name:          "array of exactly the limit",
+			body:          exactArray,
+			wantTruncated: false,
+			wantValues:    limit + 1,
+		},
+		{
+			// The partial length is not written.
+			name:          "array longer than the limit",
+			body:          "[" + strings.Repeat("1,", limit) + "1]",
+			wantTruncated: true,
+			wantValues:    limit,
+		},
+		{
+			// The padding fills the length cap, so the items length is
+			// dropped and truncated is set.
+			name:          "length entries padded by empty-object arrays",
+			body:          padded.String(),
+			wantTruncated: true,
+			wantValues:    limit + 3,
+		},
 	}
-	if !truncated {
-		t.Error("truncated must be set when the argument limit stops the walk, or the deny rule cannot fire")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, truncated, err := readJSON(tt.body, 10000, limit)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if truncated != tt.wantTruncated {
+				t.Errorf("truncated = %v, want %v", truncated, tt.wantTruncated)
+			}
+			total := 0
+			for _, values := range res {
+				total += len(values)
+			}
+			if total > 2*limit {
+				t.Errorf("got %d values, want at most %d (limit for real values plus limit for length entries)", total, 2*limit)
+			}
+			if tt.wantValues > 0 && total != tt.wantValues {
+				t.Errorf("got %d values, want %d", total, tt.wantValues)
+			}
+		})
 	}
 }
 
