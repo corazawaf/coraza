@@ -126,9 +126,8 @@ var errFlattenBudget = errors.New("flattened json exceeds its byte budget")
 // RESPONSE_ARGS -- without bound regardless of SecArgumentsLimit, exhausting
 // memory on a single request. See GHSA-3ww9-vw83-9w5x.
 //
-// Array-length entries are capped separately at argumentLimit, so the map
-// holds at most 2*argumentLimit entries. truncated only reports these two
-// caps. Outgrowing the byte budget is an error, since raising
+// Array-length entries have their own cap of argumentLimit. truncated reports
+// either cap; outgrowing the byte budget is an error, since raising
 // SecArgumentsLimit does not help with it.
 func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]string, truncated bool, err error) {
 	res = make(map[string][]string)
@@ -152,10 +151,8 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]s
 	// under the same flattened key, so counting distinct keys would let
 	// SecArgumentsLimit undercount and admit more values than configured.
 	argCount := 0
-	// lenCount tracks the synthetic array-length entries separately, so an
-	// array of exactly argumentLimit elements is not truncated by its own
-	// length entry. It has the same cap, so the flattened map holds at most
-	// 2*argumentLimit entries.
+	// lenCount counts array-length entries apart from argCount, so they do
+	// not use up SecArgumentsLimit.
 	lenCount := 0
 	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, &lenCount, res)
 	if errors.Is(err, errFlattenBudget) {
@@ -307,22 +304,14 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 
 		return true
 	})
-	// A truncated or failed walk stopped before the end of this array (or of
-	// something inside it), so arrayLen may be short of the real length.
-	// Writing it would show rules a believable but wrong value; leave it out,
-	// as truncated or the error already reports that the body was not fully
-	// read.
+	// After an early stop arrayLen is short of the real length, so skip it.
 	if arrayLen > 0 && !iterationTruncated && iterationError == nil {
 		// This write happens after ForEach has returned, so neither guard
-		// inside the callback covers it. It needs both: a count cap, since
+		// inside the callback covers it. It needs both: argumentLimit, since
 		// every array level adds an entry, and byteBudget, since each of those
 		// entries repeats the full path. See GHSA-6r3q-mjv7-xr8m.
-		//
-		// The cap is lenCount, not argCount: length entries are not arguments
-		// the client sent, so they must not use up SecArgumentsLimit. Running
-		// out of them still sets truncated, or a body padded with [{}] could
-		// silently hide the length of a later array from rules such as
-		// ARGS_POST:json.items "@gt 100".
+		// Hitting the cap still sets truncated, so [{}] padding cannot hide
+		// a later array's length.
 		if argumentLimit > 0 && *lenCount >= argumentLimit {
 			iterationTruncated = true
 		} else {

@@ -568,8 +568,7 @@ func BenchmarkReadJSONArgumentLimit(b *testing.B) {
 // ForEach returns, outside the guards inside the callback. Every array level
 // added one entry past SecArgumentsLimit and left truncated false, so 1024
 // nested arrays in a 2 KB body produced 1025 arguments and the deny rule that
-// depends on the flag never fired. Length entries have their own cap, so they
-// neither use up the limit for real values nor grow without bound.
+// depends on the flag never fired.
 func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 	// Small enough to stay under the byte budget.
 	const limit = 5
@@ -590,34 +589,29 @@ func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 		wantValues    int // total values in the result; 0 skips the check
 	}{
 		{
-			// One real value plus the limit length entries the cap admits.
+			// 1 value plus limit length entries.
 			name:          "deeply nested arrays",
 			body:          strings.Repeat("[", 20) + "1" + strings.Repeat("]", 20),
 			wantTruncated: true,
 			wantValues:    limit + 1,
 		},
 		{
-			// The length entry must not count toward the limit: an array of
-			// exactly SecArgumentsLimit elements was truncated and denied.
+			// The length entry does not count toward the limit.
 			name:          "array of exactly the limit",
 			body:          exactArray,
 			wantTruncated: false,
 			wantValues:    limit + 1,
 		},
 		{
-			// The walk stops after limit elements, so the length it counted is
-			// not the array's length and must not be written.
+			// The partial length is not written.
 			name:          "array longer than the limit",
 			body:          "[" + strings.Repeat("1,", limit) + "1]",
 			wantTruncated: true,
 			wantValues:    limit,
 		},
 		{
-			// Padding with arrays that carry no values exhausts the length
-			// entries. The length of the real array is then dropped, and that
-			// must still set truncated rather than hide it from rules.
-			// Expect exactly limit length entries, all from the padding,
-			// plus the 3 real values.
+			// The padding fills the length cap, so the items length is
+			// dropped and truncated is set.
 			name:          "length entries padded by empty-object arrays",
 			body:          padded.String(),
 			wantTruncated: true,
