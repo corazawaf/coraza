@@ -5,6 +5,7 @@ package bodyprocessors
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -121,6 +122,11 @@ const flattenBytesFactor = 8
 // legitimately outweigh the input.
 const flattenBytesFloor = 4096
 
+// errFlattenBudget stops the walk once the flattened form outgrows its budget.
+var errFlattenBudget = errors.New("flattened json exceeds its byte budget")
+
+// truncated only reports argumentLimit. Outgrowing the byte budget is an
+// error, since raising SecArgumentsLimit does not help with it.
 func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]string, truncated bool, err error) {
 	res = make(map[string][]string)
 	key := []byte("json")
@@ -144,11 +150,14 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]s
 	// SecArgumentsLimit undercount and admit more values than configured.
 	argCount := 0
 	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, res)
+	if errors.Is(err, errFlattenBudget) {
+		return res, truncated, fmt.Errorf("flattened form exceeds the %d byte budget for a %d byte body", byteBudget, len(s))
+	}
 	if err != nil {
 		return res, truncated, err
 	}
-	// readItems's own recursion guard never fires when argumentLimit or
-	// byteBudget truncates the walk before it reaches a deeply nested tail:
+	// readItems's own recursion guard never fires when argumentLimit
+	// truncates the walk before it reaches a deeply nested tail:
 	// the ForEach loop stops (truncated=true, err=nil) without ever
 	// recursing into that tail, so maxRecursion is never checked against it.
 	// gjson.Valid recurses with no depth bound at all (validany ->
@@ -222,10 +231,6 @@ func jsonNestingExceedsLimit(s string, limit int) bool {
 // generated key, and escaping would break that detection for the common,
 // non-colliding case.
 func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, res map[string][]string) (truncated bool, err error) {
-	if byteBudget > 0 && *usedBytes >= byteBudget {
-		// The flattened form has outgrown its budget; see flattenBytesFactor.
-		return true, nil
-	}
 	if argumentLimit > 0 && *argCount >= argumentLimit {
 		// Already at the configured SecArgumentsLimit: every recursive call
 		// rechecks this up front, so once the limit is hit no further level
@@ -281,8 +286,8 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 		// walked entirely inside one ForEach, so a guard at the top of the
 		// function is never re-evaluated while these writes accumulate.
 		if byteBudget > 0 && *usedBytes+len(objKey)+len(val) > byteBudget {
-			iterationTruncated = true
-			objKey = objKey[:prevParentLength]
+			// The flattened form has outgrown its budget; see flattenBytesFactor.
+			iterationError = errFlattenBudget
 			return false
 		}
 
@@ -294,7 +299,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 
 		return true
 	})
-	if arrayLen > 0 {
+	if arrayLen > 0 && iterationError == nil {
 		// This write happens after ForEach has returned, so neither guard
 		// inside the callback covers it. It needs both: argumentLimit, since
 		// every array level adds an entry, and byteBudget, since each of those
@@ -304,7 +309,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 		} else {
 			lenStr := strconv.Itoa(arrayLen)
 			if byteBudget > 0 && *usedBytes+len(objKey)+len(lenStr) > byteBudget {
-				iterationTruncated = true
+				iterationError = errFlattenBudget
 			} else {
 				k := string(objKey)
 				res[k] = append(res[k], lenStr)
