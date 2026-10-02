@@ -666,8 +666,9 @@ would have to ask "why this way?", write one.
    written alongside the change, the marker sentence is the normal case; update it
    with real quotes if review produces substantive discussion. An ADR written
    alongside embargoed security work may instead permalink into the matching
-   private advisory fork (see [Security](#security)); repoint it at the public
-   repository once the advisory publishes.
+   private advisory fork (see [Security](#security)). Publishing the advisory
+   deletes the fork, so repoint those quotes at the published advisory
+   (`https://github.com/corazawaf/coraza/security/advisories/GHSA-...`) then.
 5. Add a row to the index table in `docs/adr/README.md`.
 6. Run `go run mage.go adr`. CI runs the same check on any PR touching `docs/adr/`.
 
@@ -790,9 +791,10 @@ honestly: the checklist is a contract, not decoration.
 - An ADR required by that fix (see [Architecture Decision Records](#architecture-decision-records))
   is drafted on the same branch and may quote review discussion from the private
   advisory fork; `go run mage.go adr` accepts a permalink into that fork's own
-  repository (named `<repo>-ghsa-xxxx-xxxx-xxxx`) for exactly this case. Update
-  the quote and the `PR` field to point at the public repository once the
-  advisory publishes and the fix lands there.
+  repository (named `<repo>-ghsa-xxxx-xxxx-xxxx`) for exactly this case.
+  Publishing the advisory deletes the fork, so once it publishes, point the
+  quotes and the `PR` field at the published advisory, and cite the fix's merge
+  commit in `## References`.
 
 ### Secure coding
 

@@ -27,8 +27,9 @@ var (
 	// advisory fork instead (named "coraza-ghsa-xxxx-xxxx-xxxx", see
 	// SECURITY.md / AGENTS.md); that repo is real and reviewer-accessible,
 	// just not this one, so it is accepted under its own name rather than
-	// forcing a quote to wait until the advisory publishes.
-	adrPermalink    = regexp.MustCompile(`^https://github\.com/corazawaf/(?:coraza|coraza-ghsa-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4})/(?:pull|issues)/\d+#(?:discussion_r|issuecomment-)\d+$`)
+	// forcing a quote to wait until the advisory publishes. Publishing deletes
+	// the fork, so a quote from it then links to the published advisory.
+	adrPermalink    = regexp.MustCompile(`^https://github\.com/corazawaf/(?:(?:coraza|coraza-ghsa-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4})/(?:pull|issues)/\d+#(?:discussion_r|issuecomment-)\d+|coraza/security/advisories/GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4})$`)
 	adrIndexRowRe   = regexp.MustCompile(`(?m)^\| *\[?(?:ADR-)?(\d{4})[\]|(]`)
 	adrSupersededRe = regexp.MustCompile(`^superseded by ADR-\d{4}$`)
 	// A bare category, or one followed by a single parenthetical qualifier
@@ -153,7 +154,7 @@ func checkADR(name, num, body string) []string {
 
 	for _, q := range adrQuoteRe.FindAllStringSubmatch(body, -1) {
 		if !adrPermalink.MatchString(q[1]) {
-			bad("quote attribution links to %q, want a corazawaf/coraza (or corazawaf/coraza-ghsa-xxxx-xxxx-xxxx advisory fork) comment permalink", q[1])
+			bad("quote attribution links to %q, want a corazawaf/coraza (or corazawaf/coraza-ghsa-xxxx-xxxx-xxxx advisory fork) comment permalink, or a published corazawaf/coraza advisory", q[1])
 		}
 	}
 	return out

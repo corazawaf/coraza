@@ -1,12 +1,10 @@
 # ADR-0059: `SecResponseBodyJsonDepthLimit` directive
 
-- **Status:** proposed
-- **Date:** 2026-09-26 (expected; update before merge)
-- **Version:** unreleased (post-v3.7.0)
-- **PR:** GHSA-3c6w-j9xm-8h2h fix — developed on the advisory's private fork;
-  no public PR exists yet (see [Security](../../AGENTS.md#security))
-- **Issue(s):** No linked issue — reported through the private security
-  advisory GHSA-3c6w-j9xm-8h2h
+- **Status:** accepted
+- **Date:** 2026-09-29
+- **Version:** v3.8.0
+- **PR:** [GHSA-3c6w-j9xm-8h2h](https://github.com/corazawaf/coraza/security/advisories/GHSA-3c6w-j9xm-8h2h) (fixed on the advisory's private fork, which GitHub deleted on publication; merge commit [cae3c740](https://github.com/corazawaf/coraza/commit/cae3c7407e7b84372c207033de03f15f89bf351a))
+- **Issue(s):** No linked issue (security advisory [GHSA-3c6w-j9xm-8h2h](https://github.com/corazawaf/coraza/security/advisories/GHSA-3c6w-j9xm-8h2h))
 - **Deciders:** @fzipi
 - **Category:** Feature
 
@@ -87,5 +85,6 @@ side:
 
 ## References
 
-- Advisory: GHSA-3c6w-j9xm-8h2h (private at the time of writing)
+- Advisory: https://github.com/corazawaf/coraza/security/advisories/GHSA-3c6w-j9xm-8h2h
+- Fix merge commit: https://github.com/corazawaf/coraza/commit/cae3c7407e7b84372c207033de03f15f89bf351a
 - Related ADRs: ADR-0030 (`SecRequestBodyJsonDepthLimit`)
