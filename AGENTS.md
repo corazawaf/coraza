@@ -732,6 +732,44 @@ honestly: the checklist is a contract, not decoration.
 - A valid report needs a **working proof of concept**, affected versions and a
   concrete impact. `SECURITY.md` explains that speculative, theoretical or
   AI-generated reports without a reproducer are closed as invalid.
+- **CVSS preconditions get verified, not copied from the report.** A submitted
+  CVSS vector reflects what the reporter wants the score to be, not necessarily
+  what the vulnerability requires. Before accepting a suggested score, or when
+  drafting one, check what exploitation actually depends on:
+  - If it fires from attacker-supplied input alone, on any deployment, Attack
+    Complexity is Low.
+  - If it depends on something genuinely outside the attacker's control — a
+    specific backend behavior (e.g. an application echoing input back into a
+    response), or another vulnerability that must itself be reliably reached
+    and triggered as part of the chain — Attack Complexity is High, and the
+    advisory should say what that precondition is. Both CVSS v3.1 and v4.0 say
+    explicitly that a required configuration is scored as if the vulnerable
+    component is already in that configuration, unless it deliberately
+    weakens security or conflicts with vendor guidance; a non-default
+    configuration is not by itself grounds for Attack Complexity: High (v3.1)
+    or Attack Requirements: Present (v4.0) — neither metric is about the
+    system's own configuration. What each metric covers differs by version:
+    v3.1's Attack Complexity covers conditions beyond the attacker's control
+    that make exploitation itself harder (gathering target-specific
+    information, winning a race condition). v4.0 splits that in two instead:
+    Attack Complexity narrows to built-in protections the attacker must evade
+    or circumvent (e.g. defeating ASLR), while Attack Requirements covers
+    deployment/execution conditions that arise naturally from how the system
+    runs (a race condition, an on-path network position) — not a
+    configuration choice. A chained-in bug only pushes Attack Complexity to
+    High if the chain itself is uncertain or effortful to execute, not merely
+    because more than one bug is involved.
+  - If the PoC only reproduces on one narrow, specific environment — one exact
+    pinned patch version of an unrelated language runtime or framework (e.g.
+    "only on Python 3.9.14", or one particular Django app's routing) — that is
+    evidence about that one combination, not about the affected code path in
+    general. Check whether it reproduces on a representative setup before
+    accepting the report's claimed affected-version range as-is; narrow it if
+    it does not.
+  Recompute and correct the vector during triage regardless of what the report
+  proposed; note the reasoning as an advisory comment, or, if advisory
+  comments aren't reachable through the API for that repository, as a PR
+  comment or in the fix PR's description.
 - **A coding agent may draft or submit an advisory through the link above only
   with a human maintainer/contributor in the loop.** If you find something that
   looks exploitable while working, stop, describe it privately to the maintainer
