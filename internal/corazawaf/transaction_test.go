@@ -1391,6 +1391,9 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 // on one request, which testing/profile's StageInput.Headers
 // (map[string]string) cannot express, so it cannot be a profile.
 //
+// It is also the home for how a single Content-Type value selects the
+// processor: leading Unicode whitespace is trimmed as mime.ParseMediaType does.
+//
 // Only the first Content-Type header may select the body processor, matching
 // ProcessRequestBody's mimeType and a typical backend's Header.Get. Otherwise
 // e.g. a genuine multipart body gets the URLENCODED processor, which parses
@@ -1406,6 +1409,13 @@ func TestDuplicateContentTypeHeaderUsesFirstForBodyProcessorSelection(t *testing
 		{"urlencoded then multipart", []string{"application/x-www-form-urlencoded", "multipart/form-data; boundary=XyZ"}, "URLENCODED"},
 		{"unrecognized then multipart", []string{"text/plain", "multipart/form-data; boundary=XyZ"}, ""},
 		{"json then urlencoded", []string{"application/json", "application/x-www-form-urlencoded"}, ""},
+		// mime.ParseMediaType (and so the backend) trims Unicode whitespace
+		// around the media type; selection must too.
+		{"U+0085 before urlencoded", []string{"\u0085application/x-www-form-urlencoded"}, "URLENCODED"},
+		{"U+00A0 before urlencoded", []string{"\u00a0application/x-www-form-urlencoded"}, "URLENCODED"},
+		{"U+3000 before multipart", []string{"\u3000multipart/form-data; boundary=XyZ"}, "MULTIPART"},
+		{"tab before multipart", []string{"\tmultipart/form-data; boundary=XyZ"}, "MULTIPART"},
+		{"non-space prefix before urlencoded", []string{"xapplication/x-www-form-urlencoded"}, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
