@@ -1,9 +1,9 @@
 # ADR-0060: Iterative depth pre-scan before `gjson.Valid` in the JSON body processor
 
-- **Status:** proposed
-- **Date:** 2026-09-30 (expected; update before merge)
-- **Version:** unreleased (post-v3.8.0)
-- **PR:** [#1](https://github.com/corazawaf/coraza-ghsa-6gcq-wc29-5xf2/pull/1) (private advisory fork; update to the public PR once GHSA-6gcq-wc29-5xf2 is published)
+- **Status:** accepted
+- **Date:** 2026-09-30
+- **Version:** v3.8.1
+- **PR:** [GHSA-6gcq-wc29-5xf2](https://github.com/corazawaf/coraza/security/advisories/GHSA-6gcq-wc29-5xf2) (fixed on the advisory's private fork, which GitHub deleted on publication; merge commit [814e1898](https://github.com/corazawaf/coraza/commit/814e1898e083d2ff2ceb644382d0da17e930f93f))
 - **Issue(s):** No linked issue (security advisory [GHSA-6gcq-wc29-5xf2](https://github.com/corazawaf/coraza/security/advisories/GHSA-6gcq-wc29-5xf2))
 - **Deciders:** @fzipi
 - **Category:** Parity (security fix)
@@ -129,7 +129,7 @@ before submission.
 ## References
 
 - Advisory: https://github.com/corazawaf/coraza/security/advisories/GHSA-6gcq-wc29-5xf2
-- Advisory PR (private fork): https://github.com/corazawaf/coraza-ghsa-6gcq-wc29-5xf2/pull/1
+- Fix merge commit: https://github.com/corazawaf/coraza/commit/814e1898e083d2ff2ceb644382d0da17e930f93f
 - Related ADRs: ADR-0058 (JSON flattened-key collision, same file), ADR-0059
   (`SecResponseBodyJsonDepthLimit`, the recursion-limit directive this fix
   bounds `gjson.Valid` against)
