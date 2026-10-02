@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-09-29
-- **Version:** v3.8.0
+- **Version:** v3.8.0 (RFC 2231 continuation follow-up in v3.8.1)
 - **PR:** [GHSA-3wr7-993q-jrff](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff) (fixed on the advisory's private fork, which GitHub deleted on publication; merge commit [5427c501](https://github.com/corazawaf/coraza/commit/5427c501b2fea6ae1305903efef01b3049224a58))
 - **Issue(s):** No linked issue (security advisory [GHSA-3wr7-993q-jrff](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff))
 - **Deciders:** @fzipi, @jptosso
