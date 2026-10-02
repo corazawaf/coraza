@@ -704,6 +704,20 @@ func TestMultipartFilenameStar(t *testing.T) {
 			wantIsFile:      true,
 			wantStrictError: true,
 		},
+		{
+			// A continuation next to a bare filename* used to skip the
+			// continuation check entirely: Werkzeug resolves "shell.php"
+			// here, while Coraza exposes only the two decoys and raised no
+			// strict error.
+			name:            "an RFC 2231 continuation alongside a bare filename* is flagged",
+			fields:          `filename="safe.jpg"; filename*=iso-8859-1''x.jpg; filename*0*=iso-8859-1''shell.php`,
+			wantFilename:    "x.jpg",
+			wantAltFilename: "safe.jpg",
+			wantExtended:    true,
+			wantCharset:     "iso-8859-1",
+			wantIsFile:      true,
+			wantStrictError: true,
+		},
 	}
 
 	for _, tc := range tests {

@@ -335,6 +335,13 @@ func originFileName(p *multipart.Part) filenameFields {
 		}
 		return f
 	}
+	// A continuation alongside a bare "filename*" is not reassembled either,
+	// and Werkzeug/Flask lets the continuation win over both "filename*" and
+	// "filename", so the value a backend resolves may be one Coraza never
+	// exposes. Flag it the same way as the continuation-only case above.
+	if hasFilenameContinuation(cd) {
+		f.malformed = true
+	}
 	// RFC 5987 does not permit ext-value to be a quoted-string, but a
 	// general Content-Disposition parameter parser -- Go's mime.ParseMediaType
 	// included -- accepts a quoted-string for any parameter, filename*
