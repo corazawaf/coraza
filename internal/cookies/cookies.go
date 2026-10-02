@@ -29,8 +29,13 @@ func ParseCookies(rawCookies string) map[string][]string {
 		name, val, _ := strings.Cut(part, "=")
 		name = trimCTLAndSpace(name)
 		val = trimCTLAndSpace(val)
-		// if name is empty (eg: "Cookie:   =foo;") skip it
-		if name == "" {
+		// A name that is empty, or only CTLs and spaces, is kept under ""
+		// rather than skipped: Node's cookie package still hands
+		// "=payload" and "\x01=payload" to the application, so dropping
+		// the pair would hide its value from REQUEST_COOKIES. Only a
+		// pair with nothing left to inspect ("=") is skipped.
+		// See GHSA-g4qm-m288-5cp9.
+		if name == "" && val == "" {
 			continue
 		}
 		cookies[name] = append(cookies[name], val)
@@ -48,12 +53,12 @@ func ParseCookies(rawCookies string) map[string][]string {
 // A stray CTL character (e.g. a vertical tab) directly adjacent to '='
 // used to be kept as part of the cookie name instead of being treated as a
 // boundary, letting the name/value split land somewhere a real consumer
-// wouldn't put it -- see GHSA-g4qm-m288-5cp9. Every cookie-value/name
-// grammar we checked (RFC 6265's own token/cookie-octet definitions,
-// Python's http.cookies/Werkzeug, Node's cookie package) treats CTLs as
-// invalid at the token boundary; only where a CTL lands is disputed across
-// implementations once it's in the interior of an otherwise-plausible name,
-// which this fix does not attempt to resolve.
+// wouldn't put it -- see GHSA-g4qm-m288-5cp9. RFC 6265's token and
+// cookie-octet grammar excludes CTLs, and Python's http.cookies splits
+// "a\v=x" as name "a". Backends disagree, though: Node's cookie package
+// and Werkzeug keep "a\v" as the name. The trim follows the RFC; where a
+// CTL lands in the interior of an otherwise-plausible name is left
+// unresolved.
 //
 // Deliberately hand-rolled rather than strings.TrimFunc: TrimFunc invokes
 // its predicate through a func value once per byte scanned, which measured

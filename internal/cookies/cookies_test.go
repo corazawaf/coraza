@@ -74,10 +74,23 @@ func TestParseCookies(t *testing.T) {
 			args: args{rawCookies: ";;foo=bar"},
 			want: map[string][]string{"foo": {"bar"}},
 		},
+		// A pair whose name is empty, or trims to empty, is kept under ""
+		// so its value stays inspectable: Node's cookie package still
+		// exposes it to the application. See GHSA-g4qm-m288-5cp9.
 		{
 			name: "EmptyName",
 			args: args{rawCookies: "=bar;"},
-			want: map[string][]string{},
+			want: map[string][]string{"": {"bar"}},
+		},
+		{
+			name: "CTLOnlyName",
+			args: args{rawCookies: "a=1; \x01\x02=bar"},
+			want: map[string][]string{"a": {"1"}, "": {"bar"}},
+		},
+		{
+			name: "EmptyNameAndValue",
+			args: args{rawCookies: "=; foo=bar"},
+			want: map[string][]string{"foo": {"bar"}},
 		},
 		{
 			name: "MultipleEqualsInValues",
@@ -92,10 +105,9 @@ func TestParseCookies(t *testing.T) {
 		// A CTL character (RFC 2616) directly adjacent to '=' used to be
 		// kept as part of the cookie name instead of being treated as a
 		// boundary, letting the name/value split land somewhere a real
-		// cookie parser wouldn't put it. See GHSA-g4qm-m288-5cp9: Python's
-		// http.cookies/Werkzeug and Node's cookie package both treat the
-		// vertical tab here as a name terminator, landing on name "a",
-		// value "'".
+		// cookie parser wouldn't put it. See GHSA-g4qm-m288-5cp9: RFC 6265
+		// excludes CTLs from a name, and Python's http.cookies lands on
+		// name "a", value "'".
 		{
 			name: "CTLAdjacentToEqualsIsTrimmedFromName",
 			args: args{rawCookies: "a\v=\t'"},

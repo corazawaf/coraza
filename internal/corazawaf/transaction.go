@@ -685,7 +685,9 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		isException := false
 		lkey := strings.ToLower(c.Key())
 		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
+			// KeyStr is only meaningful without KeyRx: a regex exception from ctl
+			// carries an empty KeyStr, which would otherwise match a key named "".
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || (ex.KeyRx == nil && (ex.KeyStr == "" || strings.ToLower(ex.KeyStr) == lkey)) {
 				isException = true
 				break
 			}
