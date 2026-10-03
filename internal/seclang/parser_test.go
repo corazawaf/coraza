@@ -17,7 +17,7 @@ import (
 	"github.com/jcchavezs/mergefs"
 	"github.com/jcchavezs/mergefs/io"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/crs/v4"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
 )

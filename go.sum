@@ -1,5 +1,7 @@
-github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc h1:OlJhrgI3I+FLUCTI3JJW8MoqyM78WbqJjecqMnqG+wc=
-github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc/go.mod h1:7rsocqNDkTCira5T0M7buoKR2ehh7YZiPkzxRuAgvVU=
+github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.0.0-20261003132451-c4b6bc613a5e h1:Z3m/Y39EsDBP5lZpoGb71w/h1m2pN9K+P45K4aF8rh0=
+github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.0.0-20261003132451-c4b6bc613a5e/go.mod h1:yf3Gc7mGKBR1wchr4EXZHG10En6WQ4W4MJCg3ix91wQ=
+github.com/corazawaf/coraza-coreruleset/crs/v4 v4.0.0-20261003132451-c4b6bc613a5e h1:AiTVTt/72AvzhwINB9tGrZKY+G5KvprAszkrkrRjuYI=
+github.com/corazawaf/coraza-coreruleset/crs/v4 v4.0.0-20261003132451-c4b6bc613a5e/go.mod h1:1yaQUjecpEJ/cWXhJaFto+vRuezJCCfVxGQlaQxAGt0=
 github.com/corazawaf/libinjection-go v0.3.3 h1:NhbXKRfRpqKzBMzv8zpCcnjyEw7BCVhBOv9IPuBl7Fc=
 github.com/corazawaf/libinjection-go v0.3.3/go.mod h1:Ik/+w3UmTWH9yn366RgS9D95K3y7Atb5m/H/gXzzPCk=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
