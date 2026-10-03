@@ -126,5 +126,10 @@ type TransactionVariables interface {
 	// MultipartInvalidQuoting is 1 when a multipart part's "filename*" Content-Disposition
 	// parameter was quoted, which RFC 5987 does not permit
 	MultipartInvalidQuoting() collection.Single
+
+	// MultipartInvalidPart is 1 when a structurally invalid multipart part was seen while
+	// parsing the body, that is a part with no Content-Disposition header or one whose
+	// Content-Disposition header could not be parsed
+	MultipartInvalidPart() collection.Single
 	ArgumentsLimitReached() collection.Single
 }
