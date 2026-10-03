@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -809,5 +810,56 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	}
 	if matchdata[0].Data() != "ARGS_GET:test-data" {
 		t.Errorf("Expected ArgsGet-data, got %s", matchdata[0].Data())
+	}
+}
+
+// TestNoSpuriousWarningWhenRuleDoesNotMatch verifies that msg and logdata macros
+// are not expanded (and therefore do not emit "key not found in collection" warnings)
+// when the rule operator does not match.
+func TestNoSpuriousWarningWhenRuleDoesNotMatch(t *testing.T) {
+	const warningFragment = "key not found in collection"
+
+	for _, tc := range []struct {
+		name    string
+		setMsg  bool
+		setData bool
+	}{
+		{"logdata not expanded on no-match", false, true},
+		{"msg not expanded on no-match", true, false},
+		{"both not expanded on no-match", true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewRule()
+			r.ID_ = 1
+			r.LogID_ = "1"
+			if tc.setMsg {
+				r.Msg, _ = macro.NewMacro("%{TX.never_set_var}")
+			}
+			if tc.setData {
+				r.LogData, _ = macro.NewMacro("%{TX.never_set_var}")
+			}
+			if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatal(err)
+			}
+			// Operator that never matches
+			dummyEqOp := &dummyEqOperator{}
+			r.SetOperator(dummyEqOp, "@eq", "this-never-matches")
+
+			var buf strings.Builder
+			logger := debuglog.Default().WithOutput(&buf).WithLevel(debuglog.LevelWarn)
+
+			tx := NewWAF().NewTransaction()
+			tx.AddGetRequestArgument("x", "benign")
+
+			var matchedValues []types.MatchData
+			matchdata := r.doEvaluate(logger, types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+			if len(matchdata) != 0 {
+				t.Fatalf("expected no match, got %d", len(matchdata))
+			}
+
+			if strings.Contains(buf.String(), warningFragment) {
+				t.Errorf("spurious warning emitted when rule did not match:\n%s", buf.String())
+			}
+		})
 	}
 }
