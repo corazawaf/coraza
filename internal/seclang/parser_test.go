@@ -475,6 +475,16 @@ func TestSelect(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name:          "MULTIPART_FILENAME_CHARSET",
+			rule:          `SecRule MULTIPART_FILENAME_CHARSET:foo "bar" "id:1033"`,
+			expectedError: false,
+		},
+		{
+			name:          "MULTIPART_FILENAME_LANGUAGE",
+			rule:          `SecRule MULTIPART_FILENAME_LANGUAGE:foo "bar" "id:1034"`,
+			expectedError: false,
+		},
+		{
 			name:          "MULTIPART_FILE_LIMIT_EXCEEDED",
 			rule:          `SecRule MULTIPART_FILE_LIMIT_EXCEEDED:foo "bar" "id:34"`,
 			expectedError: true,

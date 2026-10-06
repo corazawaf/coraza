@@ -75,5 +75,40 @@
 "name": "escapeSeqDecode",
 "ret": 1,
 "output": "\\u0000"
+},
+{
+"input": "<\\563\\543\\562\\551\\560\\564>",
+"type": "tfn",
+"name": "escapeSeqDecode",
+"ret": 1,
+"output": "<script>"
+},
+{
+"input": "\\377",
+"type": "tfn",
+"name": "escapeSeqDecode",
+"ret": 1,
+"output": "\\xff"
+},
+{
+"input": "\\666",
+"type": "tfn",
+"name": "escapeSeqDecode",
+"ret": 1,
+"output": "\\xb6"
+},
+{
+"input": "\\777",
+"type": "tfn",
+"name": "escapeSeqDecode",
+"ret": 1,
+"output": "\\xff"
+},
+{
+"input": "\\412",
+"type": "tfn",
+"name": "escapeSeqDecode",
+"ret": 1,
+"output": "\n"
 }
 ]

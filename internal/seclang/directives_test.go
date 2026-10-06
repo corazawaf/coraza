@@ -413,6 +413,13 @@ func TestDirectives(t *testing.T) {
 			{"On", func(w *corazawaf.WAF) bool { return w.ResponseBodyAccess }},
 			{"Off", func(w *corazawaf.WAF) bool { return !w.ResponseBodyAccess }},
 		},
+		"SecResponseBodyJsonDepthLimit": {
+			{"", expectErrorOnDirective},
+			{"x", expectErrorOnDirective},
+			{"0", expectErrorOnDirective},
+			{"-1", expectErrorOnDirective},
+			{"1024", func(w *corazawaf.WAF) bool { return w.ResponseBodyJsonDepthLimit == 1024 }},
+		},
 		"SecRemoteRulesFailAction": {
 			{"", expectErrorOnDirective},
 			{"What?", expectErrorOnDirective},

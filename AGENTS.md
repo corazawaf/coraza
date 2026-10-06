@@ -664,7 +664,10 @@ would have to ask "why this way?", write one.
    into this repository (one comment per blockquote, `[...]` for every omission), or
    a line starting with "No substantive technical discussion recorded". For an ADR
    written alongside the change, the marker sentence is the normal case; update it
-   with real quotes if review produces substantive discussion.
+   with real quotes if review produces substantive discussion. An ADR written
+   alongside embargoed security work may instead permalink into the matching
+   private advisory fork (see [Security](#security)); repoint it at the public
+   repository once the advisory publishes.
 5. Add a row to the index table in `docs/adr/README.md`.
 6. Run `go run mage.go adr`. CI runs the same check on any PR touching `docs/adr/`.
 
@@ -723,16 +726,73 @@ honestly: the checklist is a contract, not decoration.
 ### Vulnerabilities
 
 - **Never open a public issue or PR describing an exploitable bug.** Report it
-  through the GitHub security advisory link in [`SECURITY.md`](SECURITY.md). The
-  project follows a 90-day coordinated disclosure timeline.
+  through the GitHub security advisory link:
+  <https://github.com/corazawaf/coraza/security/advisories/new>. The project
+  follows a 90-day coordinated disclosure timeline (see [`SECURITY.md`](SECURITY.md)).
 - A valid report needs a **working proof of concept**, affected versions and a
   concrete impact. `SECURITY.md` explains that speculative, theoretical or
   AI-generated reports without a reproducer are closed as invalid.
-- **Coding agents do not file security reports.** If you find something that looks
-  exploitable while working, stop, describe it privately to the maintainer you are
-  working with, with a reproducer, and let a human decide how to disclose it.
+- **CVSS preconditions get verified, not copied from the report.** A submitted
+  CVSS vector reflects what the reporter wants the score to be, not necessarily
+  what the vulnerability requires. Before accepting a suggested score, or when
+  drafting one, check what exploitation actually depends on:
+  - If it fires from attacker-supplied input alone, on any deployment, Attack
+    Complexity is Low.
+  - If it depends on something genuinely outside the attacker's control — a
+    specific backend behavior (e.g. an application echoing input back into a
+    response), or another vulnerability that must itself be reliably reached
+    and triggered as part of the chain — Attack Complexity is High, and the
+    advisory should say what that precondition is. Both CVSS v3.1 and v4.0 say
+    explicitly that a required configuration is scored as if the vulnerable
+    component is already in that configuration, unless it deliberately
+    weakens security or conflicts with vendor guidance; a non-default
+    configuration is not by itself grounds for Attack Complexity: High (v3.1)
+    or Attack Requirements: Present (v4.0) — neither metric is about the
+    system's own configuration. What each metric covers differs by version:
+    v3.1's Attack Complexity covers conditions beyond the attacker's control
+    that make exploitation itself harder (gathering target-specific
+    information, winning a race condition). v4.0 splits that in two instead:
+    Attack Complexity narrows to built-in protections the attacker must evade
+    or circumvent (e.g. defeating ASLR), while Attack Requirements covers
+    deployment/execution conditions that arise naturally from how the system
+    runs (a race condition, an on-path network position) — not a
+    configuration choice. A chained-in bug only pushes Attack Complexity to
+    High if the chain itself is uncertain or effortful to execute, not merely
+    because more than one bug is involved.
+  - If the PoC only reproduces on one narrow, specific environment — one exact
+    pinned patch version of an unrelated language runtime or framework (e.g.
+    "only on Python 3.9.14", or one particular Django app's routing) — that is
+    evidence about that one combination, not about the affected code path in
+    general. Check whether it reproduces on a representative setup before
+    accepting the report's claimed affected-version range as-is; narrow it if
+    it does not.
+  Recompute and correct the vector during triage regardless of what the report
+  proposed; note the reasoning as an advisory comment, or, if advisory
+  comments aren't reachable through the API for that repository, as a PR
+  comment or in the fix PR's description.
+- **A coding agent may draft or submit an advisory through the link above only
+  with a human maintainer/contributor in the loop.** If you find something that
+  looks exploitable while working, stop, describe it privately to the maintainer
+  you are working with, with a reproducer, before anything is submitted.
+- **Disclose AI involvement in the advisory itself.** When AI tools have
+  materially contributed to the finding, the advisory description must include:
+  1. **Which AI tools and models were used** (e.g., "GitHub Copilot", "Claude
+     Opus 4.5", "ChatGPT-4o").
+  2. **What was generated or assisted** (e.g., the vulnerability hypothesis, the
+     proof-of-concept script, the impact write-up).
+  3. **What review was performed** (e.g., reproduced by hand against a specific
+     version/commit, traced the affected code path manually, verified the PoC
+     independently of the tool).
+  Omitting this disclosure when AI materially contributed is treated the same as
+  a missing PoC: the report is closed as invalid.
 - A fix for a reported vulnerability is developed on a private fork / advisory
   branch, not on a public PR, until the advisory is published.
+- An ADR required by that fix (see [Architecture Decision Records](#architecture-decision-records))
+  is drafted on the same branch and may quote review discussion from the private
+  advisory fork; `go run mage.go adr` accepts a permalink into that fork's own
+  repository (named `<repo>-ghsa-xxxx-xxxx-xxxx`) for exactly this case. Update
+  the quote and the `PR` field to point at the public repository once the
+  advisory publishes and the fix lands there.
 
 ### Secure coding
 
