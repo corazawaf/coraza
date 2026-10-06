@@ -1,11 +1,11 @@
-# ADR-0057: `SecRequestBodyMultipartXMLParts` directive
+# ADR-0062: `SecRequestBodyMultipartXMLParts` directive
 
 - **Status:** proposed
 - **Date:** 2026-09-07
-- **Version:** unreleased (post-v3.7.0)
+- **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1716](https://github.com/corazawaf/coraza/pull/1716)
 - **Issue(s):** No linked issue
-- **Deciders:** @victors
+- **Deciders:** @victorserbu2709 (author)
 - **Category:** Feature
 
 ## Context and Problem
