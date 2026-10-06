@@ -40,6 +40,7 @@ in several places, but only ever to inspect filenames; it contains no reference 
   which buffers more be justified; file parts are currently streamed to disk and
   should stay that way.
 - Keep the multipart variables exactly as they are, whether a part parses or not.
+- A malformed part must not become a way to hide content from the rules.
 
 ## Considered Options
 
@@ -49,6 +50,9 @@ in several places, but only ever to inspect filenames; it contains no reference 
   directive, default off.
 - **C — Leave it to integrators**, who can already replace the `multipart` body
   processor through `plugins.RegisterBodyProcessor`.
+- **D — General nested body processing** (#917): map a part's content type, or a
+  chosen variable, to any body processor, which writes into its own collections.
+  Raised in review (see Technical Discussion); not decided at the time of writing.
 
 ## Decision Outcome
 
@@ -73,6 +77,10 @@ semantics, but it requires every one of them to reimplement multipart parsing,
 because the body processor registry has a public register function and no public
 getter — a processor cannot be retrieved and composed with.
 
+Option D would subsume B, which would become its first case. It is a much larger
+design (dispatch configuration, collection naming, recursion limits, JSON and
+urlencoded content inside `ARGS`) and is left to the discussion in #917.
+
 The directive is `SecRequestBodyMultipartXMLParts On|Off`, defaulting to `Off`.
 
 ### Implementation notes
@@ -80,8 +88,8 @@ The directive is `SecRequestBodyMultipartXMLParts On|Off`, defaulting to `Off`.
 A part is handed to the tokenizer when any of three hints holds: its part
 `Content-Type` media type contains `xml`, its filename carries a known XML
 extension, or its content begins with an XML declaration. All three are attacker
-controlled; they widen coverage rather than establish trust, and a part that is not
-XML simply yields nothing. The third hint is the one that matters in practice,
+controlled; they widen coverage rather than establish trust. A part that matches a
+hint but is not well-formed XML is reported as described below. The third hint is the one that matters in practice,
 because a client that cannot type a file sends `application/octet-stream`.
 
 Parsing happens on the way to disk, through an `io.TeeReader`, so a part is not
@@ -95,21 +103,54 @@ Values extracted from every XML part are merged and written once, after the loop
 Writing per part would silently drop all but the last, because `collections.Map.Set`
 replaces rather than appends.
 
-A part that fails to parse is skipped rather than failing the body processor.
-Failing would let a malformed part suppress `FILES` and the other multipart
-variables for the whole request. `MULTIPART_STRICT_ERROR` is deliberately not set
-for this case: it has defined ModSecurity semantics for multipart structure errors,
-and CRS keys rule 200002 off it.
+A part that fails to parse keeps the values tokenized before the error, and the
+first such failure is returned by the body processor only after every part has been
+processed. The transaction then sets `REQBODY_ERROR`, as it does for a malformed
+`application/xml` body, so the recommended rule 200002 rejects the request.
+Returning the error immediately would stop at that part and leave `FILES` and the
+other multipart variables of the later parts unset. Skipping the part silently, as
+an earlier revision did, let an attacker hide a payload behind a malformed tail
+(`<r>&lt;script&gt;…</r><x "`) with nothing recording that parsing failed. A
+failure to read the part, such as a body truncated mid-part, is still handled by the
+multipart processor's own unexpected-EOF logic and is not reported as an XML error.
+`MULTIPART_STRICT_ERROR` is deliberately not set for a parse failure: it has defined
+ModSecurity semantics for multipart structure errors, and the recommended
+configuration keys rule 200003 off it.
 
 ## Technical Discussion
 
-No substantive technical discussion recorded: this ADR was written alongside the
-change, before a PR was opened, so there is no review thread to quote yet. It
-should be updated with real quotes and permalinks if review produces them.
+@jptosso asked for the feature to be aligned with ModSecurity and with the broader
+idea of nested body processing:
+
+> "There is some old discussion about this somewhere, basically being able to create
+> "recursive" body processing... For multipart it's actually easier because we can
+> use the mime, for urlencoded or json we have to manually state this...
+>
+> For this I would prefer some alignment with modsecurity @airween"
+> — @jptosso ([comment](https://github.com/corazawaf/coraza/pull/1716#issuecomment-5572535557))
+
+@airween pointed at #917 and a related idea for argument values:
+
+> "May be #917 is the issue where it was asked? […] I was thinking about a similar
+> feature, eg. explode arguments from unique targets `ARGS_VALUES`, eg: `q={"a":1}`."
+> — @airween ([comment](https://github.com/corazawaf/coraza/pull/1716#issuecomment-5607616136))
+
+This is recorded as option D. Neither ModSecurity v2 nor v3 parses multipart parts;
+both expose the raw bytes as `FILES_TMP_CONTENT` only when `SecUploadKeepFiles` or
+`SecTmpSaveUploadedFiles` is on, which is option A.
+
+The automated review found that skipping a malformed part was a bypass, which led
+to the current handling of parse failures:
+
+> "**Attackers can bypass the feature: one syntax error drops every value extracted
+> before it.** […] Example: an attacker uploads `<r>&lt;script&gt;…</r>` followed by
+> a malformed tail such as `<x "`. The payload never reaches `XML:/*` or `XML://@*`,
+> and no variable records that parsing failed."
+> — @coderabbitai ([comment](https://github.com/corazawaf/coraza/pull/1716#discussion_r4192441998))
 
 ## Participants
 
-- @victors — author
+- @victorserbu2709 — author
 
 ## Consequences
 
@@ -121,6 +162,9 @@ should be updated with real quotes and permalinks if review produces them.
   holds the extracted values for the lifetime of the transaction, bounded by
   `SecRequestBodyLimit`. Only XML is dispatched: JSON parts, and file content in
   general, remain uninspectable, and `FILES_TMP_CONTENT` remains unimplemented.
+  With the recommended configuration, an upload that matches an XML hint but is not
+  well-formed (a non-XML file named `.svg`, say) is rejected by rule 200002, the same
+  outcome as sending it as an `application/xml` body.
 
 ## References
 
