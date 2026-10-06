@@ -20,7 +20,7 @@ import (
 // it will skip over the next phase 1 rule that follows it in the phase.
 //
 // Example:
-// ```
+// ```seclang
 // # Require Accept header, but not from access from the localhost
 // SecRule REMOTE_ADDR "^127\.0\.0\.1$" "phase:1,skip:1,id:141"
 //

@@ -21,7 +21,7 @@ import (
 // true (always matches, allowing subsequent rules to use GEO variables)
 //
 // Example:
-// ```
+// ```seclang
 // # Perform geolocation lookup and populate GEO variables
 // SecRule REMOTE_ADDR "@geoLookup" "phase:1,id:199,nolog,pass"
 //

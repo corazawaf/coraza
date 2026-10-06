@@ -42,6 +42,7 @@ The Coraza Project maintains implementations and plugins for the following serve
 
 * [Caddy Reverse Proxy and Webserver Plugin](https://github.com/corazawaf/coraza-caddy) - stable, needs a maintainer
 * [Proxy WASM extension](https://github.com/corazawaf/coraza-proxy-wasm) for proxies with proxy-wasm support (e.g. Envoy) - stable, still under development
+* [Traefik WASM extension](https://github.com/jcchavezs/coraza-http-wasm-traefik) for Traefik Proxy - experimental, needs a maintainer
 * [HAProxy SPOE Plugin](https://github.com/corazawaf/coraza-spoa) - experimental
 * [Coraza C Library (For nginx, etc)](https://github.com/corazawaf/libcoraza) - experimental
 * [RuiQi WAF](https://github.com/HUAHUAI23/RuiQi) - Web management panel and enhanced traffic control for Coraza SPOA - experimental
@@ -110,6 +111,21 @@ WAF is destroyed, or use this tag to opt out of memoization entirely.
 * `coraza.rule.no_regex_multiline` - disables enabling by default regexes multiline modifiers in `@rx` operator. It aligns with CRS expected behavior, reduces false positives and might improve performances. No multiline regexes by default will be enabled in the next major version. For more context check [this PR](https://github.com/corazawaf/coraza/pull/876).
 * `coraza.rule.mandatory_rule_id_check` - enables strict rule id check where `id` action is required for all SecRule/SecAction.
 * `coraza.rule.rx_prefilter` - sets the default value of the `SecRxPreFilter` directive to `On`. Optimizes `@rx` operator, by skipping the full regex when an input can not match. This build tag is meant only for testing purposes, rely on `SecRxPreFilter` directive for runtime configuration and broader documentation on this feature.
+
+### FIPS mode
+
+Coraza supports running under Go's [FIPS 140-3 mode](https://go.dev/doc/security/fips140) enabled.
+Detection of FIPS mode is performed at runtime, so no build tag is required and default builds are unchanged.
+
+`t:md5` and `t:sha1` are unavailable whenever FIPS mode is on, that is under all of
+`GODEBUG=fips140=on`, `=debug` and `=only`. Coraza applies the restriction uniformly so that
+behaviour does not vary across FIPS modes.
+Both transformations stay **registered**, so rule sets referencing them, including the CRS, still
+load unchanged. The restriction applies at evaluation time: the transformation errors, the engine
+logs a warning and keeps the untransformed value. The chain is **not** aborted and
+the rule is **not** skipped. For example, `t:sha1,t:hexEncode` becomes effectively `t:hexEncode` over
+the raw input and the rule may match *differently* rather than simply not matching.
+Review any rule depending on these before deploying in FIPS mode.
 
 ## E2E Testing
 

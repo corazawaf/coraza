@@ -24,7 +24,7 @@ import (
 // true if the input IP address matches any of the provided IPs or ranges, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block specific IPs and ranges
 // SecRule REMOTE_ADDR "@ipMatch 192.168.1.100,192.168.1.50,10.10.50.0/24" "id:160,deny,log"
 //

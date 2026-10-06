@@ -17,7 +17,7 @@ import (
 // It is recommended that you always use `t:none` in your rules, which prevents them depending on the default configuration.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule ARGS "(asfunction|javascript|vbscript|data|mocha|livescript):" "id:146,t:none,t:htmlEntityDecode,t:lowercase,t:removeNulls,t:removeWhitespace"
 // ```
 type tFn struct{}

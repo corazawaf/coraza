@@ -24,7 +24,7 @@ import (
 // true if the input value is found in the parameter list, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Allow only specific HTTP methods
 // SecRule REQUEST_METHOD "!@within GET,POST,HEAD" "id:178,deny,log"
 //

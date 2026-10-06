@@ -26,7 +26,7 @@ import (
 // true if any byte is outside the allowed range (violation detected), false if all bytes are valid
 //
 // Example:
-// ```
+// ```seclang
 // # Allow only printable ASCII characters
 // SecRule ARGS "@validateByteRange 10, 13, 32-126" "id:189,deny,log,msg:'Invalid characters'"
 //

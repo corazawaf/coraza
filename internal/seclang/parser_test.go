@@ -475,6 +475,16 @@ func TestSelect(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name:          "MULTIPART_FILENAME_CHARSET",
+			rule:          `SecRule MULTIPART_FILENAME_CHARSET:foo "bar" "id:1033"`,
+			expectedError: false,
+		},
+		{
+			name:          "MULTIPART_FILENAME_LANGUAGE",
+			rule:          `SecRule MULTIPART_FILENAME_LANGUAGE:foo "bar" "id:1034"`,
+			expectedError: false,
+		},
+		{
 			name:          "MULTIPART_FILE_LIMIT_EXCEEDED",
 			rule:          `SecRule MULTIPART_FILE_LIMIT_EXCEEDED:foo "bar" "id:34"`,
 			expectedError: true,
@@ -841,5 +851,30 @@ func TestSelect(t *testing.T) {
 				t.Errorf("FromString() error = %v, expectedError %v", err, tt.expectedError)
 			}
 		})
+	}
+}
+
+// TestGlobIncludeFromSubdirectory covers a glob include evaluated while
+// currentDir is non-empty, against a plain fs.FS.
+//
+// fs.Glob returns paths already resolvable against the FS root, so re-anchoring
+// them to currentDir points the read at a path the glob never matched. On
+// Windows the same join additionally rewrote the forward slashes io/fs mandates
+// into backslashes, which is how this surfaced in
+// corazawaf/coraza-caddy#169.
+func TestGlobIncludeFromSubdirectory(t *testing.T) {
+	waf := coraza.NewWAF()
+	p := NewParser(waf)
+	root, err := fs.Sub(testdata, "testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.SetRoot(root)
+
+	if err := p.FromFile("globnested/parent.conf"); err != nil {
+		t.Fatalf("glob include from a subdirectory failed: %s", err.Error())
+	}
+	if waf.Rules.Count() != 2 {
+		t.Errorf("expected 2 rules from the glob, found %d", waf.Rules.Count())
 	}
 }

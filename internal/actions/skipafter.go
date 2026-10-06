@@ -17,7 +17,7 @@ import (
 // The `skipAfter` action works only within the current processing phase and not necessarily the order in which the rules appear in the configuration file.
 //
 // Example:
-// ```
+// ```seclang
 // # The following rules implement the same logic as the skip example, but using skipAfter:
 // # Require Accept header, but not from access from the localhost
 // SecRule REMOTE_ADDR "^127\.0\.0\.1$" "phase:1,id:143,skipAfter:IGNORE_LOCALHOST"

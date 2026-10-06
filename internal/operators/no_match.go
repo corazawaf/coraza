@@ -21,7 +21,7 @@ import (
 // false (always, unconditionally)
 //
 // Example:
-// ```
+// ```seclang
 // # Disabled rule that never matches
 // SecRule ARGS "@noMatch" "id:205,deny,log,msg:'This rule will never fire'"
 //

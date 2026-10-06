@@ -22,7 +22,7 @@ import (
 // true if XSS injection is detected, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Detect XSS in request parameters
 // SecRule ARGS "@detectXSS" "id:187,deny,log,msg:'XSS Attack Detected'"
 //

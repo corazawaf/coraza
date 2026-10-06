@@ -4,6 +4,8 @@
 package engine
 
 import (
+	"strings"
+
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )
 
@@ -157,5 +159,50 @@ SecRule ARGS_POST:json.test3.1 "@eq 44" "id:1202, phase:2, log, block"
 SecRule ARGS_POST:json.test3.2 "@eq 55" "id:1203, phase:2, log, block"
 
 SecRule RESPONSE_ARGS:json.test4 "@eq 3" "id: 1011, phase:4, log, block"
+`,
+})
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "A JSON body whose flattened form outgrows its byte budget is a request body error, not an argument limit",
+		Enabled:     true,
+		Name:        "json_flatten_budget.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "flattened form over budget",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/json",
+							},
+							// ~4 MB flattened from about 200 arguments, against a 160 KB budget.
+							Data: `{"first":"kept","` + strings.Repeat("a", 20000) + `":` +
+								strings.Repeat("[", 200) + "1" + strings.Repeat("]", 200) + `}`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 200002, 1100},
+							NonTriggeredRules: []int{200005},
+							LogContains:       "JSON: flattened form exceeds the 163368 byte budget for a 20421 byte body",
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRequestBodyAccess On
+SecRule REQUEST_HEADERS:content-type "application/json" "id:100, phase:1, pass, log, ctl:requestBodyProcessor=JSON"
+
+SecRule REQBODY_ERROR "!@eq 0" "id:200002, phase:2, log, pass, logdata:'%{reqbody_error_msg}'"
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" "id:200005, phase:2, log, pass"
+
+# What was flattened before the budget ran out is still inspected
+SecRule ARGS_POST:json.first "@streq kept" "id:1100, phase:2, log, pass"
 `,
 })

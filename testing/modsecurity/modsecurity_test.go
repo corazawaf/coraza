@@ -13,9 +13,9 @@
 //
 // The benchmarks require a build tag and cgo flags to run.
 //
-//	CGO_CFLAGS=$(pkg-config --cflags modsecurity) CGO_LDFLAGS=$(pkg-config --libs modsecurity) go test -bench . ./testing -tags modsecurity
+//	CGO_CFLAGS=$(pkg-config --cflags modsecurity) CGO_LDFLAGS=$(pkg-config --libs modsecurity) go test -bench . ./testing/modsecurity -tags modsecurity
 
-package testing
+package modsecurity_test
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ import (
 
 func BenchmarkModSecurityCRSCompilation(b *testing.B) {
 	files := []string{
-		"../coraza.conf-recommended",
+		"../../coraza.conf-recommended",
 		filepath.Join(crspath, "crs-setup.conf.example"),
 	}
 	r, err := filepath.Glob(filepath.Join(crspath, "rules", "*.conf"))
@@ -157,7 +157,7 @@ func BenchmarkModSecurityCRSSimplePOST(b *testing.B) {
 
 func crsMS() (*modsecurity.Modsecurity, *modsecurity.RuleSet, error) {
 	files := []string{
-		"../coraza.conf-recommended",
+		"../../coraza.conf-recommended",
 		filepath.Join(crspath, "crs-setup.conf.example"),
 	}
 	r, err := filepath.Glob(filepath.Join(crspath, "rules", "*.conf"))

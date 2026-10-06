@@ -9,6 +9,7 @@ package http
 import (
 	"bufio"
 	"bytes"
+	"crypto/fips140"
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
@@ -651,10 +652,21 @@ func TestRegularRequestStillProcessesResponseBody(t *testing.T) {
 	}
 }
 
+// skipIfFIPS skips tests whose handler performs a WebSocket handshake. RFC 6455 §4.2.2 mandates
+// SHA-1, which crypto/sha1 refuses under GODEBUG=fips140=only.
+func skipIfFIPS(t *testing.T) {
+	t.Helper()
+	if fips140.Enabled() {
+		t.Skip("WebSocket handshake requires SHA-1, unavailable in FIPS 140-3 mode")
+	}
+}
+
 // TestWAFNotBypassedAfterWebSocketUpgrade verifies that a WebSocket upgrade
 // on one connection does not cause the WAF to skip inspection of subsequent
 // regular HTTP requests. Each request must get its own transaction.
 func TestWAFNotBypassedAfterWebSocketUpgrade(t *testing.T) {
+	skipIfFIPS(t)
+
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives(`
 		SecRuleEngine On
 		SecRule ARGS:attack "evil" "id:1,phase:1,deny,status:403"

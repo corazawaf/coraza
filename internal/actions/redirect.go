@@ -17,7 +17,7 @@ import (
 // Otherwise, status code 302 will be used.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule REQUEST_HEADERS:User-Agent "@streq Test" "phase:1,id:130,log,redirect:http://www.example.com/failed.html"
 // ```
 type redirectFn struct {

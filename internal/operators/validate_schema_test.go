@@ -6,6 +6,7 @@ package operators
 
 import (
 	"io/fs"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -436,7 +437,12 @@ func (m *mockTransaction) MatchedVars() collection.Map                     { ret
 func (m *mockTransaction) MatchedVarsNames() collection.Keyed              { return nil }
 func (m *mockTransaction) MultipartName() collection.Map                   { return nil }
 func (m *mockTransaction) MultipartFilename() collection.Map               { return nil }
+func (m *mockTransaction) MultipartFilenameCharset() collection.Map        { return nil }
+func (m *mockTransaction) MultipartFilenameLanguage() collection.Map       { return nil }
 func (m *mockTransaction) MultipartStrictError() collection.Single         { return nil }
+func (m *mockTransaction) MultipartDuplicatePartHeader() collection.Single { return nil }
+func (m *mockTransaction) MultipartInvalidQuoting() collection.Single      { return nil }
+func (m *mockTransaction) ArgumentsLimitReached() collection.Single        { return nil }
 func (m *mockTransaction) HighestSeverity() collection.Single              { return nil }
 func (m *mockTransaction) StatusLine() collection.Single                   { return nil }
 func (m *mockTransaction) ResponseStatus() collection.Single               { return nil }
@@ -588,5 +594,26 @@ func TestValidateSchemaPhasePreference(t *testing.T) {
 	opResult = op.Evaluate(tx, "")
 	if !opResult {
 		t.Errorf("Expected response body validation to trigger violation when only response body is available")
+	}
+}
+
+func TestSchemaCacheKey(t *testing.T) {
+	schemaA := []byte(`{"type":"object"}`)
+	schemaB := []byte(`{"type":"array"}`)
+
+	// Same content must produce the same key (so the memoizer dedupes it).
+	if got, want := schemaCacheKey(schemaA), schemaCacheKey(schemaA); got != want {
+		t.Errorf("identical schemas must yield identical keys: %q != %q", got, want)
+	}
+
+	// Different content must produce different keys (no false cache hit).
+	if schemaCacheKey(schemaA) == schemaCacheKey(schemaB) {
+		t.Errorf("different schemas must yield different keys, both %q", schemaCacheKey(schemaA))
+	}
+
+	// The key must be namespaced to avoid collisions with other key types
+	// (e.g. raw regex patterns) in the shared global memoizer.
+	if key := schemaCacheKey(schemaA); !strings.HasPrefix(key, "schema:") {
+		t.Errorf("key must be prefixed with %q, got %q", "schema:", key)
 	}
 }

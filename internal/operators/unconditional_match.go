@@ -21,7 +21,7 @@ import (
 // true (always, unconditionally)
 //
 // Example:
-// ```
+// ```seclang
 // # Always execute action to set variable
 // SecRule REMOTE_ADDR "@unconditionalMatch" "id:207,phase:1,pass,nolog,setvar:tx.initialized=1"
 //

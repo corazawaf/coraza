@@ -8,13 +8,13 @@
 //
 // Example:
 //
-// ```
+// ```seclang
 // SecRule ARGS "@contains evil" "id:100,deny"
 // ```
 //
 // Operators can be negated using the ! prefix:
 //
-// ```
+// ```seclang
 // SecRule REQUEST_LINE "!@beginsWith GET" "id:101,deny"
 // ```
 //

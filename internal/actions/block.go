@@ -17,7 +17,7 @@ import (
 // In future versions of Coraza, more control and functionality will be added to define "how" to block.
 //
 // Example:
-// ```
+// ```seclang
 // # Specify how blocking is to be done
 // SecDefaultAction "phase:2,deny,id:101,status:403,log,auditlog"
 //

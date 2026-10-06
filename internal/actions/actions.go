@@ -94,6 +94,7 @@ func Register(name string, a func() plugintypes.Action) {
 }
 
 func init() {
+	Register("accuracy", accuracy)
 	Register("allow", allow)
 	Register("auditlog", auditlog)
 	Register("block", block)

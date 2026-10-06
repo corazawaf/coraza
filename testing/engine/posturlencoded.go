@@ -48,6 +48,38 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+							},
+							Data: "test=123",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{4445, 456},
+							NonTriggeredRules: []int{200002},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"content-type": "application/x-www-form-urlencoded; charset=UTF-8; ===broken",
+							},
+							Data: "test=123",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{4445, 456},
+							NonTriggeredRules: []int{200002},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI:    "/case2",
 							Method: "POST",
 							Headers: map[string]string{

@@ -14,7 +14,7 @@ import (
 // Indicates that a successful match of the rule needs to be logged.
 //
 // Example:
-// ```
+// ```seclang
 // # log matches from the error log file to the Coraza audit log.
 // SecAction "phase:1,id:117,pass,initcol:ip=%{REMOTE_ADDR},log"
 // ```

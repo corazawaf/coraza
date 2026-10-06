@@ -22,7 +22,7 @@ import (
 // true if SQL injection is detected, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Detect SQLi in query string
 // SecRule ARGS "@detectSQLi" "id:185,deny,log,msg:'SQL Injection Detected'"
 //
