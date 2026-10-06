@@ -962,6 +962,8 @@ func TestMultipartXMLParts(t *testing.T) {
 		// wantSize, when non-empty, is the expected FILES_SIZES entry for
 		// wantSizeOf, asserting the tee'd copy still counts every byte.
 		wantSizeOf, wantSize string
+		// wantErr expects ProcessRequest to report a malformed XML part.
+		wantErr bool
 	}{
 		{
 			name:      "disabled leaves the XML collection empty",
@@ -1040,14 +1042,17 @@ func TestMultipartXMLParts(t *testing.T) {
 			wantFiles:    []string{"a.xml", "b.xml"},
 		},
 		{
-			name:    "a part that fails to parse is skipped, not fatal",
+			// A malformed tail must not hide what parsed before it, and the
+			// failure is reported only after the later parts are processed.
+			name:    "a part that fails to parse keeps its leading values and is reported",
 			enabled: true,
 			parts: []string{
-				part("bad", "bad.xml", "application/xml", `<r><unclosed "</r>`),
+				part("bad", "bad.xml", "application/xml", `<r>before</r><unclosed "</r>`),
 				part("good", "good.xml", "application/xml", `<r>payload</r>`),
 			},
-			wantContents: []string{"payload"},
+			wantContents: []string{"before", "payload"},
 			wantFiles:    []string{"bad.xml", "good.xml"},
+			wantErr:      true,
 		},
 		{
 			name:    "form fields are untouched by the option",
@@ -1087,6 +1092,7 @@ func TestMultipartXMLParts(t *testing.T) {
 			wantFiles:    []string{"p.xml"},
 			wantSizeOf:   "p.xml",
 			wantSize:     "50", // len(`<r><unclosed "</r>`) is 18, plus 32
+			wantErr:      true,
 		},
 	}
 
@@ -1096,12 +1102,13 @@ func TestMultipartXMLParts(t *testing.T) {
 			v := corazawaf.NewTransactionVariables()
 			payload := strings.Join(tt.parts, "") + "--" + boundary + "--\r\n"
 
-			if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
+			err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
 				Mime:              "multipart/form-data; boundary=" + boundary,
 				StoragePath:       t.TempDir(),
 				MultipartXMLParts: tt.enabled,
-			}); err != nil {
-				t.Fatalf("unexpected error: %v", err)
+			})
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			assertValues(t, "XML:/*", v.RequestXML().Get("/*"), tt.wantContents)

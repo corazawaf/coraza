@@ -74,8 +74,9 @@ SecArgumentsLimit 1000
 # tokenized and its element contents and attribute values are added to the
 # XML collection, so the XML:/* and XML://@* targets reach an uploaded
 # document just as they reach an XML request body. The FILES, FILES_NAMES,
-# FILES_SIZES and FILES_TMPNAMES variables are unaffected, and a part that
-# fails to parse is skipped rather than failing the request.
+# FILES_SIZES and FILES_TMPNAMES variables are unaffected. A part that fails
+# to parse keeps the values read before the error and sets REQBODY_ERROR, as
+# a malformed XML request body does, so rule 200002 below rejects it.
 # Note: ModSecurity does not parse multipart parts, hence the default of Off.
 #
 #SecRequestBodyMultipartXMLParts On

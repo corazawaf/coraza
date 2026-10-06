@@ -51,6 +51,10 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	// merged so that a body carrying more than one XML part does not lose all
 	// but the last of them.
 	var xmlAttrs, xmlContents []string
+	// xmlErr is the first XML file part that failed to parse. It is returned
+	// only after every part has been processed, so a malformed part cannot hide
+	// the upload variables of the others.
+	var xmlErr error
 	for {
 		p, err := mr.NextPart()
 		if err == io.EOF {
@@ -134,7 +138,10 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				}
 				dst = temp
 			}
-			size, attrs, contents, err := copyFilePart(dst, p, filename, options.MultipartXMLParts)
+			size, attrs, contents, partXMLErr, err := copyFilePart(dst, p, filename, options.MultipartXMLParts)
+			if partXMLErr != nil && xmlErr == nil {
+				xmlErr = fmt.Errorf("multipart: XML file part %q: %w", p.FormName(), partXMLErr)
+			}
 			if temp != nil {
 				if cerr := temp.Close(); cerr != nil && err == nil {
 					err = cerr
@@ -194,7 +201,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		xmlCol.Set("//@*", xmlAttrs)
 		xmlCol.Set("/*", xmlContents)
 	}
-	return nil
+	return xmlErr
 }
 
 // flagUnexpectedEOF records that a part ended mid-content (io.ErrUnexpectedEOF)
@@ -260,12 +267,13 @@ func (c *countingWriter) Write(p []byte) (int, error) {
 // copyFilePart copies a file part into dst and returns the number of bytes
 // copied. When parseXML is set and the part looks like XML, the part is
 // tokenized on its way to dst and the attribute values and element contents it
-// yields are returned. The part is always drained, so dst holds the whole file
-// whether it parsed or not.
-func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bool) (int64, []string, []string, error) {
+// yields are returned, along with xmlErr when the part is not well-formed. The
+// part is always drained, so dst holds the whole file whether it parsed or not;
+// err reports a failure reading the part, never a parse failure.
+func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bool) (size int64, attrs, contents []string, xmlErr, err error) {
 	if !parseXML {
 		size, err := io.Copy(dst, p)
-		return size, nil, nil, err
+		return size, nil, nil, nil, err
 	}
 
 	// Buffer the part so its first bytes can be examined without consuming them.
@@ -273,11 +281,11 @@ func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bo
 	head, err := br.Peek(xmlSniffLen)
 	// A part shorter than xmlSniffLen peeks fine, it just reports EOF.
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-		return 0, nil, nil, err
+		return 0, nil, nil, nil, err
 	}
 	if !looksLikeXML(p.Header.Get("Content-Type"), filename, head) {
 		size, err := io.Copy(dst, br)
-		return size, nil, nil, err
+		return size, nil, nil, nil, err
 	}
 
 	counter := &countingWriter{w: dst}
@@ -286,21 +294,23 @@ func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bo
 	// still stored and counted but never reaches the decoder.
 	if bom, err := br.Peek(len(utf8BOM)); err == nil && bytes.Equal(bom, utf8BOM) {
 		if _, err := io.CopyN(counter, br, int64(len(utf8BOM))); err != nil {
-			return counter.n, nil, nil, err
+			return counter.n, nil, nil, nil, err
 		}
 	}
 	tee := io.TeeReader(br, counter)
-	attrs, contents, xmlErr := readXML(tee)
+	attrs, contents, xmlErr = readXML(tee)
 	// readXML stops at the first token it cannot handle, which may be before the
 	// end of the part. Drain the remainder through the tee so the stored file and
 	// FILES_SIZES stay complete regardless of how far parsing got.
 	_, err = io.Copy(io.Discard, tee)
-	if xmlErr != nil {
-		// A part that fails to parse is not a body error: the upload variables
-		// are still populated, the part simply contributes no XML.
-		return counter.n, nil, nil, err
+	if err != nil {
+		// The part could not be read to its end. That is what made the decoder
+		// stop, so it is a body read failure rather than malformed XML.
+		xmlErr = nil
 	}
-	return counter.n, attrs, contents, err
+	// The values tokenized before a parse error are kept: discarding them would
+	// let a malformed tail hide a payload placed ahead of it.
+	return counter.n, attrs, contents, xmlErr, err
 }
 
 func (mbp *multipartBodyProcessor) ProcessResponse(_ io.Reader, _ plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {

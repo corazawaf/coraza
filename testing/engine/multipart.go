@@ -687,7 +687,7 @@ SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
 
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
-		Author:      "victors",
+		Author:      "victorserbu2709",
 		Description: "XML file parts are reachable through XML targets when SecRequestBodyMultipartXMLParts is On",
 		Enabled:     true,
 		Name:        "multipart_xml_parts.yaml",
@@ -716,7 +716,36 @@ var _ = profile.RegisterProfile(profile.Profile{
 								"----0000--\r\n",
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{500, 501, 502, 503},
+							TriggeredRules:    []int{500, 501, 502, 503},
+							NonTriggeredRules: []int{504},
+						},
+					},
+				},
+			},
+		},
+		{
+			// A malformed tail must neither hide the payload ahead of it nor go
+			// unnoticed: it is reported through REQBODY_ERROR, as a malformed
+			// XML request body is.
+			Title: "xml file part with a malformed tail keeps its payload and sets REQBODY_ERROR",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/upload.php",
+							Headers: map[string]string{
+								"Host":         "www.example.com",
+								"Content-Type": "multipart/form-data; boundary=--0000",
+							},
+							Data: "----0000\r\n" +
+								"Content-Disposition: form-data; name=\"file\"; filename=\"payload.xml\"\r\n" +
+								"Content-Type: application/xml\r\n" +
+								"\r\n" +
+								"<r>&lt;script&gt;alert(1)&lt;/script&gt;</r><x \"\r\n" +
+								"----0000--\r\n",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{500, 501, 503, 504},
 						},
 					},
 				},
@@ -785,12 +814,13 @@ SecRule XML:/* "@rx ." "id:500, phase:2, log, pass"
 SecRule XML:/* "@detectXSS" "id:501, phase:2, t:none, t:htmlEntityDecode, log, pass"
 SecRule XML://@* "@detectXSS" "id:502, phase:2, t:none, t:htmlEntityDecode, log, pass"
 SecRule FILES "@rx ." "id:503, phase:2, log, pass"
+SecRule REQBODY_ERROR "!@eq 0" "id:504, phase:2, log, pass"
 `,
 })
 
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
-		Author:      "victors",
+		Author:      "victorserbu2709",
 		Description: "XML file parts stay invisible while SecRequestBodyMultipartXMLParts is Off",
 		Enabled:     true,
 		Name:        "multipart_xml_parts_disabled.yaml",

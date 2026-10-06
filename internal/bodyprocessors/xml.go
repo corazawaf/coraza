@@ -40,7 +40,9 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 	for {
 		token, err := dec.Token()
 		if err != nil && err != io.EOF && !isUnexpectedEOFXMLSyntaxError(err) {
-			return nil, nil, err
+			// Return what was tokenized before the error alongside it, for
+			// callers that report the error without discarding the values.
+			return attrs, content, err
 		}
 		if token == nil {
 			break

@@ -375,9 +375,11 @@ func directiveSecResponseBodyJsonDepthLimit(options *DirectiveOptions) error {
 // Upload handling is unchanged: FILES, FILES_NAMES, FILES_SIZES and, on builds
 // with filesystem access, FILES_TMPNAMES keep their behaviour. Builds without it
 // (the no_fs_access tag, TinyGo) already drain file parts instead of storing them,
-// so FILES_TMPNAMES stays empty there whether this directive is On or Off. Parsing
-// failures on a part are not fatal: the part is skipped and the rest of the body is
-// processed.
+// so FILES_TMPNAMES stays empty there whether this directive is On or Off.
+//
+// A part that fails to parse keeps the values tokenized before the error. Once
+// every part has been processed, the failure sets REQBODY_ERROR, as a malformed
+// XML request body does, so the upload variables of all parts remain available.
 //
 // Note: this is a deviation from ModSecurity, which never parses multipart parts.
 // It is Off by default for that reason, and because parsing costs CPU and holds
