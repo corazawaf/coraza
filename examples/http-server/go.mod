@@ -5,7 +5,7 @@ go 1.25.0
 require github.com/corazawaf/coraza/v3 v3.3.3
 
 require (
-	github.com/corazawaf/libinjection-go v0.3.3 // indirect
+	github.com/corazawaf/libinjection-go v0.3.4 // indirect
 	github.com/foxcpp/go-mockdns v1.2.0 // indirect
 	github.com/jcchavezs/mergefs v0.1.1 // indirect
 	github.com/magefile/mage v1.17.0 // indirect
