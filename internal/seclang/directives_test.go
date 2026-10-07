@@ -401,6 +401,12 @@ func TestDirectives(t *testing.T) {
 			{"On", func(w *corazawaf.WAF) bool { return w.RequestBodyAccess }},
 			{"Off", func(w *corazawaf.WAF) bool { return !w.RequestBodyAccess }},
 		},
+		"SecRequestBodyMultipartXMLParts": {
+			{"", expectErrorOnDirective},
+			{"What?", expectErrorOnDirective},
+			{"On", func(w *corazawaf.WAF) bool { return w.RequestBodyMultipartXMLParts }},
+			{"Off", func(w *corazawaf.WAF) bool { return !w.RequestBodyMultipartXMLParts }},
+		},
 		"SecResponseBodyLimitAction": {
 			{"", expectErrorOnDirective},
 			{"What?", expectErrorOnDirective},

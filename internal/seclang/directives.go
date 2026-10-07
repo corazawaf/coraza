@@ -355,6 +355,53 @@ func directiveSecResponseBodyJsonDepthLimit(options *DirectiveOptions) error {
 	return nil
 }
 
+// Description: Configures whether XML file parts of a multipart/form-data request
+// body are parsed and exposed through the XML collection.
+// Default: Off
+// Syntax: SecRequestBodyMultipartXMLParts On|Off
+// ---
+// By default the content of an uploaded file is never parsed: only its name, form
+// field name and size are exposed, through FILES, FILES_NAMES and FILES_SIZES. A
+// file part holding XML is therefore not reachable by rules targeting XML:/* or
+// XML://@*, unlike an XML request body, which is parsed when the XML body
+// processor is selected.
+//
+// When this directive is On, every file part that looks like XML (its part
+// Content-Type contains "xml", its filename carries a known XML extension, or its
+// content starts with an XML declaration) is additionally tokenized, and its
+// element contents and attribute values are appended to XML:/* and XML://@*
+// respectively. Values of every XML part are merged into the same collection.
+//
+// Upload handling is unchanged: FILES, FILES_NAMES, FILES_SIZES and, on builds
+// with filesystem access, FILES_TMPNAMES keep their behaviour. Builds without it
+// (the no_fs_access tag, TinyGo) already drain file parts instead of storing them,
+// so FILES_TMPNAMES stays empty there whether this directive is On or Off.
+//
+// A part that fails to parse keeps the values tokenized before the error. Once
+// every part has been processed, the failure sets REQBODY_ERROR, as a malformed
+// XML request body does, so the upload variables of all parts remain available.
+//
+// Note: this is a deviation from ModSecurity, which never parses multipart parts.
+// It is Off by default for that reason, and because parsing costs CPU and holds
+// the extracted values in memory for the lifetime of the transaction.
+//
+// Example:
+// ```seclang
+// SecRequestBodyMultipartXMLParts On
+// ```
+func directiveSecRequestBodyMultipartXMLParts(options *DirectiveOptions) error {
+	if len(options.Opts) == 0 {
+		return errEmptyOptions
+	}
+
+	b, err := parseBoolean(options.Opts)
+	if err != nil {
+		return err
+	}
+	options.WAF.RequestBodyMultipartXMLParts = b
+	return nil
+}
+
 // Description: Configures the rules engine.
 // Syntax: SecRuleEngine On|Off|DetectionOnly
 // Default: Off
