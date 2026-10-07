@@ -483,6 +483,88 @@ func TestWriteHeaderSetsHeadersBeforeInterruptionCheck(t *testing.T) {
 	})
 }
 
+func TestWriteHeaderHandlesRedirectInterruption(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+			SecRuleEngine On
+			SecRule RESPONSE_HEADERS:X-Redirect "@streq true" "id:1,phase:3,redirect:https://www.example.com/redirected,status:307"
+		`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	req, _ := http.NewRequest("GET", "/test", nil)
+	res := httptest.NewRecorder()
+	rw, _ := wrap(res, req, tx)
+
+	rw.Header().Set("X-Redirect", "true")
+	rw.WriteHeader(http.StatusOK)
+
+	if want, have := http.StatusTemporaryRedirect, res.Code; want != have {
+		t.Fatalf("expected redirect status %d, got %d", want, have)
+	}
+	if want, have := "https://www.example.com/redirected", res.Header().Get("Location"); want != have {
+		t.Fatalf("unexpected Location header, want %q, have %q", want, have)
+	}
+}
+
+func TestWriteHeaderHandlesDropInterruption(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+			SecRuleEngine On
+			SecRule RESPONSE_HEADERS:X-Drop "@streq true" "id:1,phase:3,drop"
+		`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	req, _ := http.NewRequest("GET", "/test", nil)
+	rec := newHijackableRecorder()
+	rec.Code = 0
+	rw, _ := wrap(rec, req, tx)
+
+	rw.Header().Set("X-Drop", "true")
+	rw.WriteHeader(http.StatusOK)
+
+	if !rec.hijacked {
+		t.Fatal("expected drop interruption to hijack the underlying connection")
+	}
+	if rec.Code != 0 || rec.Body.Len() != 0 {
+		t.Fatalf("expected no HTTP response after drop, got code %d and body length %d", rec.Code, rec.Body.Len())
+	}
+}
+
+func TestWriteHeaderHandlesDropInterruptionWithoutHijacker(t *testing.T) {
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithDirectives(`
+			SecRuleEngine On
+			SecRule RESPONSE_HEADERS:X-Drop "@streq true" "id:1,phase:3,drop"
+		`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransaction()
+	defer tx.Close()
+
+	req, _ := http.NewRequest("GET", "/test", nil)
+	rec := httptest.NewRecorder()
+	rw, _ := wrap(rec, req, tx)
+
+	rw.Header().Set("X-Drop", "true")
+	rw.WriteHeader(http.StatusOK)
+
+	if want, have := http.StatusInternalServerError, rec.Code; want != have {
+		t.Fatalf("expected fallback status %d, got %d", want, have)
+	}
+}
+
 func TestHijackTrackerSetsIsHijacked(t *testing.T) {
 	waf, err := coraza.NewWAF(coraza.NewWAFConfig().WithDirectives("SecRuleEngine On"))
 	if err != nil {
