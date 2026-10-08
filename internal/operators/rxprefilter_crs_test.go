@@ -6,8 +6,8 @@
 // No proprietary data is used. Both the @rx patterns and the attack payloads
 // are read at test time from:
 //
-//   github.com/corazawaf/coraza-coreruleset         ← rule conf files
-//   github.com/corazawaf/coraza-coreruleset/tests   ← official FTW YAML tests
+//   github.com/corazawaf/coraza-coreruleset/crs/v4         ← rule conf files
+//   github.com/corazawaf/coraza-coreruleset/crs/tests/v4   ← official FTW YAML tests
 //
 // Both packages are already in the module graph (go.mod).
 //
@@ -32,8 +32,8 @@ import (
 	"strings"
 	"testing"
 
-	coreruleset "github.com/corazawaf/coraza-coreruleset"
-	crstests "github.com/corazawaf/coraza-coreruleset/tests"
+	coreruleset "github.com/corazawaf/coraza-coreruleset/crs/v4"
+	crstests "github.com/corazawaf/coraza-coreruleset/crs/tests/v4"
 )
 
 // ---------------------------------------------------------------------------

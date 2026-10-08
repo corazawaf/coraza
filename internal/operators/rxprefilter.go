@@ -217,9 +217,12 @@ func prefilterFunc(pattern string) func(string) bool {
 		}
 		// A literal is the prefix/suffix constraint only when it survived
 		// filterShort (len >= 2), meaning it IS the first/last literal in the
-		// pattern and not replaced by a longer one that appeared elsewhere.
-		usePrefix := hasBeginAnchor(re) && len(origFirst) >= 2
-		useSuffix := hasEndAnchor(re) && len(origLast) >= 2
+		// pattern and not replaced by a longer one that appeared elsewhere --
+		// and only when literalAtStart/literalAtEnd prove it is actually
+		// adjacent to the anchor (see their doc comments for the false
+		// negative this guards against).
+		usePrefix := hasBeginAnchor(re) && len(origFirst) >= 2 && literalAtStart(re, origFirst, caseInsensitive)
+		useSuffix := hasEndAnchor(re) && len(origLast) >= 2 && literalAtEnd(re, origLast, caseInsensitive)
 		if !usePrefix && !useSuffix {
 			// No anchor: sort longest-first for best early exit.
 			slices.SortFunc(filtered, func(a, b string) int { return len(b) - len(a) })
@@ -1019,6 +1022,54 @@ func hasEndAnchor(re *syntax.Regexp) bool {
 	return false
 }
 
+// literalAtStart reports whether lit is the literal immediately following the
+// begin anchor in re's top-level concatenation — i.e. lit is a true prefix of
+// every match, not merely some required literal collected from elsewhere in
+// the pattern.
+//
+// hasBeginAnchor only proves the pattern is anchored somewhere; extractLiterals'
+// OpConcat case silently skips any child it can't extract a literal from (an
+// alternation with an unextractable branch, a Star, ...), so the first element
+// of the collected `all` slice is not necessarily adjacent to that anchor. For
+// example ^(?:a|.)bc has hasBeginAnchor == true and all == {"bc"}, but "bc" is
+// not a prefix constraint: the alternation between ^ and "bc" can consume a
+// character. Treating "bc" as anchored would make strings.HasPrefix reject
+// inputs like "xbc" that the regex actually matches -- a false negative.
+// Requiring the node right after the anchor to be exactly that literal closes
+// the gap; anything else conservatively disables the prefix optimization.
+func literalAtStart(re *syntax.Regexp, lit string, ci bool) bool {
+	for re.Op == syntax.OpCapture {
+		re = re.Sub[0]
+	}
+	if re.Op != syntax.OpConcat || len(re.Sub) < 2 {
+		return false
+	}
+	if re.Sub[0].Op != syntax.OpBeginText {
+		return false
+	}
+	return rawLiteral(re.Sub[1], ci) == lit
+}
+
+// literalAtEnd is literalAtStart's mirror for the end anchor: it reports
+// whether lit is the literal immediately preceding the end anchor in re's
+// top-level concatenation, i.e. a true suffix constraint rather than some
+// required literal collected from a position earlier in the pattern that
+// unextractable children (an alternation, a trailing .*, ...) separate from
+// the anchor. See literalAtStart for the false-negative this guards against.
+func literalAtEnd(re *syntax.Regexp, lit string, ci bool) bool {
+	for re.Op == syntax.OpCapture {
+		re = re.Sub[0]
+	}
+	if re.Op != syntax.OpConcat || len(re.Sub) < 2 {
+		return false
+	}
+	n := len(re.Sub)
+	if re.Sub[n-1].Op != syntax.OpEndText {
+		return false
+	}
+	return rawLiteral(re.Sub[n-2], ci) == lit
+}
+
 // hasPrefixFoldASCII reports whether s begins with prefix (ASCII case-insensitive).
 // prefix must already be lowercase.
 func hasPrefixFoldASCII(s, prefix string) bool {
@@ -1124,8 +1175,11 @@ func buildCombinedPF(v combinedRequired, ci bool, re *syntax.Regexp) func(string
 
 	var allPF func(string) bool
 	if len(filteredAll) > 0 {
-		usePrefix := hasBeginAnchor(re) && len(origFirst) >= 2
-		useSuffix := hasEndAnchor(re) && len(origLast) >= 2
+		// See literalAtStart/literalAtEnd's doc comments for why adjacency to
+		// the anchor must be proven, not assumed from hasBeginAnchor/hasEndAnchor
+		// alone.
+		usePrefix := hasBeginAnchor(re) && len(origFirst) >= 2 && literalAtStart(re, origFirst, ci)
+		useSuffix := hasEndAnchor(re) && len(origLast) >= 2 && literalAtEnd(re, origLast, ci)
 		if !usePrefix && !useSuffix {
 			slices.SortFunc(filteredAll, func(a, b string) int { return len(b) - len(a) })
 		}

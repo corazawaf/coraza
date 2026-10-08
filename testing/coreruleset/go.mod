@@ -4,8 +4,9 @@ go 1.25.0
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
-	github.com/corazawaf/coraza-coreruleset/v4 v4.25.0
-	github.com/corazawaf/coraza/v3 v3.7.0
+	github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.25.0
+	github.com/corazawaf/coraza-coreruleset/crs/v4 v4.25.0
+	github.com/corazawaf/coraza/v3 v3.8.1
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw/v2 v2.5.0
 	github.com/rs/zerolog v1.35.0
@@ -16,7 +17,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
-	github.com/corazawaf/libinjection-go v0.3.2 // indirect
+	github.com/corazawaf/libinjection-go v0.3.4 // indirect
 	github.com/coreruleset/ftw-tests-schema/v2 v2.3.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect

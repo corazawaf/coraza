@@ -167,6 +167,21 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		{"(?i)s(?:elect.*into|ubstr)", "SELECT x INTO y", true},
 		{"(?i)s(?:elect.*into|ubstr)", "SUBSTR(x,1)", true},
 		{"(?i)s(?:elect.*into|ubstr)", "unrelated", false},
+
+		// Regression: an end anchor does not mean the last extracted literal is
+		// adjacent to it. Here an alternation (no extractable literal) and a
+		// trailing \.* sit between ".ph" and $, so ".ph" is NOT a true suffix
+		// constraint -- CRS rule 933110's actual pattern, which used to build a
+		// prefilter requiring strings.HasSuffix(s, ".ph") and reject "shell.php"
+		// (which ends in "php", not ".ph"), a WAF bypass under SecRxPreFilter On.
+		{`.*\.ph(?:p\d*|tml|ar|ps|t|pt)\.*$`, "shell.php", true},
+		{`.*\.ph(?:p\d*|tml|ar|ps|t|pt)\.*$`, "shell.phtml", true},
+		{`.*\.ph(?:p\d*|tml|ar|ps|t|pt)\.*$`, "safe.jpg", false},
+
+		// Mirror case for a begin anchor: the alternation sits between ^ and
+		// "bc", so "bc" is NOT a true prefix constraint.
+		{`^(?:a|.)bc.*$`, "xbc", true},
+		{`^(?:a|.)bc.*$`, "xyz", false},
 	}
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%s/%s", tc.pattern, tc.input), func(t *testing.T) {

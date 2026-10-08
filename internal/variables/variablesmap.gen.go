@@ -114,6 +114,12 @@ func (v RuleVariable) Name() string {
 		return "MULTIPART_FILENAME"
 	case MultipartName:
 		return "MULTIPART_NAME"
+	case MultipartFilenameCharset:
+		return "MULTIPART_FILENAME_CHARSET"
+	case MultipartFilenameLanguage:
+		return "MULTIPART_FILENAME_LANGUAGE"
+	case MultipartDuplicatePartHeader:
+		return "MULTIPART_DUPLICATE_PART_HEADER"
 	case MatchedVarsNames:
 		return "MATCHED_VARS_NAMES"
 	case MatchedVars:
@@ -224,6 +230,10 @@ func (v RuleVariable) Name() string {
 		return "USERID"
 	case IP:
 		return "IP"
+	case URIParseError:
+		return "URI_PARSE_ERROR"
+	case ArgumentsLimitReached:
+		return "ARGUMENTS_LIMIT_REACHED"
 
 	default:
 		return "INVALID_VARIABLE"
@@ -254,6 +264,10 @@ func (v RuleVariable) CanBeSelected() bool {
 	case MultipartFilename:
 		return true
 	case MultipartName:
+		return true
+	case MultipartFilenameCharset:
+		return true
+	case MultipartFilenameLanguage:
 		return true
 	case MatchedVarsNames:
 		return true
@@ -353,6 +367,9 @@ var rulemapRev = map[string]RuleVariable{
 	"FILES_TMP_CONTENT":                FilesTmpContent,
 	"MULTIPART_FILENAME":               MultipartFilename,
 	"MULTIPART_NAME":                   MultipartName,
+	"MULTIPART_FILENAME_CHARSET":       MultipartFilenameCharset,
+	"MULTIPART_FILENAME_LANGUAGE":      MultipartFilenameLanguage,
+	"MULTIPART_DUPLICATE_PART_HEADER":  MultipartDuplicatePartHeader,
 	"MATCHED_VARS_NAMES":               MatchedVarsNames,
 	"MATCHED_VARS":                     MatchedVars,
 	"FILES":                            Files,
@@ -408,6 +425,8 @@ var rulemapRev = map[string]RuleVariable{
 	"SESSIONID":                        Sessionid,
 	"USERID":                           Userid,
 	"IP":                               IP,
+	"URI_PARSE_ERROR":                  URIParseError,
+	"ARGUMENTS_LIMIT_REACHED":          ArgumentsLimitReached,
 }
 
 var errUnknownVariable = errors.New("unknown variable")
