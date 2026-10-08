@@ -26,7 +26,13 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	// ParseQuery itself stops once options.ArgumentLimit total pairs have
 	// been parsed (see GHSA-3ww9-vw83-9w5x): the copy below never needs to
 	// re-enforce the cap, since values can never hold more than the limit.
-	values, truncated := urlutil.ParseQuery(b, '&', options.ArgumentLimit)
+	values, truncated, err := urlutil.ParseQuery(b, '&', options.ArgumentLimit)
+	if err != nil {
+		v.UrlencodedError().(*collections.Single).Set("1")
+	}
+	// The arguments are copied even when the encoding was malformed: parsing is
+	// non-strict, so values is still populated, and dropping them would hide the
+	// body from the rules that are meant to inspect it.
 	argsCol := v.ArgsPost()
 	for k, vs := range values {
 		argsCol.Set(k, vs)

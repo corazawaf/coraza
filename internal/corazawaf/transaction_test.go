@@ -183,6 +183,38 @@ var requestBodyWriters = map[string]func(tx *Transaction, body string) (*types.I
 	},
 }
 
+func TestProcessURISetsURLencodedErrorForMalformedQuery(t *testing.T) {
+	tx := NewWAF().NewTransaction()
+	defer tx.Close()
+
+	tx.ProcessURI("/?a=%ZZ", "GET", "HTTP/1.1")
+	if got := tx.variables.urlencodedError.Get(); got != "1" {
+		t.Fatalf("expected URLENCODED_ERROR to be 1, got %q", got)
+	}
+	if got := tx.variables.args.FindString("a"); len(got) != 1 || got[0].Value() != "%ZZ" {
+		t.Fatalf("expected malformed query value to be preserved, got %v", got)
+	}
+}
+
+// A URI that url.ParseRequestURI rejects still goes through the "?" fallback
+// added for GHSA-x26q-wvhg-fh4m, so a malformed query on that path must also
+// report URLENCODED_ERROR and still expose its arguments to the rules.
+func TestProcessURISetsURLencodedErrorOnURIParseFallback(t *testing.T) {
+	tx := NewWAF().NewTransaction()
+	defer tx.Close()
+
+	tx.ProcessURI("/\x7f?a=%ZZ", "GET", "HTTP/1.1")
+	if got := tx.variables.uriParseError.Get(); got != "1" {
+		t.Fatalf("expected URI_PARSE_ERROR to be 1, got %q", got)
+	}
+	if got := tx.variables.urlencodedError.Get(); got != "1" {
+		t.Fatalf("expected URLENCODED_ERROR to be 1, got %q", got)
+	}
+	if got := tx.variables.args.FindString("a"); len(got) != 1 || got[0].Value() != "%ZZ" {
+		t.Fatalf("expected malformed query value to be preserved, got %v", got)
+	}
+}
+
 func TestWriteRequestBody(t *testing.T) {
 	const (
 		urlencodedBody    = "some=result&second=data"
