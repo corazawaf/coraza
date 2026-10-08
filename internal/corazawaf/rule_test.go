@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -622,7 +623,7 @@ func TestTransformArgSimple(t *testing.T) {
 	rule := NewRule()
 	_ = rule.AddTransformation("AppendA", transformationAppendA)
 	_ = rule.AddTransformation("AppendB", transformationAppendB)
-	arg, errs := rule.transformArg(md, 0, transformationCache)
+	arg, errs := rule.transformArg(md, 0, transformationCache, false)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
@@ -634,7 +635,7 @@ func TestTransformArgSimple(t *testing.T) {
 		t.Errorf("Expected 2 transformations in cache (one per step), got %d", len(transformationCache))
 	}
 	// Repeating the same transformation, expecting still two elements in the cache (cache hit)
-	arg, errs = rule.transformArg(md, 0, transformationCache)
+	arg, errs = rule.transformArg(md, 0, transformationCache, false)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
@@ -655,7 +656,7 @@ func TestTransformArgNoCacheForTXVariable(t *testing.T) {
 	}
 	rule := NewRule()
 	_ = rule.AddTransformation("AppendA", transformationAppendA)
-	arg, errs := rule.transformArg(md, 0, transformationCache)
+	arg, errs := rule.transformArg(md, 0, transformationCache, false)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
@@ -685,7 +686,7 @@ func TestTransformArgPrefixSharing(t *testing.T) {
 	_ = rule2.AddTransformation("AppendB", transformationAppendB)
 
 	// Evaluate rule1 first — caches the AppendA intermediate
-	arg1, errs := rule1.transformArg(md, 0, transformationCache)
+	arg1, errs := rule1.transformArg(md, 0, transformationCache, false)
 	if errs != nil {
 		t.Fatalf("Unexpected errors: %v", errs)
 	}
@@ -697,7 +698,7 @@ func TestTransformArgPrefixSharing(t *testing.T) {
 	}
 
 	// Evaluate rule2 — should reuse the cached AppendA result and only compute AppendB
-	arg2, errs := rule2.transformArg(md, 0, transformationCache)
+	arg2, errs := rule2.transformArg(md, 0, transformationCache, false)
 	if errs != nil {
 		t.Fatalf("Unexpected errors: %v", errs)
 	}
@@ -729,8 +730,8 @@ func TestClearTransformationsResetsID(t *testing.T) {
 	_ = ruleB.AddTransformation("AppendA", transformationAppendA)
 	_ = ruleB.AddTransformation("AppendB", transformationAppendB)
 
-	argA, _ := ruleA.transformArg(md, 0, transformationCache)
-	argB, _ := ruleB.transformArg(md, 0, transformationCache)
+	argA, _ := ruleA.transformArg(md, 0, transformationCache, false)
+	argB, _ := ruleB.transformArg(md, 0, transformationCache, false)
 
 	if argA != "testB" {
 		t.Errorf("Rule A (t:none resets): expected \"testB\", got %q", argA)
@@ -742,6 +743,60 @@ func TestClearTransformationsResetsID(t *testing.T) {
 	// they'd collide in the cache and one would get the wrong result.
 	if argA == argB {
 		t.Error("Rule A and Rule B produced the same result — ClearTransformations likely didn't reset transformationsID")
+	}
+}
+
+// TestTransformationCacheSharedAcrossRules checks that rules sharing a target and
+// a transformation chain also share cache entries: the chain runs once per value
+// for the whole phase, however many rules ask for it. Map-backed collections return
+// FindAll() results in Go map iteration order, so a cache key that depends on an
+// argument's position within that result makes every rule miss and store duplicates.
+func TestTransformationCacheSharedAcrossRules(t *testing.T) {
+	const (
+		nRules = 10
+		nArgs  = 10
+	)
+
+	transformations := 0
+	waf := NewWAF()
+	waf.RuleEngine = types.RuleEngineOn
+
+	for i := 0; i < nRules; i++ {
+		r := NewRule()
+		r.ID_ = 1000 + i
+		r.LogID_ = strconv.Itoa(1000 + i)
+		r.Phase_ = types.PhaseRequestHeaders
+		if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
+			t.Fatal(err)
+		}
+		if err := r.AddTransformation("countingAppendA", func(v string) (string, bool, error) {
+			transformations++
+			return v + "A", true, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		// never matches, so evaluation always walks every argument
+		r.SetOperator(&dummyEqOperator{}, "@eq", "0")
+		if err := waf.Rules.Add(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tx := waf.NewTransaction()
+	for i := 0; i < nArgs; i++ {
+		tx.AddGetRequestArgument(fmt.Sprintf("arg%d", i), fmt.Sprintf("value-%d", i))
+	}
+	tx.ProcessRequestHeaders()
+
+	if transformations != nArgs {
+		t.Errorf("transformation executed %d times, want %d (once per argument, shared by all %d rules)",
+			transformations, nArgs, nRules)
+	}
+	if got := len(tx.transformationCache); got != nArgs {
+		t.Errorf("cache holds %d entries, want %d (one per argument)", got, nArgs)
+	}
+	if err := tx.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 
