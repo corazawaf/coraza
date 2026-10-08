@@ -17,7 +17,8 @@ go 1.25.0
 // - ocsf-schema-golang
 
 require (
-	github.com/corazawaf/coraza-coreruleset v0.0.0-20240226094324-415b1017abdc
+	github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.25.0
+	github.com/corazawaf/coraza-coreruleset/crs/v4 v4.25.0
 	github.com/corazawaf/libinjection-go v0.3.4
 	github.com/foxcpp/go-mockdns v1.2.0
 	github.com/jcchavezs/mergefs v0.1.1
