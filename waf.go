@@ -33,6 +33,18 @@ func NewWAF(config WAFConfig) (WAF, error) {
 
 	waf := corazawaf.NewWAF()
 
+	w, err := buildWAF(waf, c)
+	if err != nil {
+		// The caller never receives the WAF, so release its memoize ownership here.
+		_ = waf.Close()
+		return nil, err
+	}
+
+	return w, nil
+}
+
+func buildWAF(waf *corazawaf.WAF, c *wafConfig) (WAF, error) {
+
 	if environment.HasAccessToFS {
 		if err := environment.IsDirWritable(waf.TmpDir); err != nil {
 			return nil, fmt.Errorf("filesystem access check: %w. Use 'no_fs_access' build tag, if not available", err)

@@ -5,11 +5,13 @@ package coraza
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -232,5 +234,38 @@ func TestRulesCount(t *testing.T) {
 	}
 	if rules.RulesCount() != 2 {
 		t.Fatalf("expected 2 rules, got %d", rules.RulesCount())
+	}
+}
+
+func TestNewWAFReleasesPatternsOnBuildFailure(t *testing.T) {
+	tests := []struct {
+		name       string
+		pattern    string
+		directives string
+		wantErr    bool
+	}{
+		{
+			name:       "failing rule releases earlier patterns",
+			pattern:    "leakfail[0-9]{3}probe",
+			directives: `SecRule ARGS "@rx leakfail[0-9]{3}probe" "id:1,phase:1,pass"` + "\n" + `SecRule ARGS "@rx (" "id:2,phase:1,pass"`,
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			memoize.Reset()
+			t.Cleanup(memoize.Reset)
+			_, err := NewWAF(NewWAFConfig().WithDirectives(tt.directives))
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("unexpected error state: %v", err)
+			}
+			key := fmt.Sprintf("rx:%v:(?sm)%s", false, tt.pattern)
+			compiled := false
+			_, _ = memoize.NewMemoizer(1<<40).Do(key, func() (any, error) { compiled = true; return nil, nil })
+			if !compiled {
+				t.Fatal("failed build left pattern cached")
+			}
+		})
 	}
 }
