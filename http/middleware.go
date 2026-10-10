@@ -9,6 +9,7 @@ package http
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -71,7 +72,7 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 		// body inspection, otherwise we just let the request follow its
 		// regular flow.
 		if req.Body != nil && req.Body != http.NoBody {
-			it, _, err := tx.ReadRequestBodyFrom(req.Body)
+			it, _, err := tx.ReadRequestBodyFrom(requestBodyReader(req))
 			if err != nil {
 				return nil, fmt.Errorf("failed to append request body: %s", err.Error())
 			}
@@ -96,6 +97,24 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 
 	return tx.ProcessRequestBody()
 }
+
+// requestBodyReader returns the request body, exposing its length when the
+// request carries a Content-Length, so the transaction can tell a body at the
+// limit from one over it without reading past the limit.
+func requestBodyReader(req *http.Request) io.Reader {
+	if req.ContentLength < 0 || req.ContentLength > math.MaxInt {
+		return req.Body
+	}
+	return &bodyWithLen{Reader: req.Body, n: int(req.ContentLength)}
+}
+
+type bodyWithLen struct {
+	io.Reader
+	n int
+}
+
+// Len implements the length hint the transaction's body readers look for.
+func (b *bodyWithLen) Len() int { return b.n }
 
 func WrapHandler(waf coraza.WAF, h http.Handler) http.Handler {
 	if waf == nil {

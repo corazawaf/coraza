@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -97,6 +98,11 @@ type Transaction struct {
 
 	// Handles response body buffers
 	responseBodyBuffer *BodyBuffer
+
+	// Byte read past the body limit from a reader of unknown length, handed
+	// back by the body readers so connectors forward every byte received.
+	requestBodyOverflow  []byte
+	responseBodyOverflow []byte
 
 	// Rules with this id are going to be skipped while processing a phase
 	ruleRemoveByID map[int]struct{}
@@ -372,12 +378,28 @@ func (tx *Transaction) SetDebugLogLevel(lvl debuglog.Level) {
 	tx.debugLogger = tx.debugLogger.WithLevel(lvl)
 }
 
+// ResponseBodyReader returns a reader over the response body received so far:
+// the bytes buffered up to SecResponseBodyLimit, followed by the byte read past
+// the limit from a reader of unknown length, if any.
 func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
-	return tx.responseBodyBuffer.Reader()
+	return bodyReaderWithOverflow(tx.responseBodyBuffer, tx.responseBodyOverflow)
 }
 
+// RequestBodyReader returns a reader over the request body received so far:
+// the bytes buffered up to SecRequestBodyLimit, followed by the byte read past
+// the limit from a reader of unknown length, if any.
 func (tx *Transaction) RequestBodyReader() (io.Reader, error) {
-	return tx.requestBodyBuffer.Reader()
+	return bodyReaderWithOverflow(tx.requestBodyBuffer, tx.requestBodyOverflow)
+}
+
+// bodyReaderWithOverflow returns a reader over the buffered body followed by
+// the byte read past the limit, if any, so no received byte is lost.
+func bodyReaderWithOverflow(buffer *BodyBuffer, overflow []byte) (io.Reader, error) {
+	r, err := buffer.Reader()
+	if err != nil || overflow == nil {
+		return r, err
+	}
+	return io.MultiReader(r, bytes.NewReader(overflow)), nil
 }
 
 // AddRequestHeader Adds a request header
@@ -966,9 +988,10 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		return nil, 0, nil
 	}
 
-	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
-		// tx.RequestBodyLimit will never be zero so if this happened, we have an
-		// interruption (that has been previously raised, but ignored by the connector) for sure.
+	if tx.variables.inboundDataError.Get() == "1" {
+		// The limit was already exceeded by a previous write: the transaction was
+		// interrupted (Reject, possibly ignored by the connector) or the partial
+		// body has already been processed (ProcessPartial).
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
@@ -989,7 +1012,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		return nil, 0, errors.New("overflow reached while writing request body")
 	}
 
-	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+	if tx.requestBodyBuffer.length+writingBytes > tx.RequestBodyLimit {
 		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case RequestBodyLimitAction is Reject
@@ -1019,6 +1042,21 @@ type ByteLenger interface {
 	Len() int
 }
 
+// readPastLimit tells whether a reader of unknown length still has data once
+// the body limit has been reached by reading one more byte, which is returned
+// so it can be handed back to the connector. It returns nil at the end of the
+// body, and the read error otherwise.
+func readPastLimit(r io.Reader) ([]byte, error) {
+	var b [1]byte
+	if _, err := io.ReadFull(r, b[:]); err != nil {
+		if err == io.EOF {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return []byte{b[0]}, nil
+}
+
 // ReadRequestBodyFrom writes bytes from a reader into the request body
 // it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't read the reader if the body access isn't accessible.
@@ -1031,9 +1069,10 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		return nil, 0, nil
 	}
 
-	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
-		// tx.RequestBodyLimit will never be zero so if this happened, we have an
-		// interruption (that has been previously raised, but ignored by the connector) for sure.
+	if tx.variables.inboundDataError.Get() == "1" {
+		// The limit was already exceeded by a previous write: the transaction was
+		// interrupted (Reject, possibly ignored by the connector) or the partial
+		// body has already been processed (ProcessPartial).
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
@@ -1055,7 +1094,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 			// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
 			return nil, 0, errors.New("overflow reached while writing request body")
 		}
-		if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
+		if tx.requestBodyBuffer.length+writingBytes > tx.RequestBodyLimit {
 			tx.variables.inboundDataError.Set("1")
 			if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx, 413)
@@ -1075,7 +1114,14 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		return nil, int(w), err
 	}
 
-	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
+	// A reader of unknown length is read up to the limit; the body is over the
+	// limit only if the reader still has data.
+	if _, known := r.(ByteLenger); !known && tx.requestBodyBuffer.length == tx.RequestBodyLimit {
+		if tx.requestBodyOverflow, err = readPastLimit(r); err != nil {
+			return nil, int(w), err
+		}
+	}
+	if tx.requestBodyOverflow != nil {
 		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 			return setAndReturnBodyLimitInterruption(tx, 413)
@@ -1244,9 +1290,10 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 		return nil, 0, nil
 	}
 
-	if tx.ResponseBodyLimit == tx.responseBodyBuffer.length {
-		// tx.ResponseBodyLimit will never be zero so if this happened, we have an
-		// interruption for sure.
+	if tx.variables.outboundDataError.Get() == "1" {
+		// The limit was already exceeded by a previous write: the transaction was
+		// interrupted (Reject) or the partial body has already been processed
+		// (ProcessPartial).
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
@@ -1260,7 +1307,7 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 		writingBytes           = int64(len(b))
 		runProcessResponseBody = false
 	)
-	if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
+	if tx.responseBodyBuffer.length+writingBytes > tx.ResponseBodyLimit {
 		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			// We interrupt this transaction in case ResponseBodyLimitAction is Reject
@@ -1295,7 +1342,8 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		return nil, 0, nil
 	}
 
-	if tx.ResponseBodyLimit == tx.responseBodyBuffer.length {
+	if tx.variables.outboundDataError.Get() == "1" {
+		// See WriteResponseBody.
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			return tx.interruption, 0, nil
 		}
@@ -1311,7 +1359,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	)
 	if l, ok := r.(ByteLenger); ok {
 		writingBytes = int64(l.Len())
-		if tx.responseBodyBuffer.length+writingBytes >= tx.ResponseBodyLimit {
+		if tx.responseBodyBuffer.length+writingBytes > tx.ResponseBodyLimit {
 			tx.variables.outboundDataError.Set("1")
 			if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 				return setAndReturnBodyLimitInterruption(tx, 500)
@@ -1331,7 +1379,13 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		return nil, int(w), err
 	}
 
-	if tx.responseBodyBuffer.length == tx.ResponseBodyLimit {
+	// See ReadRequestBodyFrom.
+	if _, known := r.(ByteLenger); !known && tx.responseBodyBuffer.length == tx.ResponseBodyLimit {
+		if tx.responseBodyOverflow, err = readPastLimit(r); err != nil {
+			return nil, int(w), err
+		}
+	}
+	if tx.responseBodyOverflow != nil {
 		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
 			return setAndReturnBodyLimitInterruption(tx, 500)
@@ -1733,6 +1787,8 @@ func (tx *Transaction) Close() error {
 	}
 
 	tx.variables.reset()
+	tx.requestBodyOverflow = nil
+	tx.responseBodyOverflow = nil
 	if err := tx.requestBodyBuffer.Reset(); err != nil {
 		errs = append(errs, fmt.Errorf("reseting request body buffer: %v", err))
 	}
