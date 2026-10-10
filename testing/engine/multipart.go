@@ -540,8 +540,8 @@ SecRule REQBODY_PROCESSOR "@streq MULTIPART" \
 // part's headers are 89 bytes and the form field's are 46, so the cut lands 61
 // and 104 bytes into their values. The two tests cover the file and the
 // form-field branches. The third body is exactly 150 bytes and arrives already
-// cut: nothing is dropped, but it reaches the limit, so INBOUND_DATA_ERROR is set
-// and it is treated like a body the limit cut (see flagUnexpectedEOF). The fourth
+// cut: nothing is dropped and the limit is not exceeded, so INBOUND_DATA_ERROR
+// stays 0 and it is rejected like any client-truncated body (#1045). The fourth
 // body is cut inside its closing boundary, 100 bytes after the field's value,
 // where NextPart fails instead of the part's read. The last body is cut the same
 // way by the client, below the limit, and must still be rejected.
@@ -598,7 +598,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 		{
-			Title: "a form field ending cut exactly at the limit is treated as cut by the limit",
+			Title: "a body arriving already cut, exactly at the limit, is rejected like any truncated body",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -612,8 +612,13 @@ var _ = profile.RegisterProfile(profile.Profile{
 								"CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{100, 102},
-							NonTriggeredRules: []int{200002, 200003},
+							TriggeredRules:    []int{104, 200003},
+							NonTriggeredRules: []int{100, 200002},
+							Interruption: &profile.ExpectedInterruption{
+								Status: 400,
+								RuleID: 200003,
+								Action: "deny",
+							},
 						},
 					},
 				},

@@ -197,10 +197,9 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 // it in full, and ProcessPartial already accepts that the bytes past the limit go uninspected.
 // Flagging it would make rule 200003 reject most oversized multipart bodies,
 // since a limit set in bytes usually lands inside a part's content.
-// INBOUND_DATA_ERROR is also set by a body that ends exactly at the limit with
-// nothing cut. That body is not flagged either: telling the two apart would need
-// a read past the limit, and would gain nothing, since the same malformed body
-// padded by one byte is cut by the limit and not flagged anyway.
+// A body that ends exactly at the limit with nothing cut does not set
+// INBOUND_DATA_ERROR (#1045), so one that arrives already cut at that size is
+// flagged like any other truncated body.
 func flagUnexpectedEOF(v plugintypes.TransactionVariables) {
 	if v.InboundDataError().Get() == "1" {
 		return

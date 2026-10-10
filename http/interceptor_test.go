@@ -883,10 +883,8 @@ func TestResponseBody(t *testing.T) {
 			content:                   contentWithoutDataLeak,
 			responseBodyRelativeLimit: 0,
 			responseBodyLimitAction:   limitActionReject,
-			// NOTE: According to https://coraza.io/docs/seclang/directives/#secresponsebodylimit
-			// expectedStatusCode should be http.StatusOK, but actually it is http.StatusInternalServerError.
-			// Coraza should be fixed.
-			expectedStatusCode: http.StatusInternalServerError,
+			// A body of exactly the limit is not over the limit (#1045)
+			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name:                      "OneByteShorterThanLimitAndAccepts",
