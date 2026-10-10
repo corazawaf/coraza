@@ -4,6 +4,7 @@
 package coraza
 
 import (
+	"errors"
 	"context"
 	"fmt"
 	"strings"
@@ -36,8 +37,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	w, err := buildWAF(waf, c)
 	if err != nil {
 		// The caller never receives the WAF, so release its memoize ownership here.
-		_ = waf.Close()
-		return nil, err
+		return nil, errors.Join(err, waf.Close())
 	}
 
 	return w, nil
