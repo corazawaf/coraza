@@ -378,10 +378,16 @@ func (tx *Transaction) SetDebugLogLevel(lvl debuglog.Level) {
 	tx.debugLogger = tx.debugLogger.WithLevel(lvl)
 }
 
+// ResponseBodyReader returns a reader over the response body received so far:
+// the bytes buffered up to SecResponseBodyLimit, followed by the byte read past
+// the limit from a reader of unknown length, if any.
 func (tx *Transaction) ResponseBodyReader() (io.Reader, error) {
 	return bodyReaderWithOverflow(tx.responseBodyBuffer, tx.responseBodyOverflow)
 }
 
+// RequestBodyReader returns a reader over the request body received so far:
+// the bytes buffered up to SecRequestBodyLimit, followed by the byte read past
+// the limit from a reader of unknown length, if any.
 func (tx *Transaction) RequestBodyReader() (io.Reader, error) {
 	return bodyReaderWithOverflow(tx.requestBodyBuffer, tx.requestBodyOverflow)
 }
@@ -1036,15 +1042,19 @@ type ByteLenger interface {
 	Len() int
 }
 
-// readPastLimit reads one byte from r to tell whether a reader of unknown
-// length still has data once the body limit has been reached. The byte is
-// returned so it can be handed back to the connector; nil means no more data.
-func readPastLimit(r io.Reader) []byte {
+// readPastLimit tells whether a reader of unknown length still has data once
+// the body limit has been reached by reading one more byte, which is returned
+// so it can be handed back to the connector. It returns nil at the end of the
+// body, and the read error otherwise.
+func readPastLimit(r io.Reader) ([]byte, error) {
 	var b [1]byte
-	if n, _ := r.Read(b[:]); n > 0 {
-		return []byte{b[0]}
+	if _, err := io.ReadFull(r, b[:]); err != nil {
+		if err == io.EOF {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return nil
+	return []byte{b[0]}, nil
 }
 
 // ReadRequestBodyFrom writes bytes from a reader into the request body
@@ -1107,7 +1117,9 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	// A reader of unknown length is read up to the limit; the body is over the
 	// limit only if the reader still has data.
 	if _, known := r.(ByteLenger); !known && tx.requestBodyBuffer.length == tx.RequestBodyLimit {
-		tx.requestBodyOverflow = readPastLimit(r)
+		if tx.requestBodyOverflow, err = readPastLimit(r); err != nil {
+			return nil, int(w), err
+		}
 	}
 	if tx.requestBodyOverflow != nil {
 		tx.variables.inboundDataError.Set("1")
@@ -1369,7 +1381,9 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 
 	// See ReadRequestBodyFrom.
 	if _, known := r.(ByteLenger); !known && tx.responseBodyBuffer.length == tx.ResponseBodyLimit {
-		tx.responseBodyOverflow = readPastLimit(r)
+		if tx.responseBodyOverflow, err = readPastLimit(r); err != nil {
+			return nil, int(w), err
+		}
 	}
 	if tx.responseBodyOverflow != nil {
 		tx.variables.outboundDataError.Set("1")
