@@ -28,9 +28,29 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			// tag supports macro expansion, resolved per match (#1118)
+			Title: "tags are macro expanded",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Headers: map[string]string{"X-Request-Id": "abc123"},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{300},
+							LogContains:    `[tag "static"] [tag "request-id:abc123"]`,
+							NoLogContains:  `%{REQUEST_HEADERS.x-request-id}`,
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecAction "id:1,pass,setvar:'tx.inbound_anomaly_score_threshold=5',setvar:'tx.blocking_paranoia_level=1'"
+
+SecRule REQUEST_HEADERS:X-Request-Id "@rx ." "id:300,phase:1,log,pass,tag:'static',tag:'request-id:%{REQUEST_HEADERS.x-request-id}'"
 
 SecRule TX:inbound_anomaly_score_threshold "@eq 5" "id:100,log,pass"
 
