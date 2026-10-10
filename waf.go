@@ -5,6 +5,7 @@ package coraza
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -32,6 +33,17 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	c := config.(*wafConfig)
 
 	waf := corazawaf.NewWAF()
+
+	w, err := buildWAF(waf, c)
+	if err != nil {
+		// The caller never receives the WAF, so release its memoize ownership here.
+		return nil, errors.Join(err, waf.Close())
+	}
+
+	return w, nil
+}
+
+func buildWAF(waf *corazawaf.WAF, c *wafConfig) (WAF, error) {
 
 	if environment.HasAccessToFS {
 		if err := environment.IsDirWritable(waf.TmpDir); err != nil {
