@@ -29,8 +29,7 @@ func (a *tagFn) Init(r plugintypes.RuleMetadata, data string) error {
 	if len(data) == 0 {
 		return ErrMissingArguments
 	}
-	r.(*corazawaf.Rule).Tags_ = append(r.(*corazawaf.Rule).Tags_, data)
-	return nil
+	return r.(*corazawaf.Rule).AddTag(data)
 }
 
 func (a *tagFn) Evaluate(_ plugintypes.RuleMetadata, _ plugintypes.TransactionState) {}

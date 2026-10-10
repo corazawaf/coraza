@@ -126,6 +126,12 @@ type Rule struct {
 	// Rule logdata
 	LogData macro.Macro
 
+	// tagMacros holds, per entry of Tags_, the compiled macro of a tag that
+	// contains one, or nil for a static tag. See AddTag.
+	tagMacros []macro.Macro
+	// hasMacroTags is true when any tag needs expansion at match time
+	hasMacroTags bool
+
 	// If true, triggering this rule write to the error log
 	Log bool
 
@@ -777,4 +783,39 @@ func NewRule() *Rule {
 			Tags_:     []string{},
 		},
 	}
+}
+
+// AddTag appends a tag to the rule. Tags_ keeps the tag as written, which is
+// what SecRuleRemoveByTag and ctl:ruleRemoveByTag match against; a tag that
+// contains a macro is also compiled so it can be expanded per match.
+func (r *Rule) AddTag(tag string) error {
+	var m macro.Macro
+	if strings.Contains(tag, "%{") {
+		var err error
+		if m, err = macro.NewMacro(tag); err != nil {
+			return err
+		}
+		r.hasMacroTags = true
+	}
+	r.Tags_ = append(r.Tags_, tag)
+	r.tagMacros = append(r.tagMacros, m)
+	return nil
+}
+
+// matchedMetadata returns the metadata attached to a match of the rule. When
+// any tag contains a macro it is a copy with the tags expanded against the
+// transaction; otherwise it is the rule's own metadata.
+func (r *Rule) matchedMetadata(tx *Transaction) *corazarules.RuleMetadata {
+	if !r.hasMacroTags {
+		return &r.RuleMetadata
+	}
+	md := r.RuleMetadata
+	md.Tags_ = make([]string, len(r.Tags_))
+	for i, tag := range r.Tags_ {
+		if m := r.tagMacros[i]; m != nil {
+			tag = m.Expand(tx)
+		}
+		md.Tags_[i] = tag
+	}
+	return &md
 }
