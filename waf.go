@@ -4,8 +4,8 @@
 package coraza
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
