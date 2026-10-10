@@ -793,7 +793,7 @@ func (r *Rule) AddTag(tag string) error {
 	if strings.Contains(tag, "%{") {
 		var err error
 		if m, err = macro.NewMacro(tag); err != nil {
-			return err
+			return fmt.Errorf("compiling tag %q: %w", tag, err)
 		}
 		r.hasMacroTags = true
 	}
