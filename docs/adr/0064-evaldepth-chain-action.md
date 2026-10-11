@@ -3,7 +3,7 @@
 - **Status:** proposed
 - **Date:** 2026-10-18 (expected; update before merge)
 - **Version:** unreleased (post-v3.8.1)
-- **PR:** [#NNNN](https://github.com/corazawaf/coraza/pull/NNNN)
+- **PR:** [#1744](https://github.com/corazawaf/coraza/pull/1744)
 - **Issue(s):** [#1608](https://github.com/corazawaf/coraza/issues/1608)
 - **Deciders:** @adilalperenciftci
 - **Category:** Feature
