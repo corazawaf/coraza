@@ -18,6 +18,10 @@ import (
 // chain starter, with the values that match produced, until the whole chain
 // matches. The same applies between chained rules that match several targets.
 //
+// Each match of a rule can make the rules after it run again, so the work is
+// bounded: past 10000 operator evaluations for one chain starter, the rest of
+// the chain is evaluated once, breadth first, as without `evalDepth`.
+//
 // This action is a Coraza extension, ModSecurity always evaluates chains
 // breadth first. It can only be used in the chain starter.
 //

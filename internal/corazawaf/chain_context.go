@@ -14,6 +14,9 @@ type chainContext struct {
 	matchedVar     string
 	matchedVarName string
 	captures       [10]string
+	// hasCapture has bit i set when TX:i existed, so restore does not create
+	// keys the match never set.
+	hasCapture uint16
 }
 
 func newChainContext(tx *Transaction, match types.MatchData) chainContext {
@@ -25,6 +28,7 @@ func newChainContext(tx *Transaction, match types.MatchData) chainContext {
 	for i, k := range captureKeys {
 		if v := tx.variables.tx.Get(k); len(v) > 0 {
 			c.captures[i] = v[0]
+			c.hasCapture |= 1 << i
 		}
 	}
 	return c
@@ -34,6 +38,10 @@ func (c chainContext) restore(tx *Transaction) {
 	tx.variables.matchedVar.Set(c.matchedVar)
 	tx.variables.matchedVarName.Set(c.matchedVarName)
 	for i, k := range captureKeys {
-		tx.variables.tx.SetIndex(k, 0, c.captures[i])
+		if c.hasCapture&(1<<i) != 0 {
+			tx.variables.tx.SetIndex(k, 0, c.captures[i])
+		} else {
+			tx.variables.tx.Remove(k)
+		}
 	}
 }
