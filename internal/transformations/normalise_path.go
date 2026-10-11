@@ -3,16 +3,15 @@
 
 package transformations
 
-import (
-	"path/filepath"
-)
+import "path"
 
 func normalisePath(data string) (string, bool, error) {
 	leng := len(data)
 	if leng < 1 {
 		return data, false, nil
 	}
-	clean := filepath.Clean(data)
+	// SecLang paths use slash separators on every platform.
+	clean := path.Clean(data)
 	if clean == "." {
 		return "", true, nil
 	}
