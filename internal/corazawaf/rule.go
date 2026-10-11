@@ -137,6 +137,11 @@ type Rule struct {
 
 	HasChain bool
 
+	// EvalDepth makes a chain starter evaluate the rest of the chain once per
+	// match, each time with the MATCHED_VAR, MATCHED_VAR_NAME and TX:0-9 values
+	// left by that match, instead of once with the values of the last match.
+	EvalDepth bool
+
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
 	// Multiphase specific field
@@ -188,6 +193,12 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 const noID = 0
 
 func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue) []types.MatchData {
+	return r.evaluate(logger, phase, tx, collectiveMatchedValues, chainLevel, cache, nil)
+}
+
+// evaluate is doEvaluate that additionally appends to contexts, when not nil,
+// the state left by each match of this rule, for depth first chain evaluation.
+func (r *Rule) evaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue, contexts *[]chainContext) []types.MatchData {
 	tx.Capture = r.Capture
 
 	if multiphaseEvaluation {
@@ -195,6 +206,11 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	}
 
 	var matchedValues []types.MatchData
+	var depthContexts []chainContext
+	depthFirst := r.EvalDepth && r.Chain != nil && r.ParentID_ == noID
+	if depthFirst {
+		contexts = &depthContexts
+	}
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")
 	defer logger.Debug().Msg("Finished rule evaluation")
@@ -319,6 +335,9 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 						if !multiphaseEvaluation {
 							matchedValues = append(matchedValues, mr)
+							if contexts != nil {
+								*contexts = append(*contexts, newChainContext(tx, mr))
+							}
 						} else {
 							if isMultiphaseDoubleEvaluation(tx, phase, r, collectiveMatchedValues, mr) {
 								// This variables chain already matched, let's evaluate the next variable
@@ -344,6 +363,9 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 							if r.LogData != nil {
 								mr.Data_ = r.LogData.Expand(tx)
 							}
+							if contexts != nil {
+								*contexts = append(*contexts, newChainContext(tx, mr))
+							}
 						}
 
 						evalLog.Msg("Evaluating operator: MATCH")
@@ -363,7 +385,17 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	// also, expansion of Msg and LogData of the parent rule is postponed after the chain evaluation (if any)
 	if r.ParentID_ == noID {
 		// we only run the chains for the parent rule
-		for nr := r.Chain; nr != nil; {
+		chain := r.Chain
+		if depthFirst {
+			path := chain.evaluateDepthFirst(logger, phase, tx, collectiveMatchedValues, chainLevel+1, cache, depthContexts)
+			if len(path) == 0 {
+				return nil
+			}
+			// Only the parent match the whole chain matched with is reported.
+			matchedValues = path
+			chain = nil
+		}
+		for nr := chain; nr != nil; {
 			chainLevel++
 
 			var nrLogger debuglog.Logger
@@ -416,6 +448,38 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		}
 	}
 	return matchedValues
+}
+
+// evaluateDepthFirst evaluates r, and the rules chained after it, once for
+// each context in parents, restoring that context first. It returns the
+// parent match followed by the matches of the rest of the chain for the first
+// context the whole remaining chain matched with, or nil.
+func (r *Rule) evaluateDepthFirst(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue, parents []chainContext) []types.MatchData {
+	var ruleLogger debuglog.Logger
+	if r.ID_ == noID {
+		ruleLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", r.File_, r.Line_)))
+	} else {
+		ruleLogger = logger.With(debuglog.Int("chain_rule_id", r.ID_))
+	}
+
+	var contexts []chainContext
+	for _, parent := range parents {
+		parent.restore(tx)
+		if r.Chain == nil {
+			if matched := r.evaluate(ruleLogger, phase, tx, collectiveMatchedValues, chainLevel, cache, nil); len(matched) > 0 {
+				return append([]types.MatchData{parent.match}, matched...)
+			}
+			continue
+		}
+		contexts = contexts[:0]
+		if len(r.evaluate(ruleLogger, phase, tx, collectiveMatchedValues, chainLevel, cache, &contexts)) == 0 {
+			continue
+		}
+		if path := r.Chain.evaluateDepthFirst(logger, phase, tx, collectiveMatchedValues, chainLevel+1, cache, contexts); len(path) > 0 {
+			return append([]types.MatchData{parent.match}, path...)
+		}
+	}
+	return nil
 }
 
 func (r *Rule) transformMultiMatchArg(arg types.MatchData) ([]string, []error) {

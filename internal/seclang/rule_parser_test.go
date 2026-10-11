@@ -582,3 +582,47 @@ func BenchmarkParseActions(b *testing.B) {
 		_, _ = parseActions(nil, actionsToBeParsed)
 	}
 }
+
+func TestEvalDepthOnlyInChainStarter(t *testing.T) {
+	tests := []struct {
+		name    string
+		rules   string
+		wantErr string
+	}{
+		{
+			name: "chain starter",
+			rules: `SecRule ARGS "@rx (a)" "id:400,phase:2,capture,chain,evalDepth"
+SecRule TX:1 "a" ""`,
+		},
+		{
+			name: "second link",
+			rules: `SecRule ARGS "@rx (a)" "id:401,phase:2,chain"
+SecRule TX:1 "a" "evalDepth"`,
+			wantErr: "evalDepth can only be specified in the chain starter rule",
+		},
+		{
+			name: "third link",
+			rules: `SecRule ARGS "@rx (a)" "id:402,phase:2,chain"
+SecRule TX:1 "a" "chain"
+SecRule TX:1 "a" "evalDepth"`,
+			wantErr: "evalDepth can only be specified in the chain starter rule",
+		},
+		{
+			name:    "with argument",
+			rules:   `SecRule ARGS "a" "id:403,phase:2,chain,evalDepth:on"`,
+			wantErr: "unexpected arguments",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			err := NewParser(waf).FromString(tt.rules)
+			switch {
+			case tt.wantErr == "" && err != nil:
+				t.Fatalf("unexpected error: %v", err)
+			case tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)):
+				t.Fatalf("want error containing %q, have %v", tt.wantErr, err)
+			}
+		})
+	}
+}

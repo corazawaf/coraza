@@ -240,3 +240,108 @@ SecRule REQUEST_URI|REQUEST_HEADERS "test" "id:1, phase:2, t:none, pass, log, ch
 SecRule TX:counter "@eq 3" "id:2, phase:2, t:none, pass, log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "adilalperenciftci",
+		Description: "evalDepth runs the rest of the chain once per match with that match's MATCHED_VAR and captures",
+		Enabled:     true,
+		Name:        "chains_eval_depth.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chains_eval_depth",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?a=attack1&b=attack2",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{101},
+							NonTriggeredRules: []int{102, 103, 104},
+							LogContains:       `[data "depth attack1"]`,
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?a=attack2&b=attack3",
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{101, 102, 103, 104},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?a=admin-50&b=guest-5",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{102},
+							NonTriggeredRules: []int{103, 104},
+							LogContains:       `[data "user admin over 50"]`,
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?a=admin-5&b=guest-50",
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{102, 103, 104},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?q=k1&r=k9",
+							Headers: map[string]string{
+								"X-A": "k2",
+								"X-B": "k9",
+							},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{103},
+							NonTriggeredRules: []int{104},
+							LogContains:       `[data "pair k9"]`,
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?q=k1&r=k8",
+							Headers: map[string]string{
+								"X-A": "k2",
+								"X-B": "k9",
+							},
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{103, 104},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRule ARGS "@rx ^(attack\d+)$" "id:101,phase:1,log,capture,chain,evalDepth,logdata:'depth %{TX.1}'"
+  SecRule TX:1 "@streq attack1" ""
+
+SecRule ARGS "@rx ^(\w+)-(\d+)$" "id:102,phase:1,log,capture,chain,evalDepth,logdata:'user %{TX.1} over %{TX.2}'"
+  SecRule TX:2 "@gt 10" "chain"
+    SecRule TX:1 "@streq admin" ""
+
+SecRule ARGS_GET "@rx ^(k\d)$" "id:103,phase:1,log,capture,chain,evalDepth,logdata:'pair %{TX.1}'"
+  SecRule REQUEST_HEADERS:/^x-/ "@rx ^k" "chain"
+    SecRule MATCHED_VAR "@streq %{tx.1}" ""
+
+SecRule ARGS "@rx ^(attack\d+)$" "id:104,phase:1,log,capture,chain,evalDepth"
+  SecRule TX:1 "@streq nothing" ""
+`,
+})

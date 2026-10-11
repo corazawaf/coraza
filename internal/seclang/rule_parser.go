@@ -427,6 +427,10 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			options.WAF.Rules.DiscardPendingChain()
 			return nil, fmt.Errorf("disruptive actions can only be specified in the chain starter rule (parent id: %d)", parent.ID_)
 		}
+		if rule.EvalDepth {
+			options.WAF.Rules.DiscardPendingChain()
+			return nil, fmt.Errorf("evalDepth can only be specified in the chain starter rule (parent id: %d)", parent.ID_)
+		}
 		rule.ParentID_ = parent.ID_
 		// While the ID_ will be kept to 0 being a chain rule, the LogID_ is meant to be
 		// the printable ID that represents the chain rule, therefore the parent's ID is inherited.
