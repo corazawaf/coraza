@@ -75,6 +75,17 @@ Semantics that follow from reusing the existing evaluation path:
   earlier phase is not replayed.
 - When no path matches, the transaction is left with the state of the last
   attempt, as the breadth first loop leaves the state of the last match.
+- A snapshot records which of `TX:0`-`TX:9` existed; restoring it removes
+  the ones that did not instead of creating them empty.
+- The work is bounded. Every match of a rule can make the rules after it run
+  again, so a three link chain over `ARGS` is cubic in the number of
+  arguments. The chained rules of one chain starter get a budget of 10000
+  operator evaluations (`depthFirstEvaluationLimit`); once it is spent the
+  rest of the chain is evaluated once, breadth first, with the last parent
+  match, and a warning is logged. Falling back to the default evaluation
+  rather than declaring no match keeps padding a request with arguments from
+  turning the bound into a bypass: past the limit the rule behaves exactly as
+  without `evalDepth`.
 
 ## Technical Discussion
 
@@ -86,7 +97,8 @@ the options and trade-offs above come from the issue body.
 - One new action, `evalDepth`. Rules without it are evaluated by the same
   loop as before.
 - Each parent match costs one snapshot of twelve strings while `evalDepth` is
-  set. The chained rules may run up to once per parent match instead of once.
+  set. The chained rules may run up to once per parent match instead of once,
+  within the 10000 evaluation budget.
 - A Coraza extension: a ruleset using `evalDepth` does not load on
   ModSecurity.
 
