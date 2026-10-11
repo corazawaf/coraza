@@ -72,7 +72,9 @@ Semantics that follow from reusing the existing evaluation path:
   is one context.
 - Under `coraza.rule.multiphase_evaluation` the snapshots are taken after the
   double-evaluation check, so a variable chain that already matched in an
-  earlier phase is not replayed.
+  earlier phase is not replayed. The matches that check compares are kept per
+  branch (the path above plus one parent match), so a branch that failed
+  cannot make a sibling look like a chain that already matched.
 - When no path matches, the transaction is left with the state of the last
   attempt, as the breadth first loop leaves the state of the last match.
 - A snapshot records which of `TX:0`-`TX:9` existed; restoring it removes
