@@ -71,7 +71,7 @@ func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 	ymd := t.Format("20060102")
 	ymdhm := ymd + t.Format("-1504")
 	id := al.Transaction().ID()
-	if strings.ContainsAny(id, `/\`) {
+	if strings.ContainsFunc(id, func(r rune) bool { return r == '/' || r == '\\' || r < 0x20 || r == 0x7f }) {
 		return fmt.Errorf("transaction id %q cannot be used in an audit log file name", id)
 	}
 	filename := ymdhm + t.Format("05") + "-" + id
