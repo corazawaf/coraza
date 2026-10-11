@@ -25,7 +25,9 @@ const timeout = 500 * time.Millisecond
 // RBL hostname to query (e.g., "sbl-xbl.spamhaus.org").
 //
 // Returns:
-// true if the IP address is found in the RBL, false otherwise or on timeout
+// true if the IP address is found in the RBL, false otherwise or on timeout.
+// As in ModSecurity, an IPv4 address is queried with its octets reversed
+// (4.3.2.1.service) and any other input is used as is (domain format).
 //
 // Example:
 // ```seclang
@@ -38,6 +40,7 @@ const timeout = 500 * time.Millisecond
 type rbl struct {
 	service  string
 	resolver *net.Resolver
+	timeout  time.Duration
 }
 
 var _ plugintypes.Operator = (*rbl)(nil)
@@ -48,59 +51,70 @@ func newRBL(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return &rbl{
 		service:  data,
 		resolver: net.DefaultResolver,
+		timeout:  timeout,
 	}, nil
+}
+
+// rblResult is the outcome of one RBL lookup: listed when the name resolves,
+// status holding its first TXT record when there is one.
+type rblResult struct {
+	listed bool
+	status string
 }
 
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
 func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
-	// TODO validate address
-	resC := make(chan bool)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), o.timeout)
+	defer cancel()
 
-	defer func() {
-		cancel()
+	addr := rblAddress(ipAddr, o.service)
+	// Buffered so the lookup goroutine can deliver its result and exit after a
+	// timeout, when nobody receives any more.
+	resC := make(chan rblResult, 1)
+	go func() {
+		resC <- o.lookup(ctx, addr)
 	}()
-
-	addr := fmt.Sprintf("%s.%s", ipAddr, o.service)
-	var captures []string
-	go func(ctx context.Context) {
-		defer func() {
-			close(resC)
-		}()
-		res, err := o.resolver.LookupHost(ctx, addr)
-
-		if err != nil {
-			resC <- false
-			return
-		}
-		// var status string
-		if len(res) > 0 {
-			txt, err := o.resolver.LookupTXT(ctx, addr)
-			if err != nil {
-				resC <- false
-				return
-			}
-
-			if len(txt) > 0 {
-				status := txt[0]
-				captures = append(captures, status)
-				tx.Variables().TX().Set("httpbl_msg", []string{status})
-			}
-		}
-
-		resC <- true
-	}(ctx)
 
 	select {
 	case res := <-resC:
-		if res && len(captures) > 0 {
-			tx.CaptureField(0, captures[0])
+		if res.status != "" {
+			tx.Variables().TX().Set("httpbl_msg", []string{res.status})
+			tx.CaptureField(0, res.status)
 		}
-		return res
-	case <-time.After(timeout):
+		return res.listed
+	case <-ctx.Done():
 		return false
 	}
+}
+
+// rblAddress builds the name to look up the way ModSecurity's mapIpToAddress
+// does: an IPv4 address has its octets reversed, as DNS block lists expect,
+// and anything else is treated as domain-format input and used as is.
+func rblAddress(input, service string) string {
+	if ip4 := net.ParseIP(input).To4(); ip4 != nil {
+		return fmt.Sprintf("%d.%d.%d.%d.%s", ip4[3], ip4[2], ip4[1], ip4[0], service)
+	}
+	return input + "." + service
+}
+
+func (o *rbl) lookup(ctx context.Context, addr string) rblResult {
+	hosts, err := o.resolver.LookupHost(ctx, addr)
+	if err != nil {
+		return rblResult{}
+	}
+	if len(hosts) == 0 {
+		return rblResult{listed: true}
+	}
+	txt, err := o.resolver.LookupTXT(ctx, addr)
+	if err != nil {
+		return rblResult{}
+	}
+	res := rblResult{listed: true}
+	if len(txt) > 0 {
+		res.status = txt[0]
+	}
+	return res
 }
 
 func init() {

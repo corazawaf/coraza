@@ -6,7 +6,11 @@
 package operators
 
 import (
+	"context"
+	"net"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/foxcpp/go-mockdns"
 
@@ -32,16 +36,22 @@ func TestRbl(t *testing.T) {
 
 	logger := &testLogger{t}
 
+	// IPv4 inputs are queried with their octets reversed, as DNSBLs expect:
+	// 10.0.0.1 -> 1.0.0.10.xbl.spamhaus.org.
 	srv, err := mockdns.NewServerWithLogger(map[string]mockdns.Zone{
-		"valid_no_txt.xbl.spamhaus.org.": {
+		"1.0.0.10.xbl.spamhaus.org.": {
 			A: []string{"1.2.3.4"},
 		},
-		"valid_txt.xbl.spamhaus.org.": {
+		"2.0.0.10.xbl.spamhaus.org.": {
 			A:   []string{"1.2.3.5"},
 			TXT: []string{"not blocked"},
 		},
-		"blocked.xbl.spamhaus.org.": {
+		"3.0.0.10.xbl.spamhaus.org.": {
 			A:   []string{"1.2.3.6"},
+			TXT: []string{"blocked"},
+		},
+		"domain-format.xbl.spamhaus.org.": {
+			A:   []string{"1.2.3.7"},
 			TXT: []string{"blocked"},
 		},
 	}, logger, false)
@@ -53,36 +63,78 @@ func TestRbl(t *testing.T) {
 	srv.PatchNet(op.(*rbl).resolver)
 	defer mockdns.UnpatchNet(op.(*rbl).resolver)
 
-	t.Run("Valid hostname with no TXT record", func(t *testing.T) {
-		if op.Evaluate(nil, "valid_no_txt") {
-			t.Errorf("Unexpected result for valid hostname with no TXT record")
+	t.Run("Listed IP with no TXT record", func(t *testing.T) {
+		if op.Evaluate(nil, "10.0.0.1") {
+			t.Errorf("Unexpected result for listed IP with no TXT record")
 		}
 	})
 
-	t.Run("Valid hostname with TXT record", func(t *testing.T) {
+	t.Run("Listed IP with TXT record", func(t *testing.T) {
 		tx := corazawaf.NewWAF().NewTransaction()
-		if !op.Evaluate(tx, "valid_txt") {
-			t.Errorf("Unexpected result for valid hostname")
+		if !op.Evaluate(tx, "10.0.0.2") {
+			t.Errorf("Unexpected result for listed IP")
 		}
 		if want, have := "not blocked", tx.Variables().TX().Get("httpbl_msg")[0]; want != have {
-			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
+			t.Errorf("Unexpected result for listed IP: want %q, have %q", want, have)
 		}
 	})
 
-	t.Run("Invalid hostname", func(t *testing.T) {
-		if op.Evaluate(nil, "invalid") {
-			t.Errorf("Unexpected result for invalid hostname")
+	t.Run("Unlisted IP", func(t *testing.T) {
+		if op.Evaluate(nil, "10.0.0.9") {
+			t.Errorf("Unexpected result for unlisted IP")
 		}
 	})
 
-	t.Run("Blocked hostname", func(t *testing.T) {
+	t.Run("Unreversed IP is not found", func(t *testing.T) {
+		if op.Evaluate(nil, "1.0.0.10") {
+			t.Errorf("Unexpected result: the query must reverse the octets")
+		}
+	})
+
+	t.Run("Domain format input is used as is", func(t *testing.T) {
 		tx := corazawaf.NewWAF().NewTransaction()
-		if !op.Evaluate(tx, "blocked") {
-			t.Fatal("Unexpected result for blocked hostname")
+		if !op.Evaluate(tx, "domain-format") {
+			t.Errorf("Unexpected result for domain format input")
 		}
-		t.Log(tx.Variables().TX().Get("httpbl_msg"))
+	})
+
+	t.Run("Blocked IP", func(t *testing.T) {
+		tx := corazawaf.NewWAF().NewTransaction()
+		if !op.Evaluate(tx, "10.0.0.3") {
+			t.Fatal("Unexpected result for blocked IP")
+		}
 		if want, have := "blocked", tx.Variables().TX().Get("httpbl_msg")[0]; want != have {
-			t.Errorf("Unexpected result for valid hostname: want %q, have %q", want, have)
+			t.Errorf("Unexpected result for blocked IP: want %q, have %q", want, have)
+		}
+	})
+
+	// Not a table row: the behaviour under test is that the lookup goroutine
+	// exits after a timeout, which needs a goroutine count, not an output.
+	// Uses its own resolver, blocked until the context ends, so the timed-out
+	// lookup never touches the mockdns server torn down by the parent test.
+	t.Run("Timeout does not leak the lookup goroutine", func(t *testing.T) {
+		slow := &rbl{
+			service: "xbl.spamhaus.org",
+			timeout: time.Millisecond,
+			resolver: &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
+					<-ctx.Done()
+					return nil, ctx.Err()
+				},
+			},
+		}
+
+		before := runtime.NumGoroutine()
+		if slow.Evaluate(nil, "10.0.0.3") {
+			t.Fatal("Expected the lookup to time out")
+		}
+		deadline := time.Now().Add(2 * time.Second)
+		for runtime.NumGoroutine() > before && time.Now().Before(deadline) {
+			time.Sleep(10 * time.Millisecond)
+		}
+		if after := runtime.NumGoroutine(); after > before {
+			t.Fatalf("lookup goroutine leaked: %d goroutines before, %d after", before, after)
 		}
 	})
 }
