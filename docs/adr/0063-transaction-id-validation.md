@@ -3,7 +3,7 @@
 - **Status:** proposed
 - **Date:** 2026-10-18 (expected; update before merge)
 - **Version:** unreleased (post-v3.8.1)
-- **PR:** [#NNNN](https://github.com/corazawaf/coraza/pull/NNNN)
+- **PR:** [#1743](https://github.com/corazawaf/coraza/pull/1743)
 - **Issue(s):** [#1686](https://github.com/corazawaf/coraza/issues/1686)
 - **Deciders:** @adilalperenciftci
 - **Category:** Feature (security hardening)
