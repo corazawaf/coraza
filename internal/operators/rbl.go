@@ -64,7 +64,16 @@ type rblResult struct {
 
 // https://github.com/mrichman/godnsbl
 // https://github.com/SpiderLabs/ModSecurity/blob/b66224853b4e9d30e0a44d16b29d5ed3842a6b11/src/operators/rbl.cc
+// maxDNSNameLen is the longest name a DNS query can carry (RFC 1035).
+const maxDNSNameLen = 253
+
 func (o *rbl) Evaluate(tx plugintypes.TransactionState, ipAddr string) bool {
+	// The input is request data: an input that cannot form a valid DNS name
+	// is not worth copying, let alone resolving.
+	if len(ipAddr)+1+len(o.service) > maxDNSNameLen {
+		return false
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), o.timeout)
 	defer cancel()
 
@@ -106,12 +115,10 @@ func (o *rbl) lookup(ctx context.Context, addr string) rblResult {
 	if len(hosts) == 0 {
 		return rblResult{listed: true}
 	}
-	txt, err := o.resolver.LookupTXT(ctx, addr)
-	if err != nil {
-		return rblResult{}
-	}
+	// The host lookup decides the listing; the TXT record is optional status
+	// text, so a missing one (an error from the resolver) is not a miss.
 	res := rblResult{listed: true}
-	if len(txt) > 0 {
+	if txt, err := o.resolver.LookupTXT(ctx, addr); err == nil && len(txt) > 0 {
 		res.status = txt[0]
 	}
 	return res

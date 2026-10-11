@@ -9,6 +9,7 @@ import (
 	"context"
 	"net"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,8 +65,15 @@ func TestRbl(t *testing.T) {
 	defer mockdns.UnpatchNet(op.(*rbl).resolver)
 
 	t.Run("Listed IP with no TXT record", func(t *testing.T) {
-		if op.Evaluate(nil, "10.0.0.1") {
+		// As in ModSecurity, the host lookup decides; TXT is optional status
+		if !op.Evaluate(nil, "10.0.0.1") {
 			t.Errorf("Unexpected result for listed IP with no TXT record")
+		}
+	})
+
+	t.Run("Input too long for a DNS name", func(t *testing.T) {
+		if op.Evaluate(nil, strings.Repeat("a", 254)) {
+			t.Errorf("Unexpected result for an oversized input")
 		}
 	})
 
