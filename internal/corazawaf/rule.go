@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"unsafe"
@@ -243,6 +244,9 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				continue
 			}
 			var values []types.MatchData
+			// v is a copy, but its Exceptions still share the rule's backing
+			// array; clip it so the append below cannot write into that array.
+			v.Exceptions = slices.Clip(v.Exceptions)
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
 					// TODO shall we check the pointer?

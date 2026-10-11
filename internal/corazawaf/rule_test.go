@@ -6,6 +6,8 @@ package corazawaf
 import (
 	"errors"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -157,6 +159,60 @@ func TestNoMatchEvaluateBecauseOfWholeCollectionException(t *testing.T) {
 				t.Errorf("Expected no interruption because whole collection is excluded")
 			}
 		})
+	}
+}
+
+// A race between transactions cannot be a profile: the harness runs one
+// transaction at a time.
+func TestConcurrentRemoveRuleTargetByIDKeepsRemovalsPerTransaction(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping concurrency test in short mode")
+	}
+	r := NewRule()
+	r.ID_ = 1
+	r.LogID_ = "1"
+	if err := r.AddVariable(variables.RequestCookies, "", false); err != nil {
+		t.Fatal(err)
+	}
+	// Three static exceptions leave the rule's backing array a spare slot, as
+	// REQUEST-999-COMMON-EXCEPTIONS-AFTER.conf does for CRS 942420 and 942421.
+	for _, key := range []string{"a", "b", "c"} {
+		if err := r.AddVariableNegation(variables.RequestCookies, key); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r.SetOperator(&dummyEqOperator{}, "@eq", "0")
+	waf := NewWAF()
+	cookies := [2]string{"alpha", "beta"}
+	const workers, perWorker = 16, 2000
+	var wrong atomic.Int64
+	var wg sync.WaitGroup
+	for w := range workers {
+		wg.Go(func() {
+			own, other := cookies[w%2], cookies[(w+1)%2]
+			for i := range perWorker {
+				// Even iterations remove the cookie the request carries, odd ones
+				// the other, so a lost or a borrowed removal fails either way.
+				removed, wantMatch := own, false
+				if i%2 == 1 {
+					removed, wantMatch = other, true
+				}
+				// Not closed: the tinygo pool is unsynchronised and CI runs that
+				// tag under -race.
+				tx := waf.NewTransaction()
+				tx.AddRequestHeader("Cookie", own+"=0")
+				tx.RemoveRuleTargetByID(1, variables.RequestCookies, removed, nil)
+				var matchedValues []types.MatchData
+				matched := len(r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)) > 0
+				if matched != wantMatch {
+					wrong.Add(1)
+				}
+			}
+		})
+	}
+	wg.Wait()
+	if n := wrong.Load(); n > 0 {
+		t.Errorf("%d of %d transactions were evaluated with another transaction's removals", n, workers*perWorker)
 	}
 }
 
