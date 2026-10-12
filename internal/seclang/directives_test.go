@@ -128,6 +128,21 @@ func TestSecRuleRemoveByMsg(t *testing.T) {
 			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
 		}
 	})
+
+	t.Run("keeps rules without msg", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,msg:'test-msg'"`)
+		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1001,phase:1,log,pass"`)
+		if err := directiveSecRuleRemoveByMsg(&DirectiveOptions{WAF: waf, Opts: "test-msg"}); err != nil {
+			t.Fatal(err)
+		}
+		if waf.Rules.Count() != 1 {
+			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
+		}
+		if waf.Rules.GetRules()[0].ID() != 1001 {
+			t.Errorf("expected rule 1001 to remain, got %d", waf.Rules.GetRules()[0].ID())
+		}
+	})
 }
 
 func TestSecRuleRemoveByTag(t *testing.T) {
