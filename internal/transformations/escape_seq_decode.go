@@ -85,7 +85,13 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 					j += 1
 				}
 
-				bc, _ := strconv.ParseUint(input[i+1:i+j], 8, 8)
+				// Up to 3 octal digits are consumed (\0 - \777), so the value may
+				// not fit in a byte: it has to be parsed with a wider bit size and
+				// then truncated to its low byte, mirroring the `strtol(...) & 0xFF`
+				// of Modsec implementation. Parsing it directly as an 8 bit
+				// value would make strconv return an out of range error along with
+				// the saturated value 0xff, corrupting every sequence above \377.
+				bc, _ := strconv.ParseUint(input[i+1:i+j], 8, 16)
 				data[d] = byte(bc)
 				d += 1
 				i += j

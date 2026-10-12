@@ -23,6 +23,8 @@ type BodyProcessorOptions struct {
 	DirMode fs.FileMode
 	// RequestBodyRecursionLimit is the maximum recursion level accepted in a body processor
 	RequestBodyRecursionLimit int
+	// ResponseBodyRecursionLimit is the maximum recursion level accepted in a body processor
+	ResponseBodyRecursionLimit int
 	// ArgumentLimit is the configured SecArgumentsLimit: the number of arguments
 	// an operator allows a body to contribute. A processor charges the
 	// collections it fills against this, and may scale it into a wider budget

@@ -22,14 +22,15 @@ const (
 	PhaseResponseHeaders RulePhase = 3
 	// PhaseResponseBody will process once the response body is received
 	PhaseResponseBody RulePhase = 4
-	// PhaseLogging will process once the request is sent
+	// PhaseLogging will process once the response is sent, or when the transaction
+	// is interrupted.
 	// This phase will always run
 	PhaseLogging RulePhase = 5
 )
 
-// ParseRulePhase parses the phase of the rule from a to 5
-// or request:2, response:4, logging:5
-// if the phase is invalid it will return an error
+// ParseRulePhase parses the phase of the rule from 1 to 5,
+// or request:2, response:4, logging:5.
+// If the phase is invalid it will return an error.
 func ParseRulePhase(phase string) (RulePhase, error) {
 	var i int
 	switch phase {

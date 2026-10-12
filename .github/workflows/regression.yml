@@ -56,9 +56,9 @@ jobs:
       GOLANG_BASE_VERSION: "1.25.x"
     steps:
       - name: Checkout code
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
@@ -67,45 +67,69 @@ jobs:
           BUILD_TAGS: ${{ matrix.build-flag }}
         run: go run mage.go coverage
       - name: "Codecov: General"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage.txt
           flags: default,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Examples"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage-examples.txt
           flags: examples+${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: FTW"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION }}
         with:
           files: build/coverage-ftw.txt
           flags: ftw,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Codecov: Tinygo"
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         # only if coverage-tinygo.txt exists
         if: ${{ matrix.go-version == env.GOLANG_BASE_VERSION && hashFiles('build/coverage-tinygo.txt') != '' }}
         with:
           files: build/coverage-tinygo.txt
           flags: tinygo,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
-  enforce-all-checks:
+
+  # Runs the suite in FIPS 140-3 mode
+  fips:
+    strategy:
+      fail-fast: false
+      matrix:
+        # "only" additionally makes the standard library's non-approved algorithms error or
+        # panic, which is what catches an unguarded md5.Sum/sha1.Sum at package-init time.
+        godebug: ["fips140=on", "fips140=only"]
+        # 1.26 changed FIPS-relevant behavior in crypto/tls (non-approved curves are filtered out
+        # of the defaults), so both the oldest supported and the current release are exercised.
+        go-version: [1.25.x, 1.26.x]
     runs-on: ubuntu-latest
     permissions:
-      checks: read
       contents: read
     steps:
-      - name: GitHub Checks
-        uses: poseidon/wait-for-status-checks@899c768d191b56eef585c18f8558da19e1f3e707 # v0.6.0
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          delay: 30s
-          interval: 10s # default value
-          timeout: 3600s # default value
-          ignore: "codecov/patch,codecov/project"
+          go-version: ${{ matrix.go-version }}
+          cache: true
+      # Warm the module cache before enabling FIPS: GODEBUG applies to the go command itself, and
+      # on Go 1.25 it cannot reach proxy.golang.org under fips140=only (the TLS handshake
+      # negotiates X25519, which crypto/ecdh refuses). The test steps then need no network.
+      # TODO: drop this warm-up step and the CurvePreferences pin in http/middleware_test.go once
+      # Go 1.25 is no longer supported.
+      - name: Download dependencies
+        run: |
+          go mod download
+          go -C testing/coreruleset mod download
+      - name: Tests
+        run: GODEBUG=${{ matrix.godebug }} go test ./...
+      - name: FTW tests
+        run: GODEBUG=${{ matrix.godebug }} go test ./testing/coreruleset
+      - name: FTW tests (multiphase evaluation)
+        run: GODEBUG=${{ matrix.godebug }} go test -tags=coraza.rule.multiphase_evaluation ./testing/coreruleset

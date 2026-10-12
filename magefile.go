@@ -173,8 +173,8 @@ func Coverage() error {
 	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
 		return err
 	}
-	// Execute http-server tests with coverage
-	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "-coverpkg=./...", "./examples/http-server"); err != nil {
+	// Execute http-server example tests (smoke test, not a coverage source for the full codebase)
+	if err := sh.RunV("go", "test", "-race", tagsCmd, "-coverprofile=build/coverage-examples.txt", "-covermode=atomic", "./examples/http-server"); err != nil {
 		return err
 	}
 	// Execute FTW tests with coverage as well

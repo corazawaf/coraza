@@ -85,6 +85,38 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 		{
+			// A regex removal carries an empty KeyStr, which must not match an
+			// argument or cookie whose name is "" (GHSA-g4qm-m288-5cp9).
+			Title: "ruleRemoveTargetById regex key keeps empty-named keys",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/jobs?json.0.desc=attack&=attack",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{300, 301},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/cookie-test",
+							Headers: map[string]string{
+								"Cookie": "__utma=attack; \x01=attack",
+							},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{370, 371},
+						},
+					},
+				},
+			},
+		},
+		{
 			Title: "ruleRemoveTargetById regex key (POST JSON body)",
 			Stages: []profile.Stage{
 				{
@@ -149,6 +181,103 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ruleRemoveTargetById chain child",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/chain-id?json.content=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 340 removes ARGS_GET:json.content from rule 341.
+							// Rule 341 is a chain whose child inspects ARGS_GET; the exclusion must
+							// propagate to the chain child.
+							TriggeredRules:    []int{340},
+							NonTriggeredRules: []int{341},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/chain-id?other=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Negative: ctl removes ARGS_GET:json.content only. ARGS_GET:other is
+							// not excluded, so the chain child must still match.
+							TriggeredRules: []int{340, 341},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "ruleRemoveTargetByMsg chain child",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/chain-msg?json.content=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 360 removes ARGS_GET:json.content from all rules whose parent
+							// has msg:'argument too long'. Rule 361 is a chain with that parent msg
+							// whose child inspects ARGS_GET; the exclusion must propagate.
+							TriggeredRules:    []int{360},
+							NonTriggeredRules: []int{361},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/chain-msg?other=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Negative: only ARGS_GET:json.content is removed; chain child still fires on `other`.
+							TriggeredRules: []int{360, 361},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "ruleRemoveTargetByTag chain child",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/chain-tag?json.content=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 350 removes ARGS_GET:json.content from all rules tagged OWASP_CRS.
+							// Rule 351 is a chain tagged OWASP_CRS whose child inspects ARGS_GET; the
+							// exclusion must propagate to the chain child.
+							TriggeredRules:    []int{350},
+							NonTriggeredRules: []int{351},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/chain-tag?other=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// Negative: only ARGS_GET:json.content is removed; chain child still fires on `other`.
+							TriggeredRules: []int{350, 351},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -190,6 +319,12 @@ SecRule ARGS_GET "@rx ." "id:201, phase:1, log"
 SecRule REQUEST_URI "@beginsWith /api/jobs" "id:300,phase:1,pass,log,ctl:ruleRemoveTargetById=301;ARGS_GET:/^json\.\d+\.desc$/"
 SecRule ARGS_GET "@rx attack" "id:301,phase:1,log"
 
+# ruleRemoveTargetById regex key test (cookies):
+# Rule 370 removes REQUEST_COOKIES matching /^__utm/ from rule 371. A cookie whose
+# name trims to "" must still reach rule 371.
+SecRule REQUEST_URI "@beginsWith /api/cookie-test" "id:370,phase:1,pass,log,ctl:ruleRemoveTargetById=371;REQUEST_COOKIES:/^__utm/"
+SecRule REQUEST_COOKIES "@rx attack" "id:371,phase:1,log"
+
 # ruleRemoveTargetById regex key test (POST JSON body):
 # Rule 310 activates JSON body processor for application/json requests.
 # Rule 311 removes ARGS_POST matching /^json\.\d+\.desc$/ from rule 312 when URI starts with /api/jsonjobs.
@@ -210,5 +345,27 @@ SecRule ARGS_GET "@rx attack" "id:321,phase:1,log,tag:OWASP_CRS"
 # Rule 331 has msg:'web shell detection' and would normally match the attack args but must be suppressed.
 SecRule REQUEST_URI "@beginsWith /api/msg-test" "id:330,phase:1,pass,log,ctl:ruleRemoveTargetByMsg=web shell detection;ARGS_GET:/^json\.\d+\.desc$/"
 SecRule ARGS_GET "@rx attack" "id:331,phase:1,log,msg:'web shell detection'"
+
+# ruleRemoveTargetById chain child test:
+# Rule 340 removes ARGS_GET:json.content from rule 341. Rule 341 is a chain whose
+# CHILD inspects ARGS_GET. The exclusion must propagate to the chain child or the
+# request will be blocked by the child despite the ctl removal (issue #1610).
+SecRule REQUEST_URI "@beginsWith /api/chain-id" "id:340,phase:1,pass,log,ctl:ruleRemoveTargetById=341;ARGS_GET:json.content"
+SecRule REQUEST_METHOD "@rx ^GET$" "id:341,phase:1,log,chain"
+    SecRule ARGS_GET "@rx attack" ""
+
+# ruleRemoveTargetByTag chain child test (mirrors the CRS WordPress plugin case):
+# Rule 350 removes ARGS_GET:json.content from all rules tagged OWASP_CRS. Rule 351
+# is a chain tagged OWASP_CRS whose CHILD inspects ARGS_GET.
+SecRule REQUEST_URI "@beginsWith /api/chain-tag" "id:350,phase:1,pass,log,ctl:ruleRemoveTargetByTag=OWASP_CRS;ARGS_GET:json.content"
+SecRule REQUEST_METHOD "@rx ^GET$" "id:351,phase:1,log,tag:OWASP_CRS,chain"
+    SecRule ARGS_GET "@rx attack" ""
+
+# ruleRemoveTargetByMsg chain child test:
+# Rule 360 removes ARGS_GET:json.content from all rules with msg:'argument too long'.
+# Rule 361 is a chain whose PARENT has that msg and whose CHILD inspects ARGS_GET.
+SecRule REQUEST_URI "@beginsWith /api/chain-msg" "id:360,phase:1,pass,log,ctl:ruleRemoveTargetByMsg=argument too long;ARGS_GET:json.content"
+SecRule REQUEST_METHOD "@rx ^GET$" "id:361,phase:1,log,msg:'argument too long',chain"
+    SecRule ARGS_GET "@rx attack" ""
 `,
 })

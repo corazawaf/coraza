@@ -13,6 +13,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 )
 
 type jsonBodyProcessor struct{}
@@ -28,108 +29,48 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 		return err
 	}
 	ss := s.String()
+	// Process with recursion limit
+	col := v.ArgsPost()
+	data, truncated, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload.
+	//
+	// Add, not SetIndex: col is case-insensitive by default (and RESPONSE_ARGS
+	// always is, regardless of build tags), so two flattened keys that differ
+	// only by case -- e.g. "json.account.role" and "json.account.Role" --
+	// fold to the same collection entry. SetIndex(key, i, value) lets each
+	// one's independent index-0 write silently overwrite the other, since
+	// neither call knows about the other key. Add always appends, so both
+	// values survive under the collision exactly like a same-case collision
+	// already does. See GHSA-5gj4-9gm7-2fx2.
+	for key, values := range data {
+		for _, value := range values {
+			col.Add(key, value)
+		}
+	}
+	if truncated {
+		v.ArgumentsLimitReached().(*collections.Single).Set("1")
+	}
 
-	// Store the raw JSON in the TX variable for validateSchema before parsing,
-	// so operators like @validateSchema keep their data even when parsing stops
-	// early on the argument limit or the recursion-depth limit.
-	// This is needed because RequestBody is a Single interface without a Set method
+	// Store the raw JSON in the TX variable for validateSchema
+	// This is needed because RequestBody is a Single interface without a Set method.
+	// Fork: stored before the error return, so a body the flattener rejects (parse
+	// failure, depth or size limit) still reaches @validateSchema.
 	if txVar := v.TX(); txVar != nil {
+		// Store the content type and raw body
 		txVar.Set("json_request_body", []string{ss})
 	}
 
-	// Process with recursion limit
-	col := v.ArgsPost()
-	data, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
-	if err != nil && !errors.Is(err, ErrArgumentsLimit) {
+	if err != nil {
 		return err
 	}
-	for key, value := range data {
-		col.SetIndex(key, 0, value)
-	}
 
-	return err
-}
-
-const ignoreJSONRecursionLimit = -1
-
-// jsonDecodedBytesSlack is the largest allowance added to the body length to
-// form the budget of decoded bytes (flattened keys plus values) a JSON body
-// may produce. Every leaf is stored under its full path
-// ("json.<k1>.<k2>...<kn>.leaf"), so a body that nests deeply and then fans
-// out makes many leaves share one long prefix: stored bytes grow with
-// depth * leaves while the body grows only with depth + leaves. Neither the
-// argument count nor the body length sees that product, so it is bounded
-// directly. Deriving the budget from the body keeps it self-tuning: a
-// legitimate body decodes to roughly its own size plus one path prefix per
-// member, and the slack covers that overhead outright, while the amplifying
-// shapes overshoot it by one to two orders of magnitude.
-const jsonDecodedBytesSlack = 1 << 20
-
-// jsonDecodedBytesScale caps the slack a small body earns. A fixed slack is a
-// fixed amount of amplification every request may buy however small it is, and
-// a body of a couple of kilobytes can spend it entirely on one long shared path
-// prefix: that costs no memory worth the name but feeds every member through
-// each ARGS rule's transformation pipeline, so a 2 KB request can cost more
-// phase 2 CPU than a legitimate one of a megabyte. Tying the slack to the body
-// for small inputs keeps that cost proportional to what was actually sent.
-const jsonDecodedBytesScale = 64
-
-// MaxEntriesPerArgument bounds the array-length entries a JSON body may store
-// for each argument it is allowed. Scalars are capped by the argument limit
-// directly, but the length entry recorded for a non-empty array is not an
-// argument ModSecurity counts and so spends no argument budget: a chain of
-// nested arrays costs one argument and stores one member per level. The
-// decoded-bytes budget cannot stand in for this bound, because a length entry
-// costs only its key and because inter-token whitespace raises a budget derived
-// from the body length without storing anything, so the entries are counted
-// directly. Counting them rather than the size of the whole collection keeps
-// this budget independent of the argument count, so the arguments a body
-// carries cannot change the verdict on its arrays. Together with the argument
-// limit it holds a body to MaxEntriesPerArgument+1 stored members per argument
-// allowed.
-const MaxEntriesPerArgument = 2
-
-// ErrJSONDecodedSize is raised when storing an entry would push a body past its
-// decoded-bytes budget. It wraps ErrArgumentsLimit; the distinct sentinel
-// identifies which limit tripped, so a caller can tell this budget apart from
-// SecArgumentsLimit and decide whether the condition is fatal.
-var ErrJSONDecodedSize = fmt.Errorf("json decoded size limit exceeded: %w", ErrArgumentsLimit)
-
-// ErrJSONRecursionLimit is raised when a body nests deeper than the configured
-// recursion limit. It does not wrap ErrArgumentsLimit: the parse fails and the
-// entries collected so far are discarded, so it reports as a body error.
-var ErrJSONRecursionLimit = errors.New("max recursion reached while reading json object")
-
-// jsonDecodedBudget returns the decoded bytes a body of n bytes may produce.
-// The slack it earns is proportional to it until it reaches the ceiling. The
-// division tests for the product having overflowed, which a body larger than
-// MaxInt/jsonDecodedBytesScale does on a 32-bit target: a wrapped product can
-// land positive as easily as negative, and a small positive one would starve
-// the budget rather than widen it.
-func jsonDecodedBudget(n int) int {
-	slack := n * jsonDecodedBytesScale
-	if slack > jsonDecodedBytesSlack || slack/jsonDecodedBytesScale != n {
-		slack = jsonDecodedBytesSlack
-	}
-	return n + slack
-}
-
-// lengthBudgetLeft reports whether another array-length entry fits the budget
-// those entries share, which is the argument limit scaled by
-// MaxEntriesPerArgument. A non-positive limit means unlimited.
-func lengthBudgetLeft(maxArguments, lengths int) bool {
-	return maxArguments <= 0 || lengths < scaleArgumentLimit(maxArguments, MaxEntriesPerArgument)
-}
-
-// jsonLimitError returns the limit an entry of n decoded bytes would breach,
-// given the number of arguments already stored, or nil when the entry fits.
-func jsonLimitError(n, maxArguments, args int, budget *int) error {
-	if maxArguments > 0 && args >= maxArguments {
+	// Arguments past SecArgumentsLimit were dropped. ARGUMENTS_LIMIT_REACHED is
+	// set above; the error lets the transaction raise REQBODY_ERROR as well, the
+	// way the other body processors of the fork report a truncation (DEF-51539).
+	if truncated {
 		return ErrArgumentsLimit
 	}
-	if n > *budget {
-		return ErrJSONDecodedSize
-	}
+
 	return nil
 }
 
@@ -140,74 +81,214 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 		return err
 	}
 	ss := s.String()
+	// Process with recursion limit
+	col := v.ResponseArgs()
+	data, truncated, err := readJSON(ss, bpo.ResponseBodyRecursionLimit, bpo.ArgumentLimit)
+	// The collection is populated before checking the error to still perform a best effort inspection of the payload.
+	// See the comment in ProcessRequest: Add rather than SetIndex avoids a
+	// case-insensitive collision silently overwriting one value (GHSA-5gj4-9gm7-2fx2).
+	for key, values := range data {
+		for _, value := range values {
+			col.Add(key, value)
+		}
+	}
+	if truncated {
+		v.ArgumentsLimitReached().(*collections.Single).Set("1")
+	}
 
-	// Store the raw JSON in the TX variable for validateSchema before parsing,
-	// so operators like @validateSchema keep their data even when parsing stops
-	// early on the argument limit or the recursion-depth limit.
-	// This is needed because ResponseBody is a Single interface without a Set method
+	// Store the raw JSON in the TX variable for validateSchema
+	// This is needed because ResponseBody is a Single interface without a Set method.
+	// Fork: stored before the error return, as in ProcessRequest.
 	if txVar := v.TX(); txVar != nil && v.ResponseBody() != nil {
+		// Store the content type and raw body
 		txVar.Set("json_response_body", []string{ss})
 	}
 
-	col := v.ResponseArgs()
-	// The recursion limit protects against deeply nested bodies exhausting the
-	// stack; a non-positive value means unlimited.
-	depth := bpo.RequestBodyRecursionLimit
-	if depth <= 0 {
-		depth = ignoreJSONRecursionLimit
-	}
-	data, err := readJSON(ss, depth, bpo.ArgumentLimit)
-	if err != nil && !errors.Is(err, ErrArgumentsLimit) {
+	if err != nil {
 		return err
 	}
-	for key, value := range data {
-		col.SetIndex(key, 0, value)
+
+	// See ProcessRequest: the truncation also surfaces as an error so the
+	// transaction raises RES_BODY_ERROR.
+	if truncated {
+		return ErrArgumentsLimit
 	}
 
-	return err
+	return nil
 }
 
-func readJSON(s string, maxRecursion int, maxArguments int) (map[string]string, error) {
-	res := make(map[string]string)
+// ErrJSONLimit marks a JSON body that tripped a limit (nesting depth, flattened
+// size) although it is syntactically valid. Fork addition: the transaction logs
+// these below error level so a client cannot flood the log with well-formed
+// input; error is kept for bodies the parser could not read. Match it with
+// errors.Is.
+var ErrJSONLimit = errors.New("json limit exceeded")
+
+// jsonLimitError keeps the message upstream reports for a limit trip and
+// matches ErrJSONLimit through errors.Is.
+type jsonLimitError string
+
+func (e jsonLimitError) Error() string { return string(e) }
+
+func (e jsonLimitError) Is(target error) bool { return target == ErrJSONLimit }
+
+// flattenBytesFactor bounds the flattened form relative to the body that
+// produced it. SecArgumentsLimit counts entries, not bytes, and the flattened
+// key is the full path rewritten for every leaf, so memory grows with
+// depth x leaves while the entry count grows only with leaves. A body that
+// stays comfortably under the argument limit can therefore still retain many
+// times its own size: a 34 KB body of long paths measured 1.6 MB of keys at
+// 999 arguments, roughly 48x, with no limit reached and no flag set.
+//
+// The factor is a judgement call rather than a derived number. Eight leaves
+// room for genuinely nested documents -- measured well under 2x on ordinary
+// API payloads -- while stopping the amplification well before it matters.
+const flattenBytesFactor = 8
+
+// flattenBytesFloor keeps small bodies unaffected, where a few long keys can
+// legitimately outweigh the input.
+const flattenBytesFloor = 4096
+
+// errFlattenBudget stops the walk once the flattened form outgrows its budget.
+var errFlattenBudget = errors.New("flattened json exceeds its byte budget")
+
+// readJSON flattens s into a map[string][]string, stopping once argumentLimit
+// values have been collected (argumentLimit <= 0 means no limit). Without
+// this, a small body decoding to a wide flat structure (e.g. a JSON array of
+// millions of scalars) grows this map -- and, through it, ARGS_POST/
+// RESPONSE_ARGS -- without bound regardless of SecArgumentsLimit, exhausting
+// memory on a single request. See GHSA-3ww9-vw83-9w5x.
+//
+// Array-length entries have their own cap of argumentLimit. truncated reports
+// either cap; outgrowing the byte budget is an error, since raising
+// SecArgumentsLimit does not help with it.
+func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]string, truncated bool, err error) {
+	res = make(map[string][]string)
 	key := []byte("json")
 
-	if !gjson.Valid(s) {
-		return res, errors.New("invalid JSON")
+	byteBudget := len(s) * flattenBytesFactor
+	if byteBudget < flattenBytesFloor {
+		byteBudget = flattenBytesFloor
 	}
+
+	// The walk runs before the validity check on purpose: a body with a valid
+	// prefix still populates ARGS on a best-effort basis, which rules can act
+	// on even though an error is returned (see the best-effort tests, and
+	// corazawaf/coraza#1615). What that ordering must not do is spend
+	// unbounded time and memory flattening a body that is about to be
+	// rejected -- byteBudget is what keeps that walk short.
 	json := gjson.Parse(s)
-	budget := jsonDecodedBudget(len(s))
-	args := 0
-	lengths := 0
-	err := readItems(json, key, maxRecursion, maxArguments, &args, &lengths, &budget, res)
-	return res, err
+	usedBytes := 0
+	// argCount tracks the total number of values collected, not len(res):
+	// a key collision (see GHSA-5gj4-9gm7-2fx2) appends more than one value
+	// under the same flattened key, so counting distinct keys would let
+	// SecArgumentsLimit undercount and admit more values than configured.
+	argCount := 0
+	// lenCount counts array-length entries apart from argCount, so they do
+	// not use up SecArgumentsLimit.
+	lenCount := 0
+	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, &lenCount, res)
+	if errors.Is(err, errFlattenBudget) {
+		return res, truncated, jsonLimitError(fmt.Sprintf("flattened form exceeds the %d byte budget for a %d byte body", byteBudget, len(s)))
+	}
+	if err != nil {
+		return res, truncated, err
+	}
+	// readItems's own recursion guard never fires when argumentLimit
+	// truncates the walk before it reaches a deeply nested tail:
+	// the ForEach loop stops (truncated=true, err=nil) without ever
+	// recursing into that tail, so maxRecursion is never checked against it.
+	// gjson.Valid recurses with no depth bound at all (validany ->
+	// validarray/validobject in gjson v1.18.0), so calling it unconditionally
+	// on such a tail crashes the process with an unrecoverable
+	// "fatal error: stack overflow" -- see GHSA-6gcq-wc29-5xf2. This iterative
+	// check bounds that recursion before Valid ever runs.
+	if jsonNestingExceedsLimit(s, maxRecursion) {
+		return res, truncated, jsonLimitError("max recursion reached while reading json object")
+	}
+	if !gjson.Valid(s) {
+		return res, truncated, errors.New("invalid JSON")
+	}
+	return res, truncated, nil
 }
 
-// Transform JSON to a map[string]string
+// jsonNestingExceedsLimit reports whether s, read as raw JSON text, ever
+// nests object/array containers deeper than limit. It is a single pass over
+// the bytes with a depth counter -- no recursion -- so unlike gjson.Valid's
+// recursive descent it cannot itself stack-overflow regardless of how deep
+// (or how long) the input actually nests. It does not fully validate JSON
+// syntax; that is still gjson.Valid's job once nesting is known to be safe.
+func jsonNestingExceedsLimit(s string, limit int) bool {
+	depth := 0
+	inString := false
+	escaped := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if inString {
+			switch {
+			case escaped:
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == '"':
+				inString = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inString = true
+		case '{', '[':
+			depth++
+			if depth > limit {
+				return true
+			}
+		case '}', ']':
+			depth--
+		}
+	}
+	return false
+}
+
+// Transform JSON to a map[string][]string.
 // This function is recursive and will call itself for nested objects.
-// Nesting is bounded by maxRecursion, the number of scalar values stored in
-// res is counted in args and bounded by maxArguments (<= 0 means unlimited),
-// and the total bytes stored (flattened keys plus values) are bounded by
-// budget, which is decremented as entries are added. The array-length entry
-// recorded for a non-empty array is not counted in args, because ModSecurity
-// counts scalar values alone as arguments; those entries are counted in lengths
-// and bounded by maxArguments scaled by MaxEntriesPerArgument, and exhausting
-// that budget drops further lengths without stopping the parse. When
-// maxArguments or budget is reached, parsing stops and ErrArgumentsLimit, or an
-// error wrapping it, is returned with the entries collected so far; exceeding
-// maxRecursion returns ErrJSONRecursionLimit instead.
+// The limit in recursion is defined by maxItems.
 // Example input: {"data": {"name": "John", "age": 30}, "items": [1,2,3]}
-// Example output: map[string]string{"json.data.name": "John", "json.data.age": "30", "json.items.0": "1", "json.items.1": "2", "json.items.2": "3"}
+// Example output: map[string][]string{"json.data.name": {"John"}, "json.data.age": {"30"}, "json.items.0": {"1"}, "json.items.1": {"2"}, "json.items.2": {"3"}}
 // Example input: [{"data": {"name": "John", "age": 30}, "items": [1,2,3]}]
-// Example output: map[string]string{"json.0.data.name": "John", "json.0.data.age": "30", "json.0.items.0": "1", "json.0.items.1": "2", "json.0.items.2": "3"}
-func readItems(json gjson.Result, objKey []byte, maxRecursion int, maxArguments int, args *int, lengths *int, budget *int, res map[string]string) error {
+// Example output: map[string][]string{"json.0.data.name": {"John"}, "json.0.data.age": {"30"}, "json.0.items.0": {"1"}, "json.0.items.1": {"2"}, "json.0.items.2": {"3"}}
+//
+// A nested path and a literal property name can flatten to the identical
+// string (e.g. {"account":{"role":"x"}} and {"account.role":"y"} both
+// produce "json.account.role"). Values are appended rather than overwritten
+// on such a collision, so every value stays visible to rule inspection
+// instead of a later property silently erasing an earlier one -- see
+// GHSA-5gj4-9gm7-2fx2. The flattened key text itself is left unescaped:
+// CRS rules such as 944130 match suspicious literal property names (e.g.
+// Java class names used in deserialization attacks) as a substring of the
+// generated key, and escaping would break that detection for the common,
+// non-colliding case.
+func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, lenCount *int, res map[string][]string) (truncated bool, err error) {
+	if argumentLimit > 0 && *argCount >= argumentLimit {
+		// Already at the configured SecArgumentsLimit: every recursive call
+		// rechecks this up front, so once the limit is hit no further level
+		// does any more work, regardless of how deeply nested the remainder
+		// of the structure is.
+		return true, nil
+	}
 	arrayLen := 0
 	var iterationError error
-	if maxRecursion == 0 {
+	iterationTruncated := false
+	if maxRecursion <= 0 {
 		// We reached the limit of nesting we want to handle. This protects against
 		// DoS attacks using deeply nested JSON structures (e.g., {"a":{"a":{"a":...}}}).
-		return ErrJSONRecursionLimit
+		return false, jsonLimitError("max recursion reached while reading json object")
 	}
 	json.ForEach(func(key, value gjson.Result) bool {
+		if argumentLimit > 0 && *argCount >= argumentLimit {
+			iterationTruncated = true
+			return false
+		}
 		// Avoid string concatenation to maintain a single buffer for key aggregation.
 		prevParentLength := len(objKey)
 		objKey = append(objKey, '.')
@@ -222,9 +303,14 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, maxArguments 
 		switch value.Type {
 		case gjson.JSON:
 			// call recursively with one less item to avoid doing infinite recursion
-			iterationError = readItems(value, objKey, maxRecursion-1, maxArguments, args, lengths, budget, res)
+			var nestedTruncated bool
+			nestedTruncated, iterationError = readItems(value, objKey, maxRecursion-1, argumentLimit, byteBudget, usedBytes, argCount, lenCount, res)
+			iterationTruncated = iterationTruncated || nestedTruncated
+			if iterationError != nil {
+				return false
+			}
 			objKey = objKey[:prevParentLength]
-			return iterationError == nil
+			return true
 		case gjson.String:
 			val = value.Str
 		case gjson.Null:
@@ -234,36 +320,46 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, maxArguments 
 			val = value.Raw
 		}
 
-		if err := jsonLimitError(len(objKey)+len(val), maxArguments, *args, budget); err != nil {
-			iterationError = err
-			objKey = objKey[:prevParentLength]
+		// Checked per leaf, not only on entry to readItems: a wide object is
+		// walked entirely inside one ForEach, so a guard at the top of the
+		// function is never re-evaluated while these writes accumulate.
+		if byteBudget > 0 && *usedBytes+len(objKey)+len(val) > byteBudget {
+			// The flattened form has outgrown its budget; see flattenBytesFactor.
+			iterationError = errFlattenBudget
 			return false
 		}
-		*budget -= len(objKey) + len(val)
-		*args++
-		res[string(objKey)] = val
+
+		k := string(objKey)
+		res[k] = append(res[k], val)
+		*usedBytes += len(objKey) + len(val)
+		*argCount++
 		objKey = objKey[:prevParentLength]
 
 		return true
 	})
-	// An iteration that stopped early never reached the remaining elements, so
-	// arrayLen understates the array and no length is recorded for it.
-	// Exhausting either budget drops the entry and lets the parse continue
-	// rather than reporting a truncation. A document can hold more arrays than
-	// it holds arguments, so failing here would deny bodies that carry no
-	// arguments at all, and no portable rule can read what is dropped: neither
-	// ModSecurity version records an array length, so a rule selecting one
-	// would not load on the engines this corpus also targets. Dropping still
-	// bounds what is stored, because an entry is only written while it fits.
-	if arrayLen > 0 && iterationError == nil && lengthBudgetLeft(maxArguments, *lengths) {
-		arrayLenVal := strconv.Itoa(arrayLen)
-		if n := len(objKey) + len(arrayLenVal); n <= *budget {
-			*budget -= n
-			*lengths++
-			res[string(objKey)] = arrayLenVal
+	// After an early stop arrayLen is short of the real length, so skip it.
+	if arrayLen > 0 && !iterationTruncated && iterationError == nil {
+		// This write happens after ForEach has returned, so neither guard
+		// inside the callback covers it. It needs both: argumentLimit, since
+		// every array level adds an entry, and byteBudget, since each of those
+		// entries repeats the full path. See GHSA-6r3q-mjv7-xr8m.
+		// Hitting the cap still sets truncated, so [{}] padding cannot hide
+		// a later array's length.
+		if argumentLimit > 0 && *lenCount >= argumentLimit {
+			iterationTruncated = true
+		} else {
+			lenStr := strconv.Itoa(arrayLen)
+			if byteBudget > 0 && *usedBytes+len(objKey)+len(lenStr) > byteBudget {
+				iterationError = errFlattenBudget
+			} else {
+				k := string(objKey)
+				res[k] = append(res[k], lenStr)
+				*usedBytes += len(objKey) + len(lenStr)
+				*lenCount++
+			}
 		}
 	}
-	return iterationError
+	return iterationTruncated, iterationError
 }
 
 func init() {

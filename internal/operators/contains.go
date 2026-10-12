@@ -23,7 +23,7 @@ import (
 // true if the parameter string is found anywhere in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Detect PHP files in request line
 // SecRule REQUEST_LINE "@contains .php" "id:150,deny,log"
 //

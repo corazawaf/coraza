@@ -82,5 +82,26 @@
       "input" : "\\\\0",
       "type" : "tfn",
       "name" : "jsDecode"
+   },
+   {
+      "output" : "<script>",
+      "ret" : 1,
+      "input" : "<\\163\\143\\162\\151\\160\\164>",
+      "type" : "tfn",
+      "name" : "jsDecode"
+   },
+   {
+      "output" : "\\xff",
+      "ret" : 1,
+      "input" : "\\377",
+      "type" : "tfn",
+      "name" : "jsDecode"
+   },
+   {
+      "output" : "\\x80",
+      "ret" : 1,
+      "input" : "\\200",
+      "type" : "tfn",
+      "name" : "jsDecode"
    }
 ]

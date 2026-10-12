@@ -110,7 +110,10 @@ func buildRequest(method, uri string) string {
 // on a request that fits under SecArgumentsLimit. The file is read from disk
 // so the rule that ships is the rule under test.
 func TestRecommendedConfArgumentsLimit(t *testing.T) {
-	const argumentsLimitRuleID = 200002
+	// A query string over the limit sets ARGUMENTS_LIMIT_REACHED in phase 1,
+	// where rule 200004 denies it before the REQBODY_ERROR rule (200002, phase
+	// 2) gets to run; both ship in the file and both are fork-visible signals.
+	const argumentsLimitRuleID = 200004
 
 	rec, err := os.ReadFile("../coraza.conf-recommended")
 	if err != nil {

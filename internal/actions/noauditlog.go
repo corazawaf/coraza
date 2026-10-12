@@ -19,7 +19,7 @@ import (
 // If you want to prevent audit logging from taking place, regardless of whether any rule matches, use `ctl:auditEngine=Off`.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule REQUEST_HEADERS:User-Agent "@streq Test" "allow,noauditlog,id:120"
 // ```
 type noauditlogFn struct{}

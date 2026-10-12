@@ -65,7 +65,7 @@ func runPropSeq(t *testing.T, c *Map, r *rand.Rand, steps int) {
 			c.Set(k, []string{"r"})
 			op = fmt.Sprintf("Add+Add+Set-shorter(%q)", k)
 		}
-		if want, have := groundTruth(c), c.Len(); want != have {
+		if want, have := groundTruth(c), c.TotalValues(); want != have {
 			t.Fatalf("step %d after %s: stored=%d Len=%d (data=%v)", i, op, want, have, c.data)
 		}
 	}
@@ -150,7 +150,7 @@ func TestMapLenEdgeCases(t *testing.T) {
 			t.Run(tc.name+"/"+cs.name, func(t *testing.T) {
 				c := cs.mk()
 				tc.run(c)
-				if want, have := groundTruth(c), c.Len(); want != have {
+				if want, have := groundTruth(c), c.TotalValues(); want != have {
 					t.Fatalf("stored=%d Len=%d (data=%v)", want, have, c.data)
 				}
 			})
@@ -180,7 +180,7 @@ func FuzzMapLen(f *testing.F) {
 				case 5:
 					c.Set(k, nil)
 				}
-				if want, have := groundTruth(c), c.Len(); want != have {
+				if want, have := groundTruth(c), c.TotalValues(); want != have {
 					t.Fatalf("op %d key %q: stored=%d Len=%d", ops[i]%6, k, want, have)
 				}
 			}

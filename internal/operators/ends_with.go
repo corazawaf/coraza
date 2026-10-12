@@ -23,7 +23,7 @@ import (
 // true if the input ends with the parameter string, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block requests that don't end with HTTP/1.1
 // SecRule REQUEST_LINE "!@endsWith HTTP/1.1" "id:152,deny,log"
 //

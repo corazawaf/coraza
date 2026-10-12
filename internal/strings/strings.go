@@ -4,46 +4,35 @@
 package strings
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"strings"
-	"sync"
-	"time"
 	"unsafe"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
-)
-
-var src = rand.NewSource(time.Now().UnixNano())
-var mu sync.Mutex
 
 // RandomString returns a pseudorandom string of length n.
-// It is safe to use this function in concurrent environments.
-// Implementation from https://stackoverflow.com/a/31832326
+//
+// It is safe to use in concurrent environments: math/rand/v2's top-level
+// functions are goroutine-safe and lock-free, drawing from a per-P generator
+// that is seeded randomly at startup.
+//
+// This used to hold a package-level sync.Mutex around a manually seeded
+// rand.Source (added in #430, Sept 2022). That was the right fix at the time:
+// on Go 1.19 the math/rand global source was guarded by an internal mutex and
+// had to be seeded by hand, so sharing one Source across goroutines needed
+// external synchronisation. Both reasons are gone -- Go 1.20 made the global
+// source auto-seeded and lock-free, and Go 1.22 added math/rand/v2 -- and the
+// mutex had become the bottleneck it was meant to make safe: RandomString is
+// called once per transaction (see internal/corazawaf/waf.go), so under load
+// every transaction contended on it and throughput got *worse* as cores were
+// added. See BenchmarkRandomString.
 func RandomString(n int) string {
-	sb := strings.Builder{}
-	sb.Grow(n)
-
-	mu.Lock()
-	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
-	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
-		if remain == 0 {
-			cache, remain = src.Int63(), letterIdxMax
-		}
-		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
-			sb.WriteByte(letterBytes[idx])
-			i--
-		}
-		cache >>= letterIdxBits
-		remain--
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.IntN(len(letterBytes))]
 	}
-	mu.Unlock()
-
-	return sb.String()
+	return string(b)
 }
 
 // ValidHex returns true if the byte is a valid hex character

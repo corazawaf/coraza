@@ -32,7 +32,7 @@ const timeout = 500 * time.Millisecond
 // inside 127.0.0.0/8 — false otherwise or on lookup failure
 //
 // Example:
-// ```
+// ```seclang
 // # Check the client address against a regular-order blocklist
 // SecRule TX:rbl_ip "@rbl www-brute.v2.rbl.imunify.com." "id:183,deny,log,msg:'IP found in RBL'"
 //

@@ -4,15 +4,35 @@
 package transformations
 
 import (
+	"crypto/fips140"
 	"crypto/md5"
+	"errors"
 	"io"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
 )
 
-var emptyMD5 string
+// errMD5NotAvailableFIPS is returned on every evaluation of a rule using t:md5 when the binary
+// runs in FIPS 140-3 mode (GODEBUG=fips140=on, =debug or =only). See the equivalent comment in
+// sha1.go for how this interacts with rule evaluation.
+//
+// TODO: soften this to GODEBUG=fips140=only once Go 1.25 is no longer supported. Only that mode
+// actually makes crypto/md5 unusable (its checkSum() panics); fips140=on and fips140=debug
+// leave it working. Distinguishing them needs crypto/fips140.Enforced(), which is Go 1.26+, so
+// until the floor moves the stricter policy stands: any FIPS mode disables the transformation.
+var errMD5NotAvailableFIPS = errors.New("md5 transformation is unavailable in FIPS 140-3 mode")
+
+// The MD5 digest of an empty input, hardcoded rather than computed via md5.Sum(nil): that call
+// panics under GODEBUG=fips140=only, even lazily, since crypto/md5's checkSum() panics
+// unconditionally regardless of input length. The value is fixed by the algorithm, so there is
+// nothing to compute.
+const emptyMD5 = "\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e"
 
 func md5T(data string) (string, bool, error) {
+	if fips140.Enabled() {
+		return data, false, errMD5NotAvailableFIPS
+	}
+
 	if len(data) == 0 {
 		return emptyMD5, true, nil
 	}
@@ -25,9 +45,4 @@ func md5T(data string) (string, bool, error) {
 	// The occurrence of an invariant transformation is so unlikely that we can assume the transformation returns a changed value
 	// https://crypto.stackexchange.com/questions/68674/md5-existence-of-invariant-fixed-point
 	return strings.WrapUnsafe(h.Sum(nil)), true, nil
-}
-
-func init() {
-	buf := md5.Sum(nil)
-	emptyMD5 = string(buf[:])
 }
