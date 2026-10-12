@@ -24,26 +24,14 @@ type BodyBuffer struct {
 	readers []*bodyBufferReader
 }
 
-var (
-	_ io.WriterTo = (*BodyBuffer)(nil)
-	_ io.Writer   = (*BodyBuffer)(nil)
-)
+var _ io.Writer = (*BodyBuffer)(nil)
 
-func (br *BodyBuffer) WriteTo(w io.Writer) (int64, error) {
-	if br.writer == nil {
-		return br.buffer.WriteTo(w)
-	}
-
-	b := make([]byte, br.length)
-
-	n, err := br.writer.Read(b)
-	if err != nil {
-		return 0, err
-	}
-
-	n, err = w.Write(b[:n])
-	return int64(n), err
-}
+// maxRetainedBufferCap bounds the memory a pooled transaction keeps after
+// Reset. A buffer that grew past it (one large body) is dropped instead of
+// kept for reuse: the body processors already allocate a body-sized string
+// per request, so re-growing the buffer costs at most that much again, while
+// retaining it would pin up to MemoryLimit bytes in every pooled transaction.
+const maxRetainedBufferCap = 64 << 10
 
 // Write appends data to the body buffer by chunks
 // You may dump io.Readers using io.Copy(br, reader)
@@ -126,6 +114,29 @@ func (b *bodyBufferReader) Read(p []byte) (n int, err error) {
 	return
 }
 
+// WriteTo writes the unread remainder of the body to w. io.Copy prefers it
+// over Read, so consumers (body processors, the HTTP interceptor) get the
+// in-memory body in a single Write instead of through a 32 KiB scratch buffer.
+func (b *bodyBufferReader) WriteTo(w io.Writer) (int64, error) {
+	if b.br == nil {
+		return 0, nil
+	}
+
+	if !environment.HasAccessToFS || b.br.writer == nil {
+		buf := b.br.buffer.Bytes()
+		if b.pos >= len(buf) {
+			return 0, nil
+		}
+		n, err := w.Write(buf[b.pos:])
+		b.pos += n
+		return int64(n), err
+	}
+
+	n, err := io.Copy(w, io.NewSectionReader(b.br.writer, int64(b.pos), b.br.length-int64(b.pos)))
+	b.pos += int(n)
+	return n, err
+}
+
 // Close closes the reader
 func (b *bodyBufferReader) Close() {
 	b.br = nil
@@ -148,7 +159,11 @@ func (br *BodyBuffer) Size() int64 {
 
 // Reset will reset buffers and delete temporary files
 func (br *BodyBuffer) Reset() error {
-	br.buffer.Reset()
+	if br.buffer.Cap() > maxRetainedBufferCap {
+		br.buffer = &bytes.Buffer{}
+	} else {
+		br.buffer.Reset()
+	}
 	br.length = 0
 
 	// close all readers, this is important because connectors may have
