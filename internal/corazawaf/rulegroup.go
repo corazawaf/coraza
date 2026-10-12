@@ -151,6 +151,10 @@ func (rg *RuleGroup) Count() int {
 // Eval rules for the specified phase, between 1 and 5
 // Rules are evaluated in syntactic order and the evaluation finishes
 // as soon as an interruption has been triggered.
+// The request phases (1 and 2) also finish before the next rule once the
+// transaction's context is done; the transaction records that the phase was cut
+// short and ProcessRequestBody reports it. The later phases, the logging phase
+// above all, always evaluate every rule.
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.DebugLogger().Debug().
@@ -163,6 +167,11 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	transformationCache := tx.transformationCache
 	for k := range transformationCache {
 		delete(transformationCache, k)
+	}
+	// A nil channel, which a context that can never end has, never fires.
+	var done <-chan struct{}
+	if (phase == types.PhaseRequestHeaders || phase == types.PhaseRequestBody) && tx.context != nil {
+		done = tx.context.Done()
 	}
 RulesLoop:
 	for i := range rg.rules {
@@ -181,6 +190,18 @@ RulesLoop:
 		// we break the loop
 		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
+		}
+		// The context is done: whoever was waiting for this phase is gone, so
+		// stop before this rule and remember that the phase is partial.
+		select {
+		case <-done:
+			tx.canceled = tx.contextCanceled()
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Int("rule_id", r.ID_).
+				Msg("Stopping phase: the transaction context is done")
+			break RulesLoop
+		default:
 		}
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
