@@ -28,6 +28,10 @@ type BodyProcessorOptions struct {
 	// ArgumentLimit is the maximum number of arguments accepted per collection.
 	// When exceeded, additional arguments are dropped and ArgumentsLimitReached is set.
 	ArgumentLimit int
+	// MultipartXMLParts enables parsing of XML file parts inside a multipart
+	// body, exposing them through the XML collection. Ignored by processors
+	// other than multipart.
+	MultipartXMLParts bool
 }
 
 // BodyProcessor interface is used to create

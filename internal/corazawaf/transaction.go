@@ -1176,6 +1176,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		StoragePath:               tx.WAF.UploadDir,
 		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 		ArgumentLimit:             tx.WAF.ArgumentLimit,
+		MultipartXMLParts:         tx.WAF.RequestBodyMultipartXMLParts,
 	}); err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
