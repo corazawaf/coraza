@@ -3,7 +3,7 @@
 - **Status:** proposed
 - **Date:** 2026-10-19 (expected merge date)
 - **Version:** unreleased (post-v3.8.1)
-- **PR:** [#NNNN](https://github.com/corazawaf/coraza/pull/NNNN)
+- **PR:** [#1751](https://github.com/corazawaf/coraza/pull/1751)
 - **Issue(s):** [#1749](https://github.com/corazawaf/coraza/issues/1749)
 - **Deciders:** @fzipi
 - **Category:** Perf
@@ -98,6 +98,6 @@ writing; the thresholds come from the measurements in #1749.
 
 ## References
 
-- PR: https://github.com/corazawaf/coraza/pull/NNNN
+- PR: https://github.com/corazawaf/coraza/pull/1751
 - Issue: https://github.com/corazawaf/coraza/issues/1749
 - Related ADRs: ADR-0019 (zero-copy helpers), ADR-0042 / ADR-0043 (memoize ownership)
