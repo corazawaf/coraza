@@ -127,8 +127,13 @@ func (b *bodyBufferReader) WriteTo(w io.Writer) (int64, error) {
 		if b.pos >= len(buf) {
 			return 0, nil
 		}
+		remaining := len(buf) - b.pos
 		n, err := w.Write(buf[b.pos:])
 		b.pos += n
+		if err == nil && n < remaining {
+			// same guard io.Copy applies to a writer that under-reports
+			err = io.ErrShortWrite
+		}
 		return int64(n), err
 	}
 
