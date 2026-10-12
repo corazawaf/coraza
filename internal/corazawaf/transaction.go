@@ -596,7 +596,7 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 		TransactionID_:   tx.id,
 		ServerIPAddress_: tx.variables.serverAddr.Get(),
 		ClientIPAddress_: tx.variables.remoteAddr.Get(),
-		Rule_:            &r.RuleMetadata,
+		Rule_:            r.matchedMetadata(tx),
 		Log_:             r.Log,
 		Audit_:           r.Audit,
 		MatchedDatas_:    mds,
