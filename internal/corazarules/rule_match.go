@@ -33,6 +33,26 @@ type MatchData struct {
 
 var _ types.MatchData = (*MatchData)(nil)
 
+// VariableMatch is the MatchData a collection read returns: variable, key and
+// value only. Collections produce one per value for every rule that reads them,
+// so it carries none of the match-time fields (message, logdata, chain level)
+// that MatchData adds once an operator matches; those live on the MatchData the
+// rule builds from the matching VariableMatch.
+type VariableMatch struct {
+	Variable_ variables.RuleVariable
+	Key_      string
+	Value_    string
+}
+
+var _ types.MatchData = (*VariableMatch)(nil)
+
+func (m *VariableMatch) Variable() variables.RuleVariable { return m.Variable_ }
+func (m *VariableMatch) Key() string                      { return m.Key_ }
+func (m *VariableMatch) Value() string                    { return m.Value_ }
+func (m *VariableMatch) Message() string                  { return "" }
+func (m *VariableMatch) Data() string                     { return "" }
+func (m *VariableMatch) ChainLevel() int                  { return 0 }
+
 func (m MatchData) Variable() variables.RuleVariable {
 	return m.Variable_
 }

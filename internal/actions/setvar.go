@@ -137,7 +137,9 @@ func (a *setvarFn) evaluateTxCollection(r plugintypes.RuleMetadata, tx plugintyp
 		return
 	}
 	currentVal := ""
-	if r := col.Get(key); len(r) > 0 {
+	if f, ok := col.(interface{ First(string) (string, bool) }); ok {
+		currentVal, _ = f.First(key)
+	} else if r := col.Get(key); len(r) > 0 {
 		currentVal = r[0]
 	}
 	var err error
