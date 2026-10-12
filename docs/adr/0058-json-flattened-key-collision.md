@@ -1,9 +1,9 @@
 # ADR-0058: Preserve both values on a JSON-flattened key collision
 
-- **Status:** proposed
-- **Date:** 2026-09-29 (expected; update before merge)
-- **Version:** unreleased (targeted for v3.8.0)
-- **PR:** [#1](https://github.com/corazawaf/coraza-ghsa-5gj4-9gm7-2fx2/pull/1) (private advisory fork; update to the public PR once GHSA-5gj4-9gm7-2fx2 is published)
+- **Status:** accepted
+- **Date:** 2026-09-29
+- **Version:** v3.8.0 (case-folding follow-up in v3.8.1)
+- **PR:** [GHSA-5gj4-9gm7-2fx2](https://github.com/corazawaf/coraza/security/advisories/GHSA-5gj4-9gm7-2fx2) (fixed on the advisory's private fork, which GitHub deleted on publication; merge commit [5f577a54](https://github.com/corazawaf/coraza/commit/5f577a548aeb9ca836122df4258f93ef6cfab38a), follow-up [52af139c](https://github.com/corazawaf/coraza/commit/52af139cab5ad10c5cb0152a161063b523907bdf))
 - **Issue(s):** No linked issue (security advisory [GHSA-5gj4-9gm7-2fx2](https://github.com/corazawaf/coraza/security/advisories/GHSA-5gj4-9gm7-2fx2))
 - **Deciders:** @fzipi
 - **Category:** Parity (security fix)
@@ -158,6 +158,6 @@ never collide.
 ## References
 
 - Advisory: https://github.com/corazawaf/coraza/security/advisories/GHSA-5gj4-9gm7-2fx2
-- Advisory PR (private fork): https://github.com/corazawaf/coraza-ghsa-5gj4-9gm7-2fx2/pull/1
-- Case-folding collision follow-up PR (private fork): https://github.com/corazawaf/coraza-ghsa-5gj4-9gm7-2fx2/pull/2
+- Fix merge commit: https://github.com/corazawaf/coraza/commit/5f577a548aeb9ca836122df4258f93ef6cfab38a
+- Case-folding collision follow-up merge commit: https://github.com/corazawaf/coraza/commit/52af139cab5ad10c5cb0152a161063b523907bdf
 - Related ADRs: ADR-0057 (`filename*`/`filename` dual-value precedent for the same "preserve both readings" pattern)

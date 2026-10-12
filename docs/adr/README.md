@@ -52,7 +52,8 @@ read only from above the first section so a stray line further down cannot stand
 a missing one), the `Status` and `Category` vocabularies, that the `## Technical
 Discussion` section itself carries either a permalinked quote or the marker, that quote
 permalinks point at this repository (or, for an ADR written alongside embargoed security
-work, the matching private advisory fork — see [Security](../../AGENTS.md#security)),
+work, the matching private advisory fork, or the published advisory once the fork is
+deleted — see [Security](../../AGENTS.md#security)),
 and that the index below matches the files on disk.
 
 It cannot verify that a quote matches what the person actually wrote. That is a
@@ -125,9 +126,9 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0053](0053-pm-minlen-prefilter.md) | [#1601](https://github.com/corazawaf/coraza/pull/1601) | 2026-04-13 | unreleased | ⚡ | `@pm` `minLen` prefilter |
 | [0055](0055-accuracy-rule-action.md) | [#1693](https://github.com/corazawaf/coraza/pull/1693) | 2026-08-27 | unreleased | P | `accuracy` metadata action |
 | [0056](0056-fips-140-3-support.md) | [#1678](https://github.com/corazawaf/coraza/pull/1678) | 2026-08-28 | unreleased | F | Runtime FIPS 140-3 support for `t:md5`/`t:sha1` |
-| [0057](0057-multipart-filename-star-variables.md) | [#1](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1) | 2026-09-05 (expected) | unreleased | P | `filename*` (RFC 5987) precedence and new multipart filename variables |
-| [0058](0058-json-flattened-key-collision.md) | GHSA-5gj4-9gm7-2fx2 | 2026-09-29 | unreleased | P | Preserve both values on a JSON-flattened key collision |
-| [0059](0059-secresponsebodyjsondepthlimit.md) | GHSA-3c6w-j9xm-8h2h | 2026-09-26 | unreleased | F | `SecResponseBodyJsonDepthLimit` directive |
-| [0060](0060-json-bounded-recursion-prescan.md) | GHSA-6gcq-wc29-5xf2 | 2026-09-30 | unreleased | P | Iterative depth pre-scan before `gjson.Valid` in the JSON body processor |
+| [0057](0057-multipart-filename-star-variables.md) | [GHSA-3wr7-993q-jrff](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff) | 2026-09-29 | v3.8.0 | P | `filename*` (RFC 5987) precedence and new multipart filename variables |
+| [0058](0058-json-flattened-key-collision.md) | [GHSA-5gj4-9gm7-2fx2](https://github.com/corazawaf/coraza/security/advisories/GHSA-5gj4-9gm7-2fx2) | 2026-09-29 | v3.8.0 | P | Preserve both values on a JSON-flattened key collision |
+| [0059](0059-secresponsebodyjsondepthlimit.md) | [GHSA-3c6w-j9xm-8h2h](https://github.com/corazawaf/coraza/security/advisories/GHSA-3c6w-j9xm-8h2h) | 2026-09-29 | v3.8.0 | F | `SecResponseBodyJsonDepthLimit` directive |
+| [0060](0060-json-bounded-recursion-prescan.md) | [GHSA-6gcq-wc29-5xf2](https://github.com/corazawaf/coraza/security/advisories/GHSA-6gcq-wc29-5xf2) | 2026-09-30 | v3.8.1 | P | Iterative depth pre-scan before `gjson.Valid` in the JSON body processor |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

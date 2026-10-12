@@ -1,9 +1,9 @@
 # ADR-0057: `filename*` (RFC 5987) precedence and new multipart filename variables
 
-- **Status:** proposed
-- **Date:** 2026-09-05 (expected; update before merge)
-- **Version:** unreleased (targeted for v3.8.0)
-- **PR:** [#1](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1) (private advisory fork; update to the public PR once GHSA-3wr7-993q-jrff is published)
+- **Status:** accepted
+- **Date:** 2026-09-29
+- **Version:** v3.8.0 (RFC 2231 continuation follow-up in v3.8.1)
+- **PR:** [GHSA-3wr7-993q-jrff](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff) (fixed on the advisory's private fork, which GitHub deleted on publication; merge commit [5427c501](https://github.com/corazawaf/coraza/commit/5427c501b2fea6ae1305903efef01b3049224a58))
 - **Issue(s):** No linked issue (security advisory [GHSA-3wr7-993q-jrff](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff))
 - **Deciders:** @fzipi, @jptosso
 - **Category:** Parity (ModSecurity parity + security fix)
@@ -88,6 +88,11 @@ plain `filename` has no charset/language of its own to expose.
 
 ## Technical Discussion
 
+The comments below were made on PR #1 of the advisory's private fork, which
+GitHub deleted when GHSA-3wr7-993q-jrff was published. They link to the
+published advisory instead; the quotes were copied verbatim while the fork
+existed.
+
 @jptosso reviewed the initial implementation and raised a direct objection to
 making `filename*` unconditionally authoritative:
 
@@ -101,7 +106,7 @@ making `filename*` unconditionally authoritative:
 > extension or name blocklist then catches either interpretation, there is no
 > decoy in any direction, and we don't need to win the argument about which
 > backends are out there."
-> — @jptosso ([comment](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1#issuecomment-5376317758))
+> — @jptosso ([comment](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff))
 
 Adopted: both `fields.filename` (the `filename*` reading, when present and
 well-formed) and `fields.altFilename` (the plain `filename` reading, when it
@@ -128,7 +133,7 @@ filename:
 > `mime/multipart`, python-multipart and formidable ignore that `filename*`
 > and store `shell.php` as a file, so FILES-based rules (e.g. CRS 933110),
 > FILES_NAMES/FILES_SIZES and the upload size limits never see it."
-> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1#discussion_r4138921078))
+> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff))
 
 > "**Blocking: RFC 2231 continuations (`filename*0*=` / `filename*0=`) get
 > around this fix.** `findParam` only matches the exact key `filename*`, so
@@ -137,14 +142,14 @@ filename:
 > `params["filename"] = ""`, which wipes out the plain filename. […] the
 > continuation overrides the plain filename, and since `findFilenameStar`
 > returns not-found, the `altFilename` path never runs."
-> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1#discussion_r4138921083))
+> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff))
 
 > "`MULTIPART_INVALID_QUOTING` should be set to `"0"` here too, like
 > `MULTIPART_DUPLICATE_PART_HEADER` […] Otherwise the new `logdata` on rule
 > 200003 in `coraza.conf-recommended` prints an empty
 > `MULTIPART_INVALID_QUOTING=` rather than `0`, and the two flags behave
 > differently for rules that check them."
-> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1#discussion_r4138921092))
+> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff))
 
 Adopted for all three: (1) the part is now recognized as a file when either
 reading is non-empty, falling back to `fields.altFilename` when
@@ -174,7 +179,7 @@ silently losing a value Coraza used to surface before this fix existed:
 > this is the same reading Coraza used before. […] Suggestion: keep the
 > parser's reading as `altFilename` so the existing code that adds both names
 > covers it."
-> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1#discussion_r4139178019))
+> — @M4tteoP ([review comment](https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff))
 
 Adopted: the independently-reparsed plain `filename` stays primary (it is the
 only reading Coraza can vouch for without decoding the continuation itself),
@@ -221,6 +226,6 @@ confirmed to fail without this second fix.
 ## References
 
 - Advisory: https://github.com/corazawaf/coraza/security/advisories/GHSA-3wr7-993q-jrff
-- Advisory PR (private fork): https://github.com/corazawaf/coraza-ghsa-3wr7-993q-jrff/pull/1
+- Fix merge commit: https://github.com/corazawaf/coraza/commit/5427c501b2fea6ae1305903efef01b3049224a58
 - ModSecurity parity fix: https://github.com/owasp-modsecurity/ModSecurity/security/advisories/GHSA-5pww-8rfg-9crf
 - Related ADRs: ADR-0017 (`MULTIPART_STRICT_ERROR`)
