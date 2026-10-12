@@ -524,9 +524,6 @@ func TestFTW(t *testing.T) {
 
 	customTestingConfig := `
 SecResponseBodyMimeType text/plain
-SecDefaultAction "phase:3,log,auditlog,pass"
-SecDefaultAction "phase:4,log,auditlog,pass"
-SecDefaultAction "phase:5,log,auditlog,pass"
 
 # Rule 900005 from https://github.com/coreruleset/coreruleset/blob/v4.0/dev/tests/regression/README.md#requirements
 SecAction "id:900005,\
@@ -559,7 +556,7 @@ SecRule REQUEST_HEADERS:X-CRS-Test "@rx ^.*$" \
 	// 1. Coraza config
 	// 2. Custom Rules for testing and eventually overrides of the basic Coraza config
 	// 3. CRS basic config
-	// 4. CRS rules (on top of which are applied the previously defined SecDefaultAction)
+	// 4. CRS rules (on top of which are applied the SecDefaultAction defined by the CRS basic config)
 	conf = conf.
 		WithRootFS(coreruleset.FS).
 		WithDirectives(string(rec)).
@@ -750,12 +747,8 @@ func crsWAF(t testing.TB) coraza.WAF {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TODO: SecDefaultAction should be removed as soon as we point to a CRS version that carries them by default in the crs-setup.conf.example (From CRS v4.28.0 and v4.25.1 (LTS))
 	customTestingConfig := `
 SecResponseBodyMimeType text/plain
-SecDefaultAction "phase:3,log,auditlog,pass"
-SecDefaultAction "phase:4,log,auditlog,pass"
-SecDefaultAction "phase:5,log,auditlog,pass"
 
 # Rule 900005 from https://github.com/coreruleset/coreruleset/blob/v4.0/dev/tests/regression/README.md#requirements
 SecAction "id:900005,\

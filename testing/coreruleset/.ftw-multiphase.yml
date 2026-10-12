@@ -10,3 +10,5 @@ testoverride:
     932200-13: 'Multiphase: MATCHED_VAR_NAME reports ARGS_GET instead of ARGS'
     932300-10: 'Multiphase: MATCHED_VAR_NAME reports ARGS_POST instead of ARGS'
     933120-2: 'Multiphase: MATCHED_VAR_NAME reports ARGS_POST instead of ARGS'
+    950020-1: 'Multiphase: 950020 (phase 4, RESPONSE_HEADERS) is inferred to phase 3, its skipAfter is consumed there and not applied again in phase 4. Response body rules still run'
+    950020-2: 'Multiphase: 950020 (phase 4, RESPONSE_HEADERS) is inferred to phase 3, its skipAfter skips the phase 3 rules (950100). False negative'
