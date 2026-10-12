@@ -291,15 +291,16 @@ type transformationKey struct {
 	// TODO(anuraaga): This is a big hack to support performance on TinyGo. TinyGo
 	// cannot efficiently compute a hashcode for a struct if it has embedded non-fixed
 	// size fields, for example string as we'd prefer to use here. A pointer is usable,
-	// and it works for us since the values we cache are owned by a collection and stay
-	// alive throughout the phase, so we never see different pointers with the same
-	// content, or more problematically the same pointer for different content.
+	// and it works for us since the values we cache are held by a collection throughout
+	// the phase, so we never see different pointers with the same content. The pointer
+	// stored here keeps the value's memory alive in turn, so the same pointer can never
+	// come back with different content.
 	//
 	// The identity is the value itself (data pointer + length), not the argument's key
 	// and position: collections backed by a map return FindAll() results in Go map
 	// iteration order, so an argument's position is not stable from one rule to the
-	// next within a phase. Values that are not collection-owned (TX, which mutates
-	// mid-phase, and &VARIABLE counts, which are synthesized per call) are not cached.
+	// next within a phase. Variables whose values are not held that way are not cached,
+	// see transformationCacheable.
 	argValue          *byte
 	argValueLen       int
 	transformationsID int

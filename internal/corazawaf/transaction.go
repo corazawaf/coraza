@@ -1733,6 +1733,11 @@ func (tx *Transaction) Close() error {
 	}
 
 	tx.variables.reset()
+	// The entries of the last evaluated phase point to values the collections have
+	// just released, and would keep them alive while the transaction sits in the pool.
+	for k := range tx.transformationCache {
+		delete(tx.transformationCache, k)
+	}
 	if err := tx.requestBodyBuffer.Reset(); err != nil {
 		errs = append(errs, fmt.Errorf("reseting request body buffer: %v", err))
 	}
