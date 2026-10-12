@@ -201,16 +201,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 	ruleCol := tx.variables.rule
 	ruleCol.SetIndex("id", 0, r.LogID())
-	if r.Msg != nil {
-		// Expand the message using the current TX variables so that %{rule.msg} in setvar actions
-		// returns the fully expanded message, matching ModSecurity behavior.
-		ruleCol.SetIndex("msg", 0, r.Msg.Expand(tx))
-	}
 	ruleCol.SetIndex("rev", 0, r.Rev_)
-	if r.LogData != nil {
-		// Same expansion for logdata, matching ModSecurity behavior for %{rule.logdata}.
-		ruleCol.SetIndex("logdata", 0, r.LogData.Expand(tx))
-	}
 	ruleCol.SetIndex("severity", 0, r.Severity_.String())
 	// SecMark and SecAction uses nil operator
 	if r.operator == nil {
@@ -331,6 +322,7 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 							// part of the last rule of the chain if the evaluated chained variables already matched. This avoids incrementing the CRS anomaly score multiple
 							// time from the same variables chain.
 							tx.matchVariable(mr)
+							r.expandRuleCollection(tx)
 							for _, a := range r.actions {
 								if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
 									vLog.Debug().Str("action", a.Name).Msg("Evaluating action")
@@ -366,11 +358,13 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		for nr := r.Chain; nr != nil; {
 			chainLevel++
 
-			var nrLogger debuglog.Logger
-			if nr.ID_ == noID {
-				nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
-			} else {
-				nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
+			nrLogger := logger
+			if logger.Debug().IsEnabled() {
+				if nr.ID_ == noID {
+					nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
+				} else {
+					nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
+				}
 			}
 
 			matchedChainValues := nr.doEvaluate(nrLogger, phase, tx, collectiveMatchedValues, chainLevel, cache)
@@ -503,6 +497,22 @@ func (r *Rule) transformArg(arg types.MatchData, cache map[transformationKey]tra
 	return value, errs
 }
 
+// expandRuleCollection publishes the expanded msg and logdata of the rule in
+// the RULE collection so that %{rule.msg} and %{rule.logdata} in the rule's
+// own actions see the expanded value. It runs once the rule has matched and
+// the MATCHED_* variables are set, right before the actions: expanding them for
+// every evaluated rule was the single largest allocation of a CRS request
+// (ModSecurity v2 exposes the raw strings and v3 expands on read, neither
+// pre-expands).
+func (r *Rule) expandRuleCollection(tx *Transaction) {
+	if r.Msg != nil {
+		tx.variables.rule.SetIndex("msg", 0, r.Msg.Expand(tx))
+	}
+	if r.LogData != nil {
+		tx.variables.rule.SetIndex("logdata", 0, r.LogData.Expand(tx))
+	}
+}
+
 func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	rid := r.ID_
 	if rid == noID {
@@ -522,6 +532,7 @@ func (r *Rule) matchVariable(tx *Transaction, m *corazarules.MatchData) {
 	// SecActions (r.operator == nil) are always executed
 	if !multiphaseEvaluation || r.operator == nil {
 		tx.matchVariable(m)
+		r.expandRuleCollection(tx)
 		for _, a := range r.actions {
 			if a.Function.Type() == plugintypes.ActionTypeNondisruptive {
 				tx.DebugLogger().Debug().Str("action", a.Name).Msg("Evaluating action")
