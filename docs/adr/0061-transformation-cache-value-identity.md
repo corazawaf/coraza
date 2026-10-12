@@ -1,7 +1,7 @@
 # ADR-0061: Key the transformation cache by value identity
 
-- **Status:** proposed
-- **Date:** 2026-10-12 (expected; update before merge)
+- **Status:** accepted
+- **Date:** 2026-10-12
 - **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1682](https://github.com/corazawaf/coraza/pull/1682)
 - **Issue(s):** [#1681](https://github.com/corazawaf/coraza/issues/1681)
