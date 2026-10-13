@@ -16,7 +16,7 @@ import (
 // With `multiMatch`, variables are checked against the operator before and after every transformation function that changes the input.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule ARGS "attack" "phase1,log,deny,id:119,t:removeNulls,t:lowercase,multiMatch"
 // ```
 type multimatchFn struct{}

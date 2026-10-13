@@ -98,7 +98,7 @@ const (
 //     This allows for inspection of request bodies of unknown types.
 //
 // Example:
-// ```
+// ```seclang
 // # Parse requests with Content-Type "text/xml" as XML
 // SecRule REQUEST_CONTENT_TYPE ^text/xml "nolog,pass,id:106,phase:1,ctl:requestBodyProcessor=XML"
 //

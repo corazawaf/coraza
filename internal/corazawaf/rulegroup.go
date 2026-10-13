@@ -173,10 +173,11 @@ func (rg *RuleGroup) DeleteByRange(start, end int) {
 }
 
 // DeleteByMsg deletes rules with the given message.
+// Rules without a msg action are kept.
 func (rg *RuleGroup) DeleteByMsg(msg string) {
 	var kept []Rule
 	for _, r := range rg.rules {
-		if r.Msg.String() != msg {
+		if r.Msg == nil || r.Msg.String() != msg {
 			kept = append(kept, r)
 		}
 	}

@@ -25,7 +25,7 @@ import (
 // true if the input IP address matches any IP or range from the file(s), false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block IPs from denylist file
 // SecRule REMOTE_ADDR "@ipMatchFromFile /etc/waf/blocked-ips.txt" "id:162,deny,log"
 //

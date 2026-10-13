@@ -7,14 +7,33 @@ import (
 	"strings"
 )
 
-// ParseQuery parses the URL-encoded query string and returns the corresponding map.
-// It takes separators as parameter, for example: & or ; or &;
-func ParseQuery(query string, separator byte) map[string][]string {
-	return doParseQuery(query, separator, true)
+// KeyValue holds a single parsed key-value pair in parse order.
+type KeyValue struct {
+	Key   string
+	Value string
 }
 
-func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]string {
-	m := make(map[string][]string)
+// ParseQuery parses the URL-encoded query string and returns the corresponding
+// map, plus whether parsing stopped early because limit was reached (limit <= 0
+// means no limit). Stopping the parse itself, rather than only capping what a
+// caller later copies out of the result, matters because building the full
+// map is what actually spends the memory: a query string with millions of
+// pairs (repeated key or not) would otherwise allocate for every single one
+// of them before any caller-side limit ever got a chance to run. See
+// GHSA-3ww9-vw83-9w5x. limit counts total pairs parsed, not distinct keys, so
+// it isn't fooled by many values crammed under one repeated key either.
+// It takes separators as parameter, for example: & or ; or &;
+func ParseQuery(query string, separator byte, limit int) (result map[string][]string, truncated bool) {
+	return doParseQuery(query, separator, true, limit)
+}
+
+// ParseQueryOrdered parses the URL-encoded query string and returns key-value
+// pairs in the order they appear in the input, plus whether parsing stopped
+// early because limit was reached (limit <= 0 means no limit; see ParseQuery
+// for why the parse itself, not just a later copy, is what needs to stop).
+// The order is important for deterministic behavior when an argument limit
+// is enforced.
+func ParseQueryOrdered(query string, separator byte, limit int) (result []KeyValue, truncated bool) {
 	for query != "" {
 		key := query
 		if i := strings.IndexByte(key, separator); i >= 0 {
@@ -25,6 +44,43 @@ func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]s
 		if key == "" {
 			continue
 		}
+		// Checked after the empty-key skip, right before a pair is actually
+		// added: checking above it would report truncation for a trailing
+		// separator once the limit was reached, even though nothing more was
+		// going to be dropped (e.g. "a=1&b=2&&" with limit=2).
+		if limit > 0 && len(result) >= limit {
+			return result, true
+		}
+		value := ""
+		if i := strings.IndexByte(key, '='); i >= 0 {
+			key, value = key[:i], key[i+1:]
+		}
+		key = queryUnescape(key)
+		value = queryUnescape(value)
+		result = append(result, KeyValue{Key: key, Value: value})
+	}
+	return result, false
+}
+
+func doParseQuery(query string, separator byte, urlUnescape bool, limit int) (m map[string][]string, truncated bool) {
+	m = make(map[string][]string)
+	total := 0
+	for query != "" {
+		key := query
+		if i := strings.IndexByte(key, separator); i >= 0 {
+			key, query = key[:i], key[i+1:]
+		} else {
+			query = ""
+		}
+		if key == "" {
+			continue
+		}
+		// See the matching comment in ParseQueryOrdered: checked after the
+		// empty-key skip so a trailing separator at the limit doesn't report
+		// truncation for a pair that was never going to be added.
+		if limit > 0 && total >= limit {
+			return m, true
+		}
 		value := ""
 		if i := strings.IndexByte(key, '='); i >= 0 {
 			key, value = key[:i], key[i+1:]
@@ -34,8 +90,9 @@ func doParseQuery(query string, separator byte, urlUnescape bool) map[string][]s
 			value = queryUnescape(value)
 		}
 		m[key] = append(m[key], value)
+		total++
 	}
-	return m
+	return m, false
 }
 
 // queryUnescape is a non-strict version of net/url.QueryUnescape.

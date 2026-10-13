@@ -85,6 +85,38 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 		{
+			// A regex removal carries an empty KeyStr, which must not match an
+			// argument or cookie whose name is "" (GHSA-g4qm-m288-5cp9).
+			Title: "ruleRemoveTargetById regex key keeps empty-named keys",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/jobs?json.0.desc=attack&=attack",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{300, 301},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/cookie-test",
+							Headers: map[string]string{
+								"Cookie": "__utma=attack; \x01=attack",
+							},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{370, 371},
+						},
+					},
+				},
+			},
+		},
+		{
 			Title: "ruleRemoveTargetById regex key (POST JSON body)",
 			Stages: []profile.Stage{
 				{
@@ -286,6 +318,12 @@ SecRule ARGS_GET "@rx ." "id:201, phase:1, log"
 # Matching args (json.0.desc, json.1.desc) must NOT trigger rule 301.
 SecRule REQUEST_URI "@beginsWith /api/jobs" "id:300,phase:1,pass,log,ctl:ruleRemoveTargetById=301;ARGS_GET:/^json\.\d+\.desc$/"
 SecRule ARGS_GET "@rx attack" "id:301,phase:1,log"
+
+# ruleRemoveTargetById regex key test (cookies):
+# Rule 370 removes REQUEST_COOKIES matching /^__utm/ from rule 371. A cookie whose
+# name trims to "" must still reach rule 371.
+SecRule REQUEST_URI "@beginsWith /api/cookie-test" "id:370,phase:1,pass,log,ctl:ruleRemoveTargetById=371;REQUEST_COOKIES:/^__utm/"
+SecRule REQUEST_COOKIES "@rx attack" "id:371,phase:1,log"
 
 # ruleRemoveTargetById regex key test (POST JSON body):
 # Rule 310 activates JSON body processor for application/json requests.

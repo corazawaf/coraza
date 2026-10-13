@@ -23,10 +23,16 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	}
 
 	b := buf.String()
-	values := urlutil.ParseQuery(b, '&')
+	// ParseQuery itself stops once options.ArgumentLimit total pairs have
+	// been parsed (see GHSA-3ww9-vw83-9w5x): the copy below never needs to
+	// re-enforce the cap, since values can never hold more than the limit.
+	values, truncated := urlutil.ParseQuery(b, '&', options.ArgumentLimit)
 	argsCol := v.ArgsPost()
 	for k, vs := range values {
 		argsCol.Set(k, vs)
+	}
+	if truncated {
+		v.ArgumentsLimitReached().(*collections.Single).Set("1")
 	}
 	v.RequestBody().(*collections.Single).Set(b)
 	v.RequestBodyLength().(*collections.Single).Set(strconv.Itoa(len(b)))

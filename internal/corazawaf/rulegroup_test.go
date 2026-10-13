@@ -65,6 +65,26 @@ func TestRuleGroupDeleteByMsg(t *testing.T) {
 			t.Error("Expected rule to remain when message case does not match")
 		}
 	})
+
+	t.Run("keeps rules without msg", func(t *testing.T) {
+		rg := NewRuleGroup()
+		r1 := newTestRule(1)
+		r2 := NewRule()
+		r2.ID_ = 2
+		if err := rg.Add(r1); err != nil {
+			t.Fatal("Failed to add rule to rulegroup")
+		}
+		if err := rg.Add(r2); err != nil {
+			t.Fatal("Failed to add rule to rulegroup")
+		}
+		rg.DeleteByMsg("test-Msg")
+		if rg.Count() != 1 {
+			t.Error("Expected only the rule without msg to remain")
+		}
+		if rg.GetRules()[0].ID_ != 2 {
+			t.Error("Expected the rule without msg to be kept")
+		}
+	})
 }
 
 func TestRuleGroupDeleteByID(t *testing.T) {

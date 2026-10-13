@@ -29,7 +29,7 @@ type validateNidFunction = func(input string) bool
 // true if the national ID is valid, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Validate Chilean RUT format
 // SecRule ARGS:rut "@validateNid cl ^[0-9]{7,8}-[0-9Kk]$" "id:195,pass,log"
 //

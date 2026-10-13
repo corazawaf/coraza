@@ -28,7 +28,7 @@ import (
 // true if any keyword from the file(s) is found in the input, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block user agents from denylist file
 // SecRule REQUEST_HEADERS:User-Agent "@pmFromFile /path/to/denylist.txt" "id:172,deny,log"
 //

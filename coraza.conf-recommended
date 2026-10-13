@@ -44,8 +44,28 @@ SecRule REQUEST_HEADERS:Content-Type "^application/json" \
 SecRule REQUEST_HEADERS:Content-Type "^application/[a-z0-9.-]+[+]json" \
      "id:'200006',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=JSON"
 
+# Enforces strict validation for requests whose URI could not be parsed
+# (for example, because it contains raw control bytes). This mainly affects
+# non-net/http integrations, as net/http servers already reject such URIs
+# with a 400 response before Coraza ever sees them.
+# Even when URI_PARSE_ERROR is flagged, QUERY_STRING/ARGS_GET are still
+# populated on a best-effort basis and REQUEST_URI_RAW always
+# holds the untouched URI regardless.
+#
+SecRule URI_PARSE_ERROR "@eq 1" \
+    "id:'200009',phase:1,t:none,log,deny,status:400,msg:'URI failed to parse.'"
+
 # Configures the maximum JSON recursion depth limit Coraza will accept.
 SecRequestBodyJsonDepthLimit 1024
+
+# Maximum number of arguments Coraza keeps from each source, counted
+# separately: the query string (ARGS_GET), the path (ARGS_PATH), and
+# urlencoded or JSON request bodies (ARGS_POST). JSON response bodies
+# (RESPONSE_ARGS) use the same limit.
+# Arguments beyond it are dropped and ARGUMENTS_LIMIT_REACHED is set.
+# Rules 200004 and 200005 are enforcing this limit, rejecting requests that exceed it.
+# If legitimate requests send more values, raise this value rather than removing those rules.
+SecArgumentsLimit 1000
 
 # Maximum request body size (bytes) Coraza will accept for buffering. When
 # supporting file uploads, this value has to be as large as the largest
@@ -75,6 +95,8 @@ SecRequestBodyLimitAction Reject
 # the request should be rejected (when deployed in blocking mode)
 # or a high-severity alert logged (when deployed in detection-only mode).
 #
+# It also fires for valid JSON whose flattened form exceeds its memory budget.
+#
 SecRule REQBODY_ERROR "!@eq 0" \
     "id:'200002', phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.',logdata:'%{reqbody_error_msg}',severity:2"
 
@@ -83,9 +105,33 @@ SecRule REQBODY_ERROR "!@eq 0" \
 # too strict consider changing it to detection-only.
 # Do NOT remove it, as it will catch many evasion attempts.
 #
+# MULTIPART_DUPLICATE_PART_HEADER and MULTIPART_INVALID_QUOTING are the two
+# contributors to MULTIPART_STRICT_ERROR that Coraza reports separately, so
+# the rule logs both to say why validation failed.
+# MULTIPART_DUPLICATE_PART_HEADER is set when a part repeats a header (two
+# Content-Disposition headers), or repeats a parameter inside its
+# Content-Disposition (two "filename" parameters). Backends disagree about
+# which copy wins, so the duplicate itself is the signal.
+# MULTIPART_INVALID_QUOTING is set when a part's "filename*" parameter was
+# wrapped in a quoted-string, which RFC 5987 does not permit.
+#
 SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     "id:'200003',phase:2,t:none,log,deny,status:400, \
-    msg:'Multipart request body failed strict validation.'"
+    msg:'Multipart request body failed strict validation.', \
+    logdata:'MULTIPART_DUPLICATE_PART_HEADER=%{MULTIPART_DUPLICATE_PART_HEADER}, \
+    MULTIPART_INVALID_QUOTING=%{MULTIPART_INVALID_QUOTING}'"
+
+# Rejects requests when the argument limit has been reached and arguments
+# were silently dropped. Without this rule, an attacker can flood a request
+# with filler parameters to push a malicious payload past the limit,
+# causing it to be invisible to all ARGS-targeted rules.
+#
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" \
+    "id:'200004',phase:1,t:none,log,deny,status:400, \
+    msg:'Argument limit reached; request rejected (GET/PATH args)'"
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" \
+    "id:'200005',phase:2,t:none,log,deny,status:400, \
+    msg:'Argument limit reached; request rejected (POST args)'"
 
 
 # -- Response body handling --------------------------------------------------
@@ -103,6 +149,10 @@ SecResponseBodyAccess On
 # files (e.g., images and archives).
 #
 SecResponseBodyMimeType text/plain text/html text/xml
+
+# Configures the maximum JSON recursion depth limit Coraza will accept in
+# response bodies (e.g. when SecResponseBodyMimeType includes application/json).
+SecResponseBodyJsonDepthLimit 1024
 
 # Maximum response body size (bytes) that Coraza will store in memory.
 # This default equals to 512 KB.
@@ -209,6 +259,6 @@ SecAuditLogFormat Native
 # SecCookieFormat 0
 # SecArgumentSeparator &
 # SecRule MULTIPART_UNMATCHED_BOUNDARY "@eq 1" \
-#    "id:'200004',phase:2,t:none,log,deny,msg:'Multipart parser detected a possible unmatched boundary.'"
+#    "id:'20000x',phase:2,t:none,log,deny,msg:'Multipart parser detected a possible unmatched boundary.'"
 # SecRule TX:/^COR_/ "!@streq 0" \
-#       "id:'200005',phase:2,t:none,deny,msg:'Coraza internal error flagged: %{MATCHED_VAR_NAME}'"
+#       "id:'20000x',phase:2,t:none,deny,msg:'Coraza internal error flagged: %{MATCHED_VAR_NAME}'"

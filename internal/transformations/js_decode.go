@@ -95,9 +95,12 @@ func doJsDecode(input string, pos int) (string, bool) {
 				j := 0
 
 				for (i+1+j < inputLen) && (j < 3) {
-					buf[j] = input[i+j]
+					// i points at the backslash, so the octal digits start at i+1
+					buf[j] = input[i+1+j]
 					j++
-					if !isodigit(input[i+j]) {
+					// Look at the next character to decide whether to keep consuming
+					// octal digits.
+					if i+1+j >= inputLen || !isodigit(input[i+1+j]) {
 						break
 					}
 				}
@@ -109,7 +112,11 @@ func doJsDecode(input string, pos int) (string, bool) {
 						j = 2
 						buf = buf[:j]
 					}
-					nn, _ := strconv.ParseInt(string(buf), 8, 8)
+					// Parse as an unsigned byte (0-255). The truncation above keeps the
+					// value <= 0377, so ParseUint with a bit size of 8 never overflows.
+					// Using ParseUint instead of ParseInt is needed to faithfully decode
+					// high bytes \200-\377 instead of clamping to 0x7f (127).
+					nn, _ := strconv.ParseUint(string(buf), 8, 8)
 					d[c] = byte(nn)
 					changed = true
 					c++

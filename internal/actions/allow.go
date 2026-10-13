@@ -23,7 +23,7 @@ import (
 // - Using with parameter `request`: engine will stop processing the current phase, and the next phase to be processed will be phase `types.PhaseResponseHeaders`.
 //
 // Example:
-// ```
+// ```seclang
 // # Allow unrestricted access from 192.168.1.100
 // SecRule REMOTE_ADDR "^192\.168\.1\.100$" phase:1,id:95,nolog,allow
 //

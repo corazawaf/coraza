@@ -86,6 +86,10 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.MultipartDataAfter:
 		// Not populated by Coraza
 		return types.PhaseRequestBody
+	case variables.MultipartDuplicatePartHeader:
+		return types.PhaseRequestBody
+	case variables.MultipartInvalidQuoting:
+		return types.PhaseRequestBody
 	case variables.OutboundDataError:
 		return types.PhaseResponseBody
 	case variables.QueryString:
@@ -173,6 +177,10 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 		return types.PhaseRequestBody
 	case variables.MultipartFilename:
 		return types.PhaseRequestBody
+	case variables.MultipartFilenameCharset:
+		return types.PhaseRequestBody
+	case variables.MultipartFilenameLanguage:
+		return types.PhaseRequestBody
 	case variables.MultipartName:
 		return types.PhaseRequestBody
 	case variables.MatchedVarsNames:
@@ -213,6 +221,8 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.Env:
 		return types.PhaseRequestHeaders
 	case variables.UrlencodedError:
+		return types.PhaseRequestHeaders
+	case variables.URIParseError:
 		return types.PhaseRequestHeaders
 	case variables.ResponseArgs:
 		return types.PhaseResponseBody
