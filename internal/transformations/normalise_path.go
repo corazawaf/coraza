@@ -4,7 +4,7 @@
 package transformations
 
 import (
-	"path/filepath"
+	"path"
 )
 
 func normalisePath(data string) (string, bool, error) {
@@ -12,7 +12,7 @@ func normalisePath(data string) (string, bool, error) {
 	if leng < 1 {
 		return data, false, nil
 	}
-	clean := filepath.Clean(data)
+	clean := path.Clean(data)
 	if clean == "." {
 		return "", true, nil
 	}

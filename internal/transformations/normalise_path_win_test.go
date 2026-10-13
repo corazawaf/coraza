@@ -70,6 +70,18 @@ func TestNormalisePathWin(t *testing.T) {
 			want:  "C:/path/web.config/",
 		},
 		{
+			input: `\\server\share\file`,
+			want:  "/server/share/file",
+		},
+		{
+			input: `C:foo/..`,
+			want:  "",
+		},
+		{
+			input: `C:/foo:bar/baz`,
+			want:  "C:/foo:bar/baz",
+		},
+		{
 			// A component that is entirely spaces trims down to nothing;
 			// Windows drops it rather than resolving through an empty
 			// component, which would otherwise surface as "//".
