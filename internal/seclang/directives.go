@@ -1367,9 +1367,14 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // ---
 // Generally speaking, the default value is not small enough. For most applications, you
 // should be able to reduce it down to 128 KB or lower. Anything over the limit will be
-// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GiB.
+// rejected with status code 413 (Request Entity Too Large), even when
+// `SecRequestBodyLimitAction` is `ProcessPartial`, and REQBODY_ERROR is set. The value
+// must be between 1 and 1 GiB.
 //
-// Note: not implemented yet
+// Every byte of a body counts when a body processor other than MULTIPART is selected
+// (by Content-Type or `ctl:requestBodyProcessor`) or `ctl:forceRequestBodyVariable` is on,
+// and the body is refused as soon as the limit is crossed. A multipart body is counted once
+// parsed, by the size of its form fields only. A body with no processor is not counted.
 //
 // Example:
 // ```seclang

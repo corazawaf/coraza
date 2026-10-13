@@ -77,8 +77,10 @@ SecRequestBodyLimit 13107200
 SecRequestBodyInMemoryLimit 131072
 
 # Maximum request body size (bytes) Coraza will accept for buffering, with files excluded.
-# This value should be kept as low as practical.
-# Note: SecRequestBodyNoFilesLimit is currently NOT supported by Coraza
+# This value should be kept as low as practical. The default is 1048576; a larger body is
+# rejected with a 413 whatever SecRequestBodyLimitAction is set to. It applies to bodies
+# parsed by a body processor (or forced with ctl:forceRequestBodyVariable), not to bodies
+# of an unrecognised content type.
 # SecRequestBodyNoFilesLimit 131072
 
 # Configures the action to take if the request body size is above the configured limit.

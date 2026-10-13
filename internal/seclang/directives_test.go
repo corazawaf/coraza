@@ -389,6 +389,11 @@ func TestDirectives(t *testing.T) {
 			{"z", expectErrorOnDirective},
 			{"123", func(w *corazawaf.WAF) bool { return *(w.RequestBodyInMemoryLimit()) == 123 }},
 		},
+		"SecRequestBodyNoFilesLimit": {
+			{"", expectErrorOnDirective},
+			{"y", expectErrorOnDirective},
+			{"123", func(w *corazawaf.WAF) bool { return w.RequestBodyNoFilesLimit == 123 }},
+		},
 		"SecRequestBodyLimitAction": {
 			{"", expectErrorOnDirective},
 			{"What?", expectErrorOnDirective},

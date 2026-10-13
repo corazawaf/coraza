@@ -1047,6 +1047,36 @@ func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Inte
 	return tx.interruption, 0, nil
 }
 
+// noFilesLimitExceeded reports whether the request body holds more non-file
+// data than SecRequestBodyNoFilesLimit allows, and if so raises REQBODY_ERROR
+// and interrupts the transaction with a 413 regardless of the body limit action.
+//
+// While the body is being written, every byte counts as non-file data once a
+// body processor other than MULTIPART is selected, or when there is no processor
+// and ctl:forceRequestBodyVariable is on. A body with neither is not measured. A
+// multipart body, forced or not, is measured by ProcessRequestBody after parsing,
+// when the file bytes are known.
+func (tx *Transaction) noFilesLimitExceeded() bool {
+	rbp := tx.variables.reqbodyProcessor.Get()
+	if strings.EqualFold(rbp, "MULTIPART") || (rbp == "" && !tx.ForceRequestBodyVariable) {
+		return false
+	}
+	return tx.rejectOverNoFilesLimit(tx.requestBodyBuffer.length)
+}
+
+// rejectOverNoFilesLimit interrupts the transaction when nonFileLen is above
+// the limit.
+func (tx *Transaction) rejectOverNoFilesLimit(nonFileLen int64) bool {
+	if nonFileLen <= tx.WAF.RequestBodyNoFilesLimit {
+		return false
+	}
+	tx.debugLogger.Warn().Msg("Disrupting transaction with non-file body size above the configured limit")
+	tx.variables.reqbodyError.Set("1")
+	tx.variables.reqbodyErrorMsg.Set(fmt.Sprintf("Request body no files data length is larger than the configured limit (%d)", tx.WAF.RequestBodyNoFilesLimit))
+	tx.interruption = &types.Interruption{Status: 413, Action: "deny"}
+	return true
+}
+
 // WriteRequestBody writes bytes from a slice of bytes into the request body,
 // it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't copy the bytes if the body access isn't accessible.
@@ -1098,6 +1128,9 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 	w, err := tx.requestBodyBuffer.Write(b[:writingBytes])
 	if err != nil {
 		return nil, 0, err
+	}
+	if tx.noFilesLimitExceeded() {
+		return tx.interruption, int(w), nil
 	}
 
 	if runProcessRequestBody {
@@ -1166,6 +1199,9 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	w, err := io.CopyN(tx.requestBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
 		return nil, int(w), err
+	}
+	if tx.noFilesLimitExceeded() {
+		return tx.interruption, int(w), nil
 	}
 
 	if tx.requestBodyBuffer.length == tx.RequestBodyLimit {
@@ -1339,6 +1375,18 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			tx.generateRequestBodyError(err)
 		}
 		return tx.evalRequestBody()
+	}
+
+	// A multipart body is non-file data only through its form fields, which are
+	// known once the body is parsed.
+	if rbp == "multipart" {
+		var fieldsLen int64
+		for _, f := range tx.variables.argsPost.FindAll() {
+			fieldsLen += int64(len(f.Key()) + len(f.Value()))
+		}
+		if tx.rejectOverNoFilesLimit(fieldsLen) {
+			return tx.interruption, nil
+		}
 	}
 
 	return tx.evalRequestBody()
