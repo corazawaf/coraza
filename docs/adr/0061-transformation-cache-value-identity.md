@@ -1,11 +1,11 @@
 # ADR-0061: Key the transformation cache by value identity
 
-- **Status:** accepted
-- **Date:** 2026-10-12
+- **Status:** proposed
+- **Date:** 2026-10-13 (expected; update before merge)
 - **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1682](https://github.com/corazawaf/coraza/pull/1682)
 - **Issue(s):** [#1681](https://github.com/corazawaf/coraza/issues/1681)
-- **Deciders:** @M4tteoP
+- **Deciders:** @M4tteoP, @fzipi
 - **Category:** Perf
 
 ## Context and Problem
@@ -43,18 +43,26 @@ transaction keeps a table sized for the largest phase it ever ran.
 Chosen: **key by value identity alone**. The key is the value's data pointer,
 its length and the transformation prefix ID. Transformations are functions of
 the input string only, so neither the variable nor the argument name can change
-the result, and dropping the variable takes the key from 32 to 24 bytes. The
-pointer in the key keeps the value's memory alive, so within a phase the same
-pointer and length always mean the same bytes.
+the result, and dropping the variable takes the key from 32 to 24 bytes.
 
-The cache now rests on one rule: **cache only values that a collection holds
-for the whole phase.** Three kinds of variable are evaluated without it, decided
-once per variable in `transformationCacheable`:
+Correctness rests on pointer identity alone: the pointer in the key keeps the
+value's memory alive, so within a phase the same pointer and length always mean
+the same bytes, whichever variable the value came from.
+
+Which variables go through the cache is therefore a question of usefulness, not
+of safety: an entry pays off only when a later rule sees the same string again.
+Three kinds of variable are evaluated without the cache, decided once per
+variable in `transformationCacheable`:
 
 - `&VARIABLE` counts and `ARGS_COMBINED_SIZE`: the value is a new string on
   every lookup, so an entry would never be found again.
 - `TX`, as before: `setvar` replaces its values mid-phase, and each replaced
   value would leave its entries behind.
+
+`MATCHED_VAR`, `MATCHED_VAR_NAME`, `MATCHED_VARS_NAMES` and `RULE` also get
+fresh strings during a phase and stay cached. That is accepted: the cost is
+entries that are never read again, never a wrong result (see the review
+summarised below).
 
 `Transaction.Close()` empties the cache, so a transaction waiting in the pool
 does not keep the last phase's values alive through the cache keys.
@@ -85,7 +93,13 @@ The author noted what the change does not solve:
 > […] **Pooled transactions keep the cache's high-water capacity.** Entries are deleted at each phase, but the map never shrinks, so a pooled tx keeps a table sized for the largest phase it ever ran. This PR lowers the peak but doesn't bound it. […]
 > — @M4tteoP ([comment](https://github.com/corazawaf/coraza/pull/1682#issuecomment-5832289282))
 
-and @fzipi asked to land the key change first:
+@fzipi's [review](https://github.com/corazawaf/coraza/pull/1682#pullrequestreview-5495501862)
+pointed out that `TX` is not the only variable whose values change within a
+phase, and that for the others the cost is unread entries and not wrong
+results. That is why the exclusions are framed above as hygiene. It is
+summarised here and not quoted, because a review body has no comment permalink.
+
+@fzipi had earlier asked to land the key change first:
 
 > […] If the two follow-ups you listed on Sept 25 (bounding the pooled map's high-water capacity, and the second point) can be split into a separate issue, I would rather land this fix first and iterate. […]
 > — @fzipi ([comment](https://github.com/corazawaf/coraza/pull/1682#issuecomment-6006656087))
@@ -93,7 +107,7 @@ and @fzipi asked to land the key change first:
 ## Participants
 
 - @M4tteoP — author
-- @fzipi — PR thread
+- @fzipi — review
 - @frankii91 — PR thread, independent measurements
 
 ## Consequences
@@ -106,7 +120,8 @@ and @fzipi asked to land the key change first:
   stream holds it for its whole lifetime. Cache keys now keep the untransformed
   value alive until the phase ends, where they used to reference the
   argument's name. A collection that starts synthesizing its values per lookup
-  has to be added to `transformationCacheable`.
+  should be added to `transformationCacheable`, or it leaves unread entries
+  behind.
 
 ## References
 
