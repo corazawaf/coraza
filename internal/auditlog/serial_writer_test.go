@@ -56,8 +56,8 @@ func TestSerialLoggerSuccessOnInit(t *testing.T) {
 
 func TestSerialWriterFailsOnInitForUnexistingFile(t *testing.T) {
 	config := NewConfig()
-	config.Target = "/unexisting.log"
 	config.Dir = t.TempDir()
+	config.Target = filepath.Join(config.Dir, "missing-dir", "audit.log")
 	config.FileMode = fs.FileMode(0777)
 	config.DirMode = fs.FileMode(0777)
 	config.Formatter = &jsonFormatter{}
