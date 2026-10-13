@@ -12,6 +12,12 @@ import (
 
 type Options = corazawaf.Options
 
+// ErrPhaseCanceled is wrapped by the error ProcessRequestBody returns when the
+// context given in Options ended before the request body phase was evaluated to
+// its last rule. Such a phase is partial: the absence of an interruption does
+// not mean the request is allowed.
+var ErrPhaseCanceled = corazawaf.ErrPhaseCanceled
+
 // WAFWithOptions is an interface that allows to create transactions
 // with options
 type WAFWithOptions interface {

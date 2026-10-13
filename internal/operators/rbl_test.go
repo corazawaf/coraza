@@ -374,3 +374,20 @@ func TestRblTimeoutLeavesTransactionUntouched(t *testing.T) {
 		t.Errorf("a timed out lookup logged at error level: %v", lines)
 	}
 }
+
+// A lookup made in a request phase ends with the transaction's context instead
+// of waiting out its own timeout.
+func TestRblLookupEndsWithTransactionContext(t *testing.T) {
+	op := &rbl{service: "rbl.example.com", resolver: hangingResolver()}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	tx := corazawaf.NewWAF().NewTransactionWithOptions(corazawaf.Options{Context: ctx})
+
+	start := time.Now()
+	if op.Evaluate(tx, "127.0.0.2") {
+		t.Error("Unexpected result for a lookup whose transaction context is done")
+	}
+	if elapsed := time.Since(start); elapsed >= timeout/2 {
+		t.Errorf("Evaluate did not stop with the transaction context: %v", elapsed)
+	}
+}

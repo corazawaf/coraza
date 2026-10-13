@@ -68,8 +68,14 @@ func (o *rbl) Evaluate(tx plugintypes.TransactionState, operand string) bool {
 	}
 
 	// The lookups take the deadline through the context, so they unwind on
-	// their own and no work outlives Evaluate.
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	// their own and no work outlives Evaluate. In a request phase they also end
+	// with the transaction's context, so that a connector that has gone away does
+	// not leave them waiting out the timeout.
+	parent := context.Background()
+	if pc, ok := tx.(interface{ PhaseContext() context.Context }); ok {
+		parent = pc.PhaseContext()
+	}
+	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 
 	// The query name is the operand written in front of the zone, verbatim.
