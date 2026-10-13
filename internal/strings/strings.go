@@ -119,6 +119,16 @@ func WrapUnsafe(buf []byte) string {
 	return *(*string)(unsafe.Pointer(&buf))
 }
 
+// UnsafeBytes returns s as a byte slice without copying it. The slice aliases
+// the string's memory, so it is for reading only: a string is immutable and may
+// sit in read-only memory, and writing through the slice is undefined behaviour.
+// It is meant for handing a value to a third-party matcher that takes []byte but
+// never writes to it, where the conversion []byte(s) would copy the whole value
+// on every call (ADR-0061).
+func UnsafeBytes(s string) []byte {
+	return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
 // HasRegex checks if s is enclosed in unescaped forward slashes (e.g. "/pattern/"),
 // consistent with the ModSecurity regex delimiter convention. It returns (true, pattern)
 // where pattern is the content between the slashes. Escaped closing slashes (e.g. "/foo\/")
