@@ -1,0 +1,28 @@
+# Aggregates the results of all other checks into a single required status check.
+# It must run on every pull request, with no path filters: a required check that
+# lives in a path-filtered workflow never reports on PRs that skip it (e.g.
+# docs-only changes), leaving them blocked forever.
+name: Enforce all checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  enforce-all-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      contents: read
+    steps:
+      - name: GitHub Checks
+        uses: poseidon/wait-for-status-checks@e7e24423722c5b8e97a6dd5848827d2a412f812d # v0.7.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          delay: 30s
+          interval: 10s # default value
+          timeout: 3600s # default value
+          ignore: "codecov/patch,codecov/project"

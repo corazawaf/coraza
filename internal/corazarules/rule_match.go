@@ -14,7 +14,7 @@ import (
 )
 
 // MatchData works like VariableKey but is used for logging,
-// so it contains the collection as a string, and it's value
+// so it contains the collection as a string, and its value
 type MatchData struct {
 	// Variable
 	Variable_ variables.RuleVariable

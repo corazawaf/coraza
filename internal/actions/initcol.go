@@ -25,7 +25,7 @@ var persistenColKeys = []string{"USER", "SESSION", "IP", "RESOURCE", "GLOBAL"}
 // See the `Persistent Storage` section for further details.
 //
 // Example:
-// ```
+// ```seclang
 // # Initiates IP address tracking, which is best done in phase 1
 // SecAction "phase:1,id:116,nolog,pass,initcol:ip=%{REMOTE_ADDR}"
 // ```

@@ -42,7 +42,7 @@ import (
 // Transactions are used to store all data like URLs, request and response
 // headers. Transactions are used to evaluate rules by phase and generate disruptive
 // actions. Disruptive actions can be read from *tx.Interruption.
-// It is safe to manage multiple transactions but transactions themself are not
+// It is safe to manage multiple transactions but transactions themselves are not
 // thread safe
 type Transaction struct {
 	// Transaction ID
@@ -296,6 +296,10 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.filesTmpContent
 	case variables.MultipartFilename:
 		return tx.variables.multipartFilename
+	case variables.MultipartFilenameCharset:
+		return tx.variables.multipartFilenameCharset
+	case variables.MultipartFilenameLanguage:
+		return tx.variables.multipartFilenameLanguage
 	case variables.MultipartName:
 		return tx.variables.multipartName
 	case variables.MatchedVarsNames:
@@ -335,6 +339,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.env
 	case variables.UrlencodedError:
 		return tx.variables.urlencodedError
+	case variables.URIParseError:
+		return tx.variables.uriParseError
 	case variables.ResponseArgs:
 		return tx.variables.responseArgs
 	case variables.ResponseXML:
@@ -347,6 +353,10 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.multipartPartHeaders
 	case variables.MultipartStrictError:
 		return tx.variables.multipartStrictError
+	case variables.MultipartDuplicatePartHeader:
+		return tx.variables.multipartDuplicatePartHeader
+	case variables.MultipartInvalidQuoting:
+		return tx.variables.multipartInvalidQuoting
 	case variables.Time:
 		return tx.variables.time
 	case variables.TimeDay:
@@ -379,6 +389,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.ip
 	case variables.Resource:
 		return tx.variables.resource
+	case variables.ArgumentsLimitReached:
+		return tx.variables.argumentsLimitReached
 	}
 
 	return collections.Noop
@@ -447,11 +459,26 @@ func (tx *Transaction) AddRequestHeader(key string, value string) {
 
 	switch keyl {
 	case "content-type":
-		val := strings.ToLower(value)
-		if val == "application/x-www-form-urlencoded" {
-			tx.variables.reqbodyProcessor.Set("URLENCODED")
-		} else if strings.HasPrefix(val, "multipart/form-data") {
-			tx.variables.reqbodyProcessor.Set("MULTIPART")
+		// Only the first Content-Type header selects the body processor.
+		// ProcessRequestBody's mimeType (requestHeaders.Get("content-type")[0])
+		// and a typical backend's Header.Get both read the first value only;
+		// letting any later header select the processor, even when the first
+		// one is unrecognized, desynchronizes which body Coraza inspects from
+		// which body the backend parses -- see GHSA-w253-m66g-rx24. The header
+		// was added above, so a count of 1 means this is the first one.
+		if len(tx.variables.requestHeaders.Get("content-type")) == 1 {
+			// Trimmed the way mime.ParseMediaType trims the media type, which
+			// a typical backend uses to pick its own parser: TrimSpace strips
+			// Unicode whitespace (U+0085, U+00A0, U+3000, ...) that net/http
+			// accepts in header values. Without it, a leading Unicode space
+			// skips body processing here while the backend still parses the
+			// body.
+			val := strings.TrimSpace(strings.ToLower(value))
+			if strings.HasPrefix(val, "application/x-www-form-urlencoded") {
+				tx.variables.reqbodyProcessor.Set("URLENCODED")
+			} else if strings.HasPrefix(val, "multipart/form-data") {
+				tx.variables.reqbodyProcessor.Set("MULTIPART")
+			}
 		}
 	case "cookie":
 		// 4.2.  Cookie
@@ -725,7 +752,9 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		isException := false
 		lkey := strings.ToLower(c.Key())
 		for _, ex := range rv.Exceptions {
-			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || strings.ToLower(ex.KeyStr) == lkey || (ex.KeyStr == "" && ex.KeyRx == nil) {
+			// KeyStr is only meaningful without KeyRx: a regex exception from ctl
+			// carries an empty KeyStr, which would otherwise match a key named "".
+			if (ex.KeyRx != nil && ex.KeyRx.MatchString(lkey)) || (ex.KeyRx == nil && (ex.KeyStr == "" || strings.ToLower(ex.KeyStr) == lkey)) {
 				isException = true
 				break
 			}
@@ -879,20 +908,26 @@ func signalArgumentsLimit(errorFlag, errorMsg *collections.Single) {
 	errorMsg.Set(argumentsLimitErrorMsg)
 }
 
-// checkArgumentLimit reports whether c has reached SecArgumentsLimit and, if it
-// has, raises the error flag and message pair covering c. Callers must stop
-// adding to c once it returns true.
-func (tx *Transaction) checkArgumentLimit(c interface{ Len() int }, errorFlag, errorMsg *collections.Single) bool {
-	if c.Len() < tx.WAF.ArgumentLimit {
+// checkArgumentLimit reports whether c already holds ArgumentLimit values and,
+// if it does, raises ARGUMENTS_LIMIT_REACHED and the error flag and message
+// pair covering c. Callers must stop adding to c once it returns true.
+//
+// It counts every individual value (TotalValues), not distinct keys (Len):
+// Map.Add appends repeated-key values into the same map entry without growing
+// Len, so a flood of identical keys ("a=1&a=1&a=1...") would never trip a check
+// against Len, no matter how large it grew. See GHSA-3ww9-vw83-9w5x.
+func (tx *Transaction) checkArgumentLimit(c interface{ TotalValues() int }, errorFlag, errorMsg *collections.Single) bool {
+	if c.TotalValues() < tx.WAF.ArgumentLimit {
 		return false
 	}
+	tx.variables.argumentsLimitReached.Set("1")
 	signalArgumentsLimit(errorFlag, errorMsg)
 	return true
 }
 
 // checkRequestArgumentLimit applies the limit to a request collection, so a
 // trip reports through REQBODY_ERROR.
-func (tx *Transaction) checkRequestArgumentLimit(c interface{ Len() int }) bool {
+func (tx *Transaction) checkRequestArgumentLimit(c interface{ TotalValues() int }) bool {
 	return tx.checkArgumentLimit(c, tx.variables.reqbodyError, tx.variables.reqbodyErrorMsg)
 }
 
@@ -934,21 +969,21 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 	parsedURL, err := url.ParseRequestURI(uri)
 	query := ""
 	if err != nil {
-		tx.variables.urlencodedError.Set(err.Error())
-		path = uri
+		// url.ParseRequestURI rejects raw control bytes (NUL, bare CR/LF, tab, etc.)
+		// that some non-net/http integrations (coraza-spoa, coraza-proxy-wasm) forward
+		// as-is. Falling back to a plain split on "?" still recovers QUERY_STRING and
+		// ARGS_GET on a best-effort basis instead of silently dropping them -- see
+		// GHSA-x26q-wvhg-fh4m. REQUEST_URI_RAW (set above, before the parse) always
+		// has the untouched URI regardless of this fallback.
+		tx.variables.uriParseError.Set("1")
 		tx.variables.requestURI.Set(uri)
-		/*
-			tx.Variables.VARIABLE_URI_PARSE_ERROR.Set("1")
-			posRawQuery := strings.Index(uri, "?")
-			if posRawQuery != -1 {
-				tx.ExtractArguments("GET", uri[posRawQuery+1:])
-				path = uri[:posRawQuery]
-				query = uri[posRawQuery+1:]
-			} else {
-				path = uri
-			}
-			tx.Variables.RequestUri.Set(uri)
-		*/
+		if posRawQuery := strings.Index(uri, "?"); posRawQuery != -1 {
+			path = uri[:posRawQuery]
+			query = uri[posRawQuery+1:]
+			tx.ExtractGetArguments(query)
+		} else {
+			path = uri
+		}
 	} else {
 		tx.ExtractGetArguments(parsedURL.RawQuery)
 		tx.variables.requestURI.Set(parsedURL.String())
@@ -977,7 +1012,7 @@ func (tx *Transaction) SetServerName(serverName string) {
 	tx.variables.serverName.Set(serverName)
 }
 
-// ProcessRequestHeaders Performs the analysis on the request readers.
+// ProcessRequestHeaders performs the analysis on the request headers.
 //
 // This method perform the analysis on the request headers, notice however
 // that the headers should be added prior to the execution of this function.
@@ -1291,15 +1326,16 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		ArgumentLimit:             tx.WAF.ArgumentLimit,
 	}); err != nil {
 		switch {
-		case errors.Is(err, bodyprocessors.ErrJSONDecodedSize), errors.Is(err, bodyprocessors.ErrJSONRecursionLimit):
-			// Limit trips on a syntactically valid body, so they log at the same
-			// level as the argument limit and only their rule-visible signal
-			// differs. Error is kept for bodies the parser could not read.
-			tx.debugLogger.Warn().Err(err).Msg("Failed to process request body")
-			tx.generateRequestBodyError(err)
 		case errors.Is(err, bodyprocessors.ErrArgumentsLimit):
 			tx.debugLogger.Warn().Msg("skipping request body arguments, over SecArgumentsLimit; inspection truncated")
+			tx.variables.argumentsLimitReached.Set("1")
 			signalArgumentsLimit(tx.variables.reqbodyError, tx.variables.reqbodyErrorMsg)
+		case errors.Is(err, bodyprocessors.ErrJSONLimit):
+			// A limit trip on a syntactically valid body logs below error level,
+			// like the argument limit, so a client cannot flood the log. Error is
+			// kept for bodies the parser could not read.
+			tx.debugLogger.Warn().Err(err).Msg("Failed to process request body")
+			tx.generateRequestBodyError(err)
 		default:
 			tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 			tx.generateRequestBodyError(err)
@@ -1472,13 +1508,13 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 	return tx.interruption, int(w), err
 }
 
-// ProcessResponseBody Perform the analysis of the the response body (if any)
+// ProcessResponseBody performs the analysis of the response body (if any)
 //
 // It is recommended to call this method even if it is not expected to have a body.
-// It permits to execute rules belonging to request body phase, but not necessarily
+// It permits to execute rules belonging to response body phase, but not necessarily
 // processing the response body.
 //
-// note Remember to check for a possible intervention.
+// Note: Remember to check for a possible intervention.
 func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 	if tx.IsRuleEngineOff() {
 		return nil, nil
@@ -1529,16 +1565,18 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 
 		tx.debugLogger.Debug().Str("body_processor", bp).Msg("Attempting to process response body")
 		if err := b.ProcessResponse(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
-			RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
-			ArgumentLimit:             tx.WAF.ArgumentLimit,
+			ResponseBodyRecursionLimit: tx.WAF.ResponseBodyJsonDepthLimit,
+			ArgumentLimit:              tx.WAF.ArgumentLimit,
 		}); err != nil {
 			switch {
-			case errors.Is(err, bodyprocessors.ErrJSONDecodedSize), errors.Is(err, bodyprocessors.ErrJSONRecursionLimit):
-				tx.debugLogger.Warn().Err(err).Msg("Failed to process response body")
-				tx.generateResponseBodyError(err)
 			case errors.Is(err, bodyprocessors.ErrArgumentsLimit):
 				tx.debugLogger.Warn().Msg("skipping response body arguments, over SecArgumentsLimit; inspection truncated")
+				tx.variables.argumentsLimitReached.Set("1")
 				signalArgumentsLimit(tx.variables.resBodyError, tx.variables.resBodyErrorMsg)
+			case errors.Is(err, bodyprocessors.ErrJSONLimit):
+				// See the request side: a limit trip is not a parse failure.
+				tx.debugLogger.Warn().Err(err).Msg("Failed to process response body")
+				tx.generateResponseBodyError(err)
 			default:
 				tx.debugLogger.Error().Err(err).Msg("Failed to process response body")
 				tx.generateResponseBodyError(err)
@@ -1984,93 +2022,99 @@ func (tx *Transaction) setTimeVariables() {
 
 // TransactionVariables has pointers to all the variables of the transaction
 type TransactionVariables struct {
-	args                     *collections.ConcatKeyed
-	argsCombinedSize         *collections.SizeCollection
-	argsGet                  *collections.NamedCollection
-	argsGetNames             collection.Keyed
-	argsNames                *collections.ConcatKeyed
-	argsPath                 *collections.NamedCollection
-	argsPost                 *collections.NamedCollection
-	argsPostNames            collection.Keyed
-	duration                 *collections.Single
-	env                      *collections.Map
-	files                    *collections.Map
-	filesCombinedSize        *collections.Single
-	filesNames               *collections.Map
-	filesSizes               *collections.Map
-	filesTmpContent          *collections.Map
-	filesTmpNames            *collections.Map
-	fullRequestLength        *collections.Single
-	geo                      *collections.Map
-	highestSeverity          *collections.Single
-	inboundDataError         *collections.Single
-	matchedVar               *collections.Single
-	matchedVarName           *collections.Single
-	matchedVars              *collections.NamedCollection
-	matchedVarsNames         collection.Keyed
-	multipartDataAfter       *collections.Single
-	multipartFilename        *collections.Map
-	multipartName            *collections.Map
-	multipartPartHeaders     *collections.Map
-	multipartStrictError     *collections.Single
-	outboundDataError        *collections.Single
-	queryString              *collections.Single
-	remoteAddr               *collections.Single
-	remoteHost               *collections.Single
-	remotePort               *collections.Single
-	reqbodyError             *collections.Single
-	reqbodyErrorMsg          *collections.Single
-	reqbodyProcessor         *collections.Single
-	reqbodyProcessorError    *collections.Single
-	reqbodyProcessorErrorMsg *collections.Single
-	requestBasename          *collections.Single
-	requestBody              *collections.Single
-	requestBodyLength        *collections.Single
-	requestCookies           *collections.NamedCollection
-	requestCookiesNames      collection.Keyed
-	requestFilename          *collections.Single
-	requestHeaders           *collections.NamedCollection
-	requestHeadersNames      collection.Keyed
-	requestLine              *collections.Single
-	requestMethod            *collections.Single
-	requestProtocol          *collections.Single
-	requestURI               *collections.Single
-	requestURIRaw            *collections.Single
-	requestXML               *collections.Map
-	responseBody             *collections.Single
-	responseContentLength    *collections.Single
-	responseContentType      *collections.Single
-	responseHeaders          *collections.NamedCollection
-	responseHeadersNames     collection.Keyed
-	responseProtocol         *collections.Single
-	responseStatus           *collections.Single
-	responseXML              *collections.Map
-	responseArgs             *collections.Map
-	resBodyProcessor         *collections.Single
-	rule                     *collections.Map
-	serverAddr               *collections.Single
-	serverName               *collections.Single
-	serverPort               *collections.Single
-	statusLine               *collections.Single
-	tx                       *collections.Map
-	uniqueID                 *collections.Single
-	urlencodedError          *collections.Single
-	xml                      *collections.Map
-	resBodyError             *collections.Single
-	resBodyErrorMsg          *collections.Single
-	resBodyProcessorError    *collections.Single
-	resBodyProcessorErrorMsg *collections.Single
-	time                     *collections.Single
-	timeDay                  *collections.Single
-	timeEpoch                *collections.Single
-	timeHour                 *collections.Single
-	timeMin                  *collections.Single
-	timeMon                  *collections.Single
-	timeSec                  *collections.Single
-	timeWday                 *collections.Single
-	timeYear                 *collections.Single
-	scriptFilename           *collections.Single
-	scriptUsername           *collections.Single
+	args                         *collections.ConcatKeyed
+	argsCombinedSize             *collections.SizeCollection
+	argsGet                      *collections.NamedCollection
+	argsGetNames                 collection.Keyed
+	argsNames                    *collections.ConcatKeyed
+	argsPath                     *collections.NamedCollection
+	argsPost                     *collections.NamedCollection
+	argsPostNames                collection.Keyed
+	duration                     *collections.Single
+	env                          *collections.Map
+	files                        *collections.Map
+	filesCombinedSize            *collections.Single
+	filesNames                   *collections.Map
+	filesSizes                   *collections.Map
+	filesTmpContent              *collections.Map
+	filesTmpNames                *collections.Map
+	fullRequestLength            *collections.Single
+	geo                          *collections.Map
+	highestSeverity              *collections.Single
+	inboundDataError             *collections.Single
+	matchedVar                   *collections.Single
+	matchedVarName               *collections.Single
+	matchedVars                  *collections.NamedCollection
+	matchedVarsNames             collection.Keyed
+	multipartDataAfter           *collections.Single
+	multipartFilename            *collections.Map
+	multipartFilenameCharset     *collections.Map
+	multipartFilenameLanguage    *collections.Map
+	multipartName                *collections.Map
+	multipartPartHeaders         *collections.Map
+	multipartStrictError         *collections.Single
+	multipartDuplicatePartHeader *collections.Single
+	multipartInvalidQuoting      *collections.Single
+	outboundDataError            *collections.Single
+	queryString                  *collections.Single
+	remoteAddr                   *collections.Single
+	remoteHost                   *collections.Single
+	remotePort                   *collections.Single
+	reqbodyError                 *collections.Single
+	reqbodyErrorMsg              *collections.Single
+	reqbodyProcessor             *collections.Single
+	reqbodyProcessorError        *collections.Single
+	reqbodyProcessorErrorMsg     *collections.Single
+	requestBasename              *collections.Single
+	requestBody                  *collections.Single
+	requestBodyLength            *collections.Single
+	requestCookies               *collections.NamedCollection
+	requestCookiesNames          collection.Keyed
+	requestFilename              *collections.Single
+	requestHeaders               *collections.NamedCollection
+	requestHeadersNames          collection.Keyed
+	requestLine                  *collections.Single
+	requestMethod                *collections.Single
+	requestProtocol              *collections.Single
+	requestURI                   *collections.Single
+	requestURIRaw                *collections.Single
+	requestXML                   *collections.Map
+	responseBody                 *collections.Single
+	responseContentLength        *collections.Single
+	responseContentType          *collections.Single
+	responseHeaders              *collections.NamedCollection
+	responseHeadersNames         collection.Keyed
+	responseProtocol             *collections.Single
+	responseStatus               *collections.Single
+	responseXML                  *collections.Map
+	responseArgs                 *collections.Map
+	resBodyProcessor             *collections.Single
+	rule                         *collections.Map
+	serverAddr                   *collections.Single
+	serverName                   *collections.Single
+	serverPort                   *collections.Single
+	statusLine                   *collections.Single
+	tx                           *collections.Map
+	uniqueID                     *collections.Single
+	urlencodedError              *collections.Single
+	uriParseError                *collections.Single
+	argumentsLimitReached        *collections.Single
+	xml                          *collections.Map
+	resBodyError                 *collections.Single
+	resBodyErrorMsg              *collections.Single
+	resBodyProcessorError        *collections.Single
+	resBodyProcessorErrorMsg     *collections.Single
+	time                         *collections.Single
+	timeDay                      *collections.Single
+	timeEpoch                    *collections.Single
+	timeHour                     *collections.Single
+	timeMin                      *collections.Single
+	timeMon                      *collections.Single
+	timeSec                      *collections.Single
+	timeWday                     *collections.Single
+	timeYear                     *collections.Single
+	scriptFilename               *collections.Single
+	scriptUsername               *collections.Single
 	// persistent collections
 	global   *collections.Persistent
 	resource *collections.Persistent
@@ -2082,6 +2126,8 @@ type TransactionVariables struct {
 func NewTransactionVariables(persistenceEngine ptypes.PersistentEngine) *TransactionVariables {
 	v := &TransactionVariables{}
 	v.urlencodedError = collections.NewSingle(variables.UrlencodedError)
+	v.uriParseError = collections.NewSingle(variables.URIParseError)
+	v.argumentsLimitReached = collections.NewSingle(variables.ArgumentsLimitReached)
 	v.responseContentType = collections.NewSingle(variables.ResponseContentType)
 	v.uniqueID = collections.NewSingle(variables.UniqueID)
 	v.filesCombinedSize = collections.NewSingle(variables.FilesCombinedSize)
@@ -2128,6 +2174,8 @@ func NewTransactionVariables(persistenceEngine ptypes.PersistentEngine) *Transac
 	v.filesSizes = collections.NewMap(variables.FilesSizes)
 	v.filesTmpContent = collections.NewMap(variables.FilesTmpContent)
 	v.multipartFilename = collections.NewMap(variables.MultipartFilename)
+	v.multipartFilenameCharset = collections.NewMap(variables.MultipartFilenameCharset)
+	v.multipartFilenameLanguage = collections.NewMap(variables.MultipartFilenameLanguage)
 	v.multipartName = collections.NewMap(variables.MultipartName)
 	v.matchedVars = collections.NewNamedCollection(variables.MatchedVars)
 	v.matchedVarsNames = v.matchedVars.Names(variables.MatchedVarsNames)
@@ -2149,6 +2197,8 @@ func NewTransactionVariables(persistenceEngine ptypes.PersistentEngine) *Transac
 	v.requestXML = collections.NewMap(variables.RequestXML)
 	v.multipartPartHeaders = collections.NewMap(variables.MultipartPartHeaders)
 	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
+	v.multipartDuplicatePartHeader = collections.NewSingle(variables.MultipartDuplicatePartHeader)
+	v.multipartInvalidQuoting = collections.NewSingle(variables.MultipartInvalidQuoting)
 	v.time = collections.NewSingle(variables.Time)
 	v.timeDay = collections.NewSingle(variables.TimeDay)
 	v.timeEpoch = collections.NewSingle(variables.TimeEpoch)
@@ -2202,6 +2252,14 @@ func NewTransactionVariables(persistenceEngine ptypes.PersistentEngine) *Transac
 
 func (v *TransactionVariables) UrlencodedError() collection.Single {
 	return v.urlencodedError
+}
+
+func (v *TransactionVariables) URIParseError() collection.Single {
+	return v.uriParseError
+}
+
+func (v *TransactionVariables) ArgumentsLimitReached() collection.Single {
+	return v.argumentsLimitReached
 }
 
 func (v *TransactionVariables) ResponseContentType() collection.Single {
@@ -2420,6 +2478,14 @@ func (v *TransactionVariables) MatchedVarsNames() collection.Keyed {
 	return v.matchedVarsNames
 }
 
+func (v *TransactionVariables) MultipartFilenameCharset() collection.Map {
+	return v.multipartFilenameCharset
+}
+
+func (v *TransactionVariables) MultipartFilenameLanguage() collection.Map {
+	return v.multipartFilenameLanguage
+}
+
 func (v *TransactionVariables) MultipartFilename() collection.Map {
 	return v.multipartFilename
 }
@@ -2502,6 +2568,14 @@ func (v *TransactionVariables) ResBodyProcessorErrorMsg() collection.Single {
 
 func (v *TransactionVariables) MultipartStrictError() collection.Single {
 	return v.multipartStrictError
+}
+
+func (v *TransactionVariables) MultipartDuplicatePartHeader() collection.Single {
+	return v.multipartDuplicatePartHeader
+}
+
+func (v *TransactionVariables) MultipartInvalidQuoting() collection.Single {
+	return v.multipartInvalidQuoting
 }
 
 func (v *TransactionVariables) ScriptFilename() collection.Single {
@@ -2615,10 +2689,22 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 	if !f(variables.MultipartFilename, v.multipartFilename) {
 		return
 	}
+	if !f(variables.MultipartFilenameCharset, v.multipartFilenameCharset) {
+		return
+	}
+	if !f(variables.MultipartFilenameLanguage, v.multipartFilenameLanguage) {
+		return
+	}
 	if !f(variables.MultipartName, v.multipartName) {
 		return
 	}
 	if !f(variables.MultipartPartHeaders, v.multipartPartHeaders) {
+		return
+	}
+	if !f(variables.MultipartDuplicatePartHeader, v.multipartDuplicatePartHeader) {
+		return
+	}
+	if !f(variables.MultipartInvalidQuoting, v.multipartInvalidQuoting) {
 		return
 	}
 	if !f(variables.MultipartStrictError, v.multipartStrictError) {
@@ -2762,6 +2848,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 	if !f(variables.UrlencodedError, v.urlencodedError) {
 		return
 	}
+	if !f(variables.URIParseError, v.uriParseError) {
+		return
+	}
 	if !f(variables.XML, v.xml) {
 		return
 	}
@@ -2796,6 +2885,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.ScriptUsername, v.scriptUsername) {
+		return
+	}
+	if !f(variables.ArgumentsLimitReached, v.argumentsLimitReached) {
 		return
 	}
 }

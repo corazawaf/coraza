@@ -21,7 +21,7 @@ import (
 // true if the input string is identical to the parameter string, false otherwise
 //
 // Example:
-// ```
+// ```seclang
 // # Block if foo parameter is not exactly "bar"
 // SecRule ARGS:foo "!@streq bar" "id:176,deny,log"
 //

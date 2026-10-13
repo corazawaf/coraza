@@ -42,6 +42,9 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 		return true
 	})
 	if overLimit {
+		// Both signals: the variable is upstream's contract, the error is the
+		// fork's, so the transaction raises REQBODY_ERROR as well.
+		v.ArgumentsLimitReached().(*collections.Single).Set("1")
 		return ErrArgumentsLimit
 	}
 	return nil

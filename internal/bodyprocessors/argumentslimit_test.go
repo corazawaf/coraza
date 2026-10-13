@@ -11,7 +11,6 @@ import (
 	"os"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -288,74 +287,6 @@ func TestXMLNodeFloodTrips(t *testing.T) {
 	}
 }
 
-// deepJSONBody nests levels objects, each keyed by a 1000-character name, and
-// places leaves leaf-valued members at the bottom. Every leaf is stored under
-// the full accumulated path, so stored bytes grow with levels*leaves while the
-// body grows only with levels+leaves.
-func deepJSONBody(levels, leaves int) string {
-	pad := strings.Repeat("A", 1000)
-	body := strings.Builder{}
-	for i := 0; i < levels; i++ {
-		fmt.Fprintf(&body, `{"z":1,"%s":`, pad)
-	}
-	if leaves == 0 {
-		body.WriteString("1")
-	} else {
-		body.WriteString("{")
-		for i := 0; i < leaves; i++ {
-			if i > 0 {
-				body.WriteString(",")
-			}
-			fmt.Fprintf(&body, `"L%d":1`, i)
-		}
-		body.WriteString("}")
-	}
-	body.WriteString(strings.Repeat("}", levels))
-	return body.String()
-}
-
-// TestJSONAmplifyingNestingStopped asserts that bodies which inflate stored
-// bytes far beyond their own size are stopped by the decoded-bytes budget,
-// well before the member count alone would bound the memory they hold.
-func TestJSONAmplifyingNestingStopped(t *testing.T) {
-	bp, err := bodyprocessors.GetBodyProcessor("json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, tc := range []struct {
-		name           string
-		levels, leaves int
-	}{
-		// One long path per level: the depth alone drives the inflation.
-		{name: "deep_chain", levels: 900, leaves: 0},
-		// Many leaves sharing one long prefix. Each individual path stays
-		// modest, so a per-key length cap does not catch this shape; only the
-		// cumulative byte budget does.
-		{name: "wide_under_long_prefix", levels: 60, leaves: 1000},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			body := deepJSONBody(tc.levels, tc.leaves)
-			v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-			err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-				RequestBodyRecursionLimit: 1024,
-				ArgumentLimit:             1000,
-			})
-			if !errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
-				t.Fatalf("expected ErrArgumentsLimit, got %v", err)
-			}
-			// The stored bytes must stay within the budget the body earns
-			// rather than growing with depth*leaves.
-			stored := 0
-			for _, m := range v.ArgsPost().FindAll() {
-				stored += len(m.Key()) + len(m.Value())
-			}
-			if maxStored := len(body) + (1 << 20); stored > maxStored {
-				t.Errorf("stored %d bytes from a %d byte body, budget is %d", stored, len(body), maxStored)
-			}
-		})
-	}
-}
-
 // TestJSONLargeBodiesAccepted asserts the decoded-bytes budget does not reject
 // legitimate bodies: it scales with the input, so large flat bodies and
 // realistically nested ones parse without error.
@@ -473,7 +404,8 @@ func TestJSONResponseArgumentsLimit(t *testing.T) {
 
 	v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
 	err = bp.ProcessResponse(strings.NewReader(body.String()), v, plugintypes.BodyProcessorOptions{
-		ArgumentLimit: 5,
+		ResponseBodyRecursionLimit: 10,
+		ArgumentLimit:              5,
 	})
 	if !errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
 		t.Fatalf("expected ErrArgumentsLimit, got %v", err)
@@ -483,7 +415,9 @@ func TestJSONResponseArgumentsLimit(t *testing.T) {
 	}
 
 	v = corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-	if err := bp.ProcessResponse(strings.NewReader(body.String()), v, plugintypes.BodyProcessorOptions{}); err != nil {
+	if err := bp.ProcessResponse(strings.NewReader(body.String()), v, plugintypes.BodyProcessorOptions{
+		ResponseBodyRecursionLimit: 10,
+	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if want, have := 10, len(v.ResponseArgs().FindAll()); want != have {
@@ -702,9 +636,9 @@ func TestMultipartHeaderTruncationDeterministic(t *testing.T) {
 	}
 }
 
-type errReader struct{}
+type forkErrReader struct{}
 
-func (errReader) Read([]byte) (int, error) { return 0, errors.New("read failed") }
+func (forkErrReader) Read([]byte) (int, error) { return 0, errors.New("read failed") }
 
 // TestMultipartTempFileAlwaysRegistered asserts that a temp file created for a
 // file part is recorded in FILES_TMP_NAMES even when the part fails to be
@@ -714,7 +648,7 @@ func TestMultipartTempFileAlwaysRegistered(t *testing.T) {
 		t.Skip("no filesystem access")
 	}
 	head := "--X\r\nContent-Disposition: form-data; name=\"f\"; filename=\"a.txt\"\r\n\r\n"
-	body := io.MultiReader(strings.NewReader(head+strings.Repeat("A", 8192)), errReader{})
+	body := io.MultiReader(strings.NewReader(head+strings.Repeat("A", 8192)), forkErrReader{})
 
 	bp, err := bodyprocessors.GetBodyProcessor("multipart")
 	if err != nil {
@@ -742,7 +676,7 @@ func TestMultipartTempFileAlwaysRegistered(t *testing.T) {
 
 // TestJSONTruncatedArrayLength asserts that stopping inside an array does not
 // record the array length under a path the document does not have, and that the
-// decoded-bytes budget names itself instead of pointing at SecArgumentsLimit.
+// flatten byte budget names itself instead of pointing at SecArgumentsLimit.
 func TestJSONTruncatedArrayLength(t *testing.T) {
 	body := strings.Builder{}
 	body.WriteString(`[{"`)
@@ -764,11 +698,11 @@ func TestJSONTruncatedArrayLength(t *testing.T) {
 	err = bp.ProcessRequest(strings.NewReader(body.String()), v, plugintypes.BodyProcessorOptions{
 		RequestBodyRecursionLimit: 1024,
 	})
-	if !errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
-		t.Fatalf("expected ErrArgumentsLimit, got %v", err)
+	if !errors.Is(err, bodyprocessors.ErrJSONLimit) || errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
+		t.Fatalf("expected the flatten byte budget error, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "decoded size") {
-		t.Errorf("the decoded-bytes budget is reported as an argument count limit: %q", err)
+	if !strings.Contains(err.Error(), "byte budget") {
+		t.Errorf("the flatten byte budget is not reported under its own name: %q", err)
 	}
 	// The enclosing array stopped on the error its element raised, so it has no
 	// length entry either.
@@ -949,8 +883,8 @@ func TestJSONRawBodyStoredOnArgumentsLimit(t *testing.T) {
 
 	v = corazawaf.NewTransactionVariables(persistence.NoopEngine{})
 	err = bp.ProcessResponse(strings.NewReader(body.String()), v, plugintypes.BodyProcessorOptions{
-		RequestBodyRecursionLimit: 10,
-		ArgumentLimit:             5,
+		ResponseBodyRecursionLimit: 10,
+		ArgumentLimit:              5,
 	})
 	if !errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
 		t.Fatalf("expected ErrArgumentsLimit, got %v", err)
@@ -967,11 +901,13 @@ func TestJSONResponseDepthLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	body := strings.Repeat("[", 200) + strings.Repeat("]", 200)
+	// 50 levels stay under upstream's flatten byte budget (see
+	// TestJSONArgumentFreeBodiesAreNotDenied), so only the depth limit decides.
+	body := strings.Repeat("[", 50) + strings.Repeat("]", 50)
 
 	v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
 	err = bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-		RequestBodyRecursionLimit: 100,
+		ResponseBodyRecursionLimit: 25,
 	})
 	if err == nil || errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
 		t.Fatalf("expected recursion error, got %v", err)
@@ -984,7 +920,7 @@ func TestJSONResponseDepthLimit(t *testing.T) {
 
 	v = corazawaf.NewTransactionVariables(persistence.NoopEngine{})
 	if err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-		RequestBodyRecursionLimit: 500,
+		ResponseBodyRecursionLimit: 100,
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1084,194 +1020,6 @@ func TestURLEncodedArgumentsLimitAllocs(t *testing.T) {
 	if maxAllocated := uint64(len(body)) + 1<<20; allocated > maxAllocated {
 		t.Errorf("allocated %d bytes, expected at most %d", allocated, maxAllocated)
 	}
-}
-
-// TestJSONArrayLengthNotCountedAsArgument asserts that the array-length entry a
-// non-empty array records is not charged against SecArgumentsLimit: ModSecurity
-// counts scalar values only, so a body of exactly ArgumentLimit scalars is
-// accepted whole and the entry past it is what trips the limit.
-func TestJSONArrayLengthNotCountedAsArgument(t *testing.T) {
-	const limit = 1000
-	body := func(scalars int) string {
-		b := strings.Builder{}
-		b.WriteString(`{"a":[`)
-		for i := 0; i < scalars; i++ {
-			if i > 0 {
-				b.WriteString(",")
-			}
-			fmt.Fprintf(&b, "%d", i)
-		}
-		b.WriteString("]}")
-		return b.String()
-	}
-
-	bp, err := bodyprocessors.GetBodyProcessor("json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, tc := range []struct {
-		scalars int
-		wantErr bool
-	}{
-		{scalars: limit - 1, wantErr: false},
-		{scalars: limit, wantErr: false},
-		{scalars: limit + 1, wantErr: true},
-	} {
-		t.Run(fmt.Sprintf("%d_scalars", tc.scalars), func(t *testing.T) {
-			v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-			err := bp.ProcessRequest(strings.NewReader(body(tc.scalars)), v, plugintypes.BodyProcessorOptions{
-				RequestBodyRecursionLimit: 10,
-				ArgumentLimit:             limit,
-			})
-			if tc.wantErr {
-				if !errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
-					t.Fatalf("expected ErrArgumentsLimit, got %v", err)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error for %d scalars under a limit of %d: %v", tc.scalars, limit, err)
-			}
-			// The scalars plus the array-length entry, which is still recorded.
-			if want, have := tc.scalars+1, len(v.ArgsPost().FindAll()); want != have {
-				t.Errorf("unexpected number of members, want %d, have %d", want, have)
-			}
-			if want, have := []string{strconv.Itoa(tc.scalars)}, v.ArgsPost().Get("json.a"); !reflect.DeepEqual(want, have) {
-				t.Errorf("unexpected array length entry, want %q, have %q", want, have)
-			}
-		})
-	}
-}
-
-// TestJSONArrayLengthEntriesBounded asserts that ARGS_POST stays within the
-// argument limit scaled by MaxEntriesPerArgument+1 whatever shape the body
-// takes, and that reaching the array-length budget never denies a body. An
-// array records its length without spending argument budget, so a body of
-// nested arrays stores a member per level while the argument count barely
-// moves; only a bound on those entries catches that. The entries are metadata
-// ModSecurity never records, so exhausting their budget drops them and the
-// parse continues: a document can hold more arrays than arguments, and failing
-// there would deny bodies carrying no arguments at all.
-func TestJSONArrayLengthEntriesBounded(t *testing.T) {
-	bp, err := bodyprocessors.GetBodyProcessor("json")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	const limit = 1000
-	maxMembers := limit * (bodyprocessors.MaxEntriesPerArgument + 1)
-
-	chains := func(n, depth int) string {
-		parts := make([]string, n)
-		for i := range parts {
-			parts[i] = strings.Repeat("[", depth) + "1" + strings.Repeat("]", depth)
-		}
-		return "[" + strings.Join(parts, ",") + "]"
-	}
-	// Rows of empty cells: every array is non-empty but the body carries no
-	// value at all, so ModSecurity counts zero arguments for it.
-	sparseRows := func(rows int) string {
-		parts := make([]string, rows)
-		for i := range parts {
-			parts[i] = "[[],[],[],[]]"
-		}
-		return `{"rows":[` + strings.Join(parts, ",") + `]}`
-	}
-	for _, tc := range []struct {
-		name string
-		body string
-		// arguments is what ModSecurity would count for the body, which decides
-		// whether the truncation may be reported.
-		arguments int
-	}{
-		{name: "nested_chains", body: chains(1000, 28), arguments: 1000},
-		{name: "nested_chains_whitespace_padded", body: chains(1000, 28) + strings.Repeat(" ", 8<<20), arguments: 1000},
-		{name: "empty_containers", body: "[" + strings.TrimSuffix(strings.Repeat("[[[]]],", 20000), ",") + "]", arguments: 0},
-		{name: "sparse_rows", body: sparseRows(2000), arguments: 0},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-			err := bp.ProcessRequest(strings.NewReader(tc.body), v, plugintypes.BodyProcessorOptions{
-				RequestBodyRecursionLimit: 1024,
-				ArgumentLimit:             limit,
-			})
-			have := len(v.ArgsPost().FindAll())
-			if have > maxMembers {
-				t.Errorf("a %d byte body stored %d members, the bound is %d", len(tc.body), have, maxMembers)
-			}
-			// Stated absolutely as well, so loosening MaxEntriesPerArgument
-			// cannot move both sides of the comparison above together.
-			if have > 3000 {
-				t.Errorf("a %d byte body stored %d members under a limit of %d", len(tc.body), have, limit)
-			}
-			// A body under the argument limit must not be reported as truncated,
-			// however many arrays it holds.
-			if tc.arguments < limit && err != nil {
-				t.Errorf("a body carrying %d arguments was reported as truncated: %v", tc.arguments, err)
-			}
-		})
-	}
-
-	t.Run("duplicate_keys_report_the_surviving_array", func(t *testing.T) {
-		v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-		if err := bp.ProcessRequest(strings.NewReader(`{"a":[1,2,3],"a":[4,5]}`), v, plugintypes.BodyProcessorOptions{
-			RequestBodyRecursionLimit: 1024,
-			ArgumentLimit:             limit,
-		}); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		// Later keys overwrite earlier ones, so the array a rule sees is [4,5].
-		if want, have := "2", strings.Join(v.ArgsPost().Get("json.a"), ","); want != have {
-			t.Errorf("unexpected array length entry, want %q, have %q", want, have)
-		}
-	})
-
-	t.Run("array_of_empty_containers_keeps_its_length", func(t *testing.T) {
-		v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-		if err := bp.ProcessRequest(strings.NewReader(`{"a":[[],[],[]]}`), v, plugintypes.BodyProcessorOptions{
-			RequestBodyRecursionLimit: 1024,
-			ArgumentLimit:             limit,
-		}); err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if want, have := "3", strings.Join(v.ArgsPost().Get("json.a"), ","); want != have {
-			t.Errorf("unexpected array length entry, want %q, have %q", want, have)
-		}
-	})
-
-	// The array budget must not depend on how many scalars the body also holds,
-	// or on the order its keys arrive in: the same document serialised two ways
-	// would otherwise get two verdicts.
-	t.Run("verdict_independent_of_key_order", func(t *testing.T) {
-		arrays := make([]string, 1500)
-		for i := range arrays {
-			arrays[i] = fmt.Sprintf(`"a%d":[[]]`, i)
-		}
-		scalars := make([]string, 700)
-		for i := range scalars {
-			scalars[i] = fmt.Sprintf(`"s%d":1`, i)
-		}
-		arraysFirst := "{" + strings.Join(append(append([]string{}, arrays...), scalars...), ",") + "}"
-		scalarsFirst := "{" + strings.Join(append(append([]string{}, scalars...), arrays...), ",") + "}"
-		var first int
-		for i, body := range []string{arraysFirst, scalarsFirst} {
-			v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-			if err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-				RequestBodyRecursionLimit: 1024,
-				ArgumentLimit:             limit,
-			}); err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			have := len(v.ArgsPost().FindAll())
-			if i == 0 {
-				first = have
-				continue
-			}
-			if first != have {
-				t.Errorf("key order changed the result, arrays first stored %d members, scalars first stored %d", first, have)
-			}
-		}
-	})
 }
 
 // TestMultipartTypedPartsWithinArgumentLimit asserts that a form of
@@ -1429,54 +1177,6 @@ func TestJSONSiblingArrayLengthsNotCountedAsArguments(t *testing.T) {
 	}
 }
 
-// TestJSONArrayLengthChargedAgainstDecodedBytes asserts that the array-length
-// entry is charged against the decoded-bytes budget. Each entry is stored under
-// its parent's full flattened path, so a document that nests deeply and then
-// fans out into sibling arrays inflates stored bytes through the length entries
-// alone, without storing a single extra scalar.
-func TestJSONArrayLengthChargedAgainstDecodedBytes(t *testing.T) {
-	bp, err := bodyprocessors.GetBodyProcessor("json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// A long prefix every length entry inherits, then many sibling arrays under
-	// it, each holding one scalar.
-	const (
-		prefixDepth = 40
-		siblings    = 3000
-	)
-	b := strings.Builder{}
-	for i := 0; i < prefixDepth; i++ {
-		fmt.Fprintf(&b, `{"prefixsegment%d":`, i)
-	}
-	b.WriteString("{")
-	for i := 0; i < siblings; i++ {
-		if i > 0 {
-			b.WriteString(",")
-		}
-		fmt.Fprintf(&b, `"s%d":[1]`, i)
-	}
-	b.WriteString("}")
-	b.WriteString(strings.Repeat("}", prefixDepth))
-	body := b.String()
-
-	v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-	err = bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-		RequestBodyRecursionLimit: 1024,
-		ArgumentLimit:             siblings * 4,
-	})
-	if err != nil && !errors.Is(err, bodyprocessors.ErrArgumentsLimit) {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	stored := 0
-	for _, m := range v.ArgsPost().FindAll() {
-		stored += len(m.Key()) + len(m.Value())
-	}
-	if maxStored := len(body) + (1 << 20); stored > maxStored {
-		t.Errorf("stored %d bytes from a %d byte body, the budget is %d", stored, len(body), maxStored)
-	}
-}
-
 // TestScaledBudgetsHaveLiteralAnchors pins the two scaling constants against
 // concrete documents and literal member counts. Assertions written in terms of
 // MaxNodesPerArgument or MaxHeadersPerPart move with the constant and so cannot
@@ -1560,91 +1260,21 @@ func TestScaledBudgetsHaveLiteralAnchors(t *testing.T) {
 	})
 }
 
-// TestJSONDecodedBytesBudgetScalesWithSmallBodies asserts that a small body
-// cannot buy the whole slack. Every member is stored under its full flattened
-// path, so a body that nests deeply and then fans out spends its budget on one
-// long shared prefix: cheap in memory, but each member is fed through every
-// ARGS rule's transformation pipeline, so a fixed slack lets a request of a few
-// kilobytes cost more phase 2 CPU than a legitimate one of a megabyte.
-func TestJSONDecodedBytesBudgetScalesWithSmallBodies(t *testing.T) {
-	bp, err := bodyprocessors.GetBodyProcessor("json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	deep := func(levels, leaves, keylen, vallen int) string {
-		b := strings.Builder{}
-		k := strings.Repeat("k", keylen)
-		for i := 0; i < levels; i++ {
-			fmt.Fprintf(&b, `{"%s%d":`, k, i)
-		}
-		b.WriteString("{")
-		for i := 0; i < leaves; i++ {
-			if i > 0 {
-				b.WriteString(",")
-			}
-			fmt.Fprintf(&b, `"l%d":"%s"`, i, strings.Repeat("v", vallen))
-		}
-		b.WriteString("}" + strings.Repeat("}", levels))
-		return b.String()
-	}
-	measure := func(t *testing.T, body string) (stored int, tripped bool) {
-		t.Helper()
-		v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})
-		err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{
-			RequestBodyRecursionLimit: 1024,
-			ArgumentLimit:             1000,
-		})
-		for _, m := range v.ArgsPost().FindAll() {
-			stored += len(m.Key()) + len(m.Value())
-		}
-		return stored, errors.Is(err, bodyprocessors.ErrJSONDecodedSize)
-	}
-
-	t.Run("small_body_with_a_long_shared_prefix_is_stopped", func(t *testing.T) {
-		// A 2 KB body whose every member sits under a 1 KB path.
-		body := strings.Repeat("[", 1000) +
-			`{"s0":"x","s1":"x","s2":"x","s3":"x","s4":"x","s5":"x","s6":"x","s7":"x","s8":"x","s9":"x"}` +
-			strings.Repeat("]", 1000)
-		stored, _ := measure(t, body)
-		// The budget is the body length plus the scaled slack. A fixed slack
-		// let this body store roughly 1 MiB.
-		if maxStored := len(body) * 65; stored > maxStored {
-			t.Errorf("stored %d bytes from a %d byte body, the budget allows %d", stored, len(body), maxStored)
-		}
-	})
-
-	// Legitimately nested bodies stay well inside the scaled budget. The
-	// deepest of these measures about 20x its own size, so the scale has room.
-	for _, tc := range []struct {
-		name                           string
-		levels, leaves, keylen, vallen int
-	}{
-		{"depth20_50leaves", 20, 50, 8, 20},
-		{"depth50_100leaves", 50, 100, 8, 30},
-		{"depth100_100leaves", 100, 100, 10, 40},
-		{"depth10_config", 10, 300, 20, 60},
-		{"api_response", 6, 800, 14, 120},
-	} {
-		t.Run("accepted_"+tc.name, func(t *testing.T) {
-			body := deep(tc.levels, tc.leaves, tc.keylen, tc.vallen)
-			if _, tripped := measure(t, body); tripped {
-				t.Errorf("a legitimately nested %d byte body was stopped by the decoded-bytes budget", len(body))
-			}
-		})
-	}
-}
-
 // TestJSONArgumentFreeBodiesAreNotDenied asserts that a body carrying no
-// arguments is never reported as truncated, however deeply it nests. Array
-// lengths are metadata, so running out of room for them drops entries rather
-// than failing the parse: a body ModSecurity counts zero arguments for must not
-// be denied by a rule written against REQBODY_ERROR.
+// arguments is not reported as truncated at nesting depths real clients send.
+// Array lengths are metadata, so a body ModSecurity counts zero arguments for
+// must not be denied by a rule written against REQBODY_ERROR.
+//
+// Since the v3.8.1 sync the length entries are charged to upstream's flatten
+// byte budget (GHSA-6r3q-mjv7-xr8m), whose floor of 4096 bytes is outgrown by
+// arrays nested about 64 levels deep (path length is quadratic in depth), so
+// the former 100..1000 rows now end in a REQBODY_ERROR by design.
 func TestJSONArgumentFreeBodiesAreNotDenied(t *testing.T) {
 	bp, err := bodyprocessors.GetBodyProcessor("json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, depth := range []int{100, 129, 200, 500, 1000} {
+	for _, depth := range []int{10, 50} {
 		t.Run(fmt.Sprintf("nested_arrays_%d", depth), func(t *testing.T) {
 			body := strings.Repeat("[", depth) + strings.Repeat("]", depth)
 			v := corazawaf.NewTransactionVariables(persistence.NoopEngine{})

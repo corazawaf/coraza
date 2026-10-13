@@ -453,6 +453,305 @@ func TestNativeFormatter(t *testing.T) {
 	})
 }
 
+// hasLineContaining scans output line-by-line and returns true if any line
+// exactly matches or contains the needle. This is the correct way to detect
+// CRLF injection — a forged value should never appear as its own line.
+func hasLineContaining(output, needle string) bool {
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, needle) && !strings.Contains(line, `\r`) && !strings.Contains(line, `\n`) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestNativeFormatterCRLFInjection verifies that CRLF sequences in attacker-controlled
+// fields are escaped and cannot forge log boundaries or entries (GHSA-prpw-wwv7-xjjr).
+func TestNativeFormatterCRLFInjection(t *testing.T) {
+	f := &nativeFormatter{}
+
+	t.Run("body with forged boundary", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartRequestBody,
+			},
+			Transaction_: Transaction{
+				Request_: &TransactionRequest{
+					Body_: "evil=benign\r\n--coraza-forged-X--\r\nForgedLine: yes\r\n--coraza-forged-H--\r\n[client \"9.9.9.9\"] FAKE ATTACK ENTRY",
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Count the lines — with escaping the body should be a single content line
+		scanner := bufio.NewScanner(bytes.NewReader(data))
+		var lines []string
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+		}
+		// Boundary line + escaped body line + empty separator = 3 lines
+		if len(lines) != 3 {
+			t.Errorf("expected 3 lines (boundary + escaped body + separator), got %d:\n%s", len(lines), string(data))
+		}
+		// The escaped form must be present as literal text
+		if !strings.Contains(string(data), `\r\n--coraza-forged-X--`) {
+			t.Error("expected escaped CRLF sequences in body output")
+		}
+	})
+
+	t.Run("header value with CRLF", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartRequestHeaders,
+			},
+			Transaction_: Transaction{
+				Request_: &TransactionRequest{
+					Method_:   "GET",
+					URI_:      "/",
+					Protocol_: "HTTP/1.1",
+					Headers_: map[string][]string{
+						"X-Evil": {"value\r\nInjected-Header: malicious"},
+					},
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		output := string(data)
+		// The injected header must NOT appear as its own line
+		if hasLineContaining(output, "Injected-Header: malicious") {
+			t.Error("CRLF injection: injected header appeared as a separate line")
+		}
+		// The escaped form must be present
+		if !strings.Contains(output, `value\r\nInjected-Header: malicious`) {
+			t.Error("expected escaped CRLF sequences in header value")
+		}
+	})
+
+	t.Run("response header with CRLF", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartResponseHeaders,
+			},
+			Transaction_: Transaction{
+				Response_: &TransactionResponse{
+					Status_:   200,
+					Protocol_: "HTTP/1.1",
+					Headers_: map[string][]string{
+						"X-Evil": {"value\r\nInjected: yes"},
+					},
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		output := string(data)
+		if hasLineContaining(output, "Injected: yes") {
+			t.Error("CRLF injection in response header value")
+		}
+		if !strings.Contains(output, `value\r\nInjected: yes`) {
+			t.Error("expected escaped CRLF sequences in response header value")
+		}
+	})
+
+	t.Run("error message with CRLF", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartAuditLogTrailer,
+			},
+			Transaction_: Transaction{},
+			Messages_: []plugintypes.AuditLogMessage{
+				&Message{
+					ErrorMessage_: "real error\n[client \"9.9.9.9\"] FAKE ENTRY",
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		output := string(data)
+		if hasLineContaining(output, `[client "9.9.9.9"] FAKE ENTRY`) {
+			t.Error("CRLF injection in error message")
+		}
+		if !strings.Contains(output, `real error\n[client`) {
+			t.Error("expected escaped newline in error message")
+		}
+	})
+
+	t.Run("matched rule raw data with CRLF", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartRulesMatched,
+			},
+			Transaction_: Transaction{},
+			Messages_: []plugintypes.AuditLogMessage{
+				&Message{
+					Data_: &MessageData{
+						Raw_: "SecRule \"id:1\"\nSecRule \"id:9999\" # forged",
+					},
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		output := string(data)
+		if hasLineContaining(output, `SecRule "id:9999" # forged`) {
+			t.Error("CRLF injection in matched rule raw data")
+		}
+		if !strings.Contains(output, `SecRule "id:1"\nSecRule "id:9999" # forged`) {
+			t.Error("expected escaped newline in raw rule data")
+		}
+	})
+
+	t.Run("response body with CRLF", func(t *testing.T) {
+		al := &Log{
+			Parts_: []types.AuditLogPart{
+				types.AuditLogPartIntermediaryResponseBody,
+			},
+			Transaction_: Transaction{
+				Response_: &TransactionResponse{
+					Body_: "legit body\r\n--fake-boundary-E--\r\nforged content",
+				},
+			},
+		}
+		data, err := f.Format(al)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		output := string(data)
+		if hasLineContaining(output, "--fake-boundary-E--") {
+			t.Error("CRLF injection in response body")
+		}
+		if !strings.Contains(output, `legit body\r\n--fake-boundary-E--\r\nforged content`) {
+			t.Error("expected escaped CRLF sequences in response body")
+		}
+	})
+}
+
+// TestNativeFormatterEscapeIsReversible verifies the escaper is injective: a
+// real CR and the literal two-character input `\r` must not collide, or a
+// consumer that unescapes turns the literal back into a line break and the
+// injection survives the round trip (GHSA-prpw-wwv7-xjjr).
+func TestNativeFormatterEscapeIsReversible(t *testing.T) {
+	realCRLF := logEscaper.Replace("evil\r\nForged: yes")
+	literal := logEscaper.Replace(`evil\r\nForged: yes`)
+
+	if realCRLF == literal {
+		t.Errorf("escaping is not reversible: a real CRLF and the literal %q both render as %q",
+			`\r\n`, realCRLF)
+	}
+	if strings.ContainsAny(realCRLF, "\r\n") {
+		t.Errorf("real control characters survived escaping: %q", realCRLF)
+	}
+	// The literal backslashes must be doubled, not left alone.
+	if !strings.Contains(literal, `\\r`) {
+		t.Errorf("literal backslash was not escaped: %q", literal)
+	}
+	// A single left-to-right pass must not re-scan its own output.
+	if got := logEscaper.Replace(`a\b`); got != `a\\b` {
+		t.Errorf("double escaping: %q -> %q", `a\b`, got)
+	}
+}
+
+// lineCount reports how many lines a formatted record occupies. Injection into
+// any field shows up as extra lines, which is a stronger check than scanning
+// for a needle: hasLineContaining treats a line holding any escaped `\r` as
+// safe, so it misses a forged line that shares a line with an escaped field.
+func lineCount(t *testing.T, data []byte) int {
+	t.Helper()
+	return len(strings.Split(strings.TrimRight(string(data), "\n"), "\n"))
+}
+
+// TestNativeFormatterEscapesNonBodyFields covers the fields that are not
+// request or response bodies: the Part A transaction line, the Part B request
+// line, and header names in Parts B and F. All are caller-supplied. Each case
+// formats a benign record and a hostile one and requires the same line count --
+// a field that escapes its line changes that count.
+func TestNativeFormatterEscapesNonBodyFields(t *testing.T) {
+	f := &nativeFormatter{}
+	const evil = "\r\nForged: yes"
+
+	tests := []struct {
+		name            string
+		part            types.AuditLogPart
+		benign, hostile Transaction
+	}{
+		{
+			name: "part A transaction id and IPs",
+			part: types.AuditLogPartHeader,
+			benign: Transaction{
+				ID_: "id", ClientIP_: "1.1.1.1", HostIP_: "2.2.2.2",
+			},
+			hostile: Transaction{
+				ID_:       "id" + evil,
+				ClientIP_: "1.1.1.1" + evil,
+				HostIP_:   "2.2.2.2" + evil,
+			},
+		},
+		{
+			name: "part B request line and header name",
+			part: types.AuditLogPartRequestHeaders,
+			benign: Transaction{Request_: &TransactionRequest{
+				Method_: "GET", URI_: "/a", Protocol_: "HTTP/1.1",
+				Headers_: map[string][]string{"X-Test": {"v"}},
+			}},
+			hostile: Transaction{Request_: &TransactionRequest{
+				Method_: "GET" + evil, URI_: "/a" + evil, Protocol_: "HTTP/1.1" + evil,
+				Headers_: map[string][]string{"X-Test" + evil: {"v"}},
+			}},
+		},
+		{
+			name: "part F status line and header name",
+			part: types.AuditLogPartResponseHeaders,
+			benign: Transaction{Response_: &TransactionResponse{
+				Protocol_: "HTTP/1.1", Status_: 200,
+				Headers_: map[string][]string{"X-Test": {"v"}},
+			}},
+			hostile: Transaction{Response_: &TransactionResponse{
+				Protocol_: "HTTP/1.1" + evil, Status_: 200,
+				Headers_: map[string][]string{"X-Test" + evil: {"v"}},
+			}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			format := func(tr Transaction) []byte {
+				data, err := f.Format(&Log{Parts_: []types.AuditLogPart{tc.part}, Transaction_: tr})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return data
+			}
+			want := lineCount(t, format(tc.benign))
+			got := lineCount(t, format(tc.hostile))
+			if got != want {
+				t.Errorf("hostile input added %d line(s); a field escaped its line:\n%s", got-want, format(tc.hostile))
+			}
+			if strings.Contains(string(format(tc.hostile)), "\nForged: yes") {
+				t.Errorf("forged header appears on its own line:\n%s", format(tc.hostile))
+			}
+		})
+	}
+}
+
 func TestNativeFormatterPartJ(t *testing.T) {
 	f := &nativeFormatter{}
 

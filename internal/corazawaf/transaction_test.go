@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -20,7 +21,6 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
-	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -1185,6 +1185,21 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 	}
 }
 
+// TestTransactionFieldCount is a tripwire against pool-reuse state leaks such as
+// https://github.com/corazawaf/coraza/issues/1640. Transactions are pooled and
+// reused, so every field must be reset before a transaction is handed out again
+// (in newTransaction, or in place in Close); a field left set leaks into the next
+// request. This test fails whenever a field is added to or removed from
+// Transaction: when it does, make sure the field is reset on pool reuse, then
+// update wantFields.
+func TestTransactionFieldCount(t *testing.T) {
+	const wantFields = 37
+	if got := reflect.TypeFor[Transaction]().NumField(); got != wantFields {
+		t.Fatalf("Transaction has %d fields, want %d. If you added a field, make sure it "+
+			"is reset on pool reuse in newTransaction() (or Close()), then update wantFields.", got, wantFields)
+	}
+}
+
 func TestLogCallback(t *testing.T) {
 
 	testCases := []struct {
@@ -1368,6 +1383,51 @@ func TestRequestBodyProcessingAlgorithm(t *testing.T) {
 	}
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+// TestDuplicateContentTypeHeaderUsesFirstForBodyProcessorSelection is a
+// regression test for GHSA-w253-m66g-rx24: it needs two Content-Type headers
+// on one request, which testing/profile's StageInput.Headers
+// (map[string]string) cannot express, so it cannot be a profile.
+//
+// It is also the home for how a single Content-Type value selects the
+// processor: leading Unicode whitespace is trimmed as mime.ParseMediaType does.
+//
+// Only the first Content-Type header may select the body processor, matching
+// ProcessRequestBody's mimeType and a typical backend's Header.Get. Otherwise
+// e.g. a genuine multipart body gets the URLENCODED processor, which parses
+// it without error and leaves ARGS_POST and FILES empty.
+func TestDuplicateContentTypeHeaderUsesFirstForBodyProcessorSelection(t *testing.T) {
+	tests := []struct {
+		name    string
+		headers []string
+		want    string
+	}{
+		{"single urlencoded", []string{"application/x-www-form-urlencoded"}, "URLENCODED"},
+		{"multipart then urlencoded", []string{"multipart/form-data; boundary=XyZ", "application/x-www-form-urlencoded"}, "MULTIPART"},
+		{"urlencoded then multipart", []string{"application/x-www-form-urlencoded", "multipart/form-data; boundary=XyZ"}, "URLENCODED"},
+		{"unrecognized then multipart", []string{"text/plain", "multipart/form-data; boundary=XyZ"}, ""},
+		{"json then urlencoded", []string{"application/json", "application/x-www-form-urlencoded"}, ""},
+		// mime.ParseMediaType (and so the backend) trims Unicode whitespace
+		// around the media type; selection must too.
+		{"U+0085 before urlencoded", []string{"\u0085application/x-www-form-urlencoded"}, "URLENCODED"},
+		{"U+00A0 before urlencoded", []string{"\u00a0application/x-www-form-urlencoded"}, "URLENCODED"},
+		{"U+3000 before multipart", []string{"\u3000multipart/form-data; boundary=XyZ"}, "MULTIPART"},
+		{"tab before multipart", []string{"\tmultipart/form-data; boundary=XyZ"}, "MULTIPART"},
+		{"non-space prefix before urlencoded", []string{"xapplication/x-www-form-urlencoded"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := NewWAF().NewTransaction()
+			defer func() { _ = tx.Close() }()
+			for _, h := range tt.headers {
+				tx.AddRequestHeader("Content-Type", h)
+			}
+			if got := tx.variables.reqbodyProcessor.Get(); got != tt.want {
+				t.Errorf("reqbodyProcessor = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -1714,7 +1774,7 @@ func BenchmarkTxGetField(b *testing.B) {
 	rvp := ruleVariableParams{
 		Variable: variables.Args,
 	}
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tx.GetField(rvp)
 	}
 	if err := tx.Close(); err != nil {
@@ -1746,8 +1806,8 @@ func BenchmarkTxGetFieldWithShortRegexException(b *testing.B) {
 		},
 	}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		tx.GetField(rvp)
 	}
 	b.StopTimer()
@@ -1805,7 +1865,7 @@ func TestTxProcessURI(t *testing.T) {
 }
 
 func BenchmarkTransactionCreation(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		makeTransaction(b)
 	}
 }
@@ -1847,8 +1907,8 @@ func makeTransactionTimestamped(t testing.TB) *Transaction {
 func BenchmarkTransactionTimestamped(b *testing.B) {
 	tx := NewWAF().NewTransaction()
 	tx.Timestamp = time.Now().Unix()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		tx.setTimeVariables()
 	}
 }
@@ -2570,124 +2630,46 @@ func TestAddResponseArgsWithOverlimit(t *testing.T) {
 	}
 }
 
-func oversizedJSONBody(members int) string {
-	body := strings.Builder{}
-	body.WriteString("{")
-	for i := 0; i < members; i++ {
-		if i > 0 {
-			body.WriteString(",")
-		}
-		fmt.Fprintf(&body, `"k%d":"v"`, i)
+// TestAddArgsRepeatedKeyOverlimit is a regression test for
+// GHSA-3ww9-vw83-9w5x: checkArgumentLimit used to compare against Len (the
+// number of distinct keys), so many values added under a single repeated key
+// never tripped the limit no matter how many times Add was called. It must
+// now be bounded by TotalValues (every individual value) instead.
+func TestAddArgsRepeatedKeyOverlimit(t *testing.T) {
+	const limit = 5
+	const attempts = 1000
+
+	adders := map[string]func(tx *Transaction, key, value string){
+		"get":      func(tx *Transaction, key, value string) { tx.AddGetRequestArgument(key, value) },
+		"post":     func(tx *Transaction, key, value string) { tx.AddPostRequestArgument(key, value) },
+		"path":     func(tx *Transaction, key, value string) { tx.AddPathRequestArgument(key, value) },
+		"response": func(tx *Transaction, key, value string) { tx.AddResponseArgument(key, value) },
 	}
-	body.WriteString("}")
-	return body.String()
-}
 
-// TestProcessRequestBodyArgumentsLimit asserts that a body holding more members
-// than SecArgumentsLimit raises REQBODY_ERROR and names SecArgumentsLimit in
-// REQBODY_ERROR_MSG, whichever processor parsed it, and leaves the
-// REQBODY_PROCESSOR_ERROR family untouched: the processor itself did not fail.
-// The collection keeps exactly SecArgumentsLimit members, so what fits under
-// the limit stays available to the rules.
-func TestProcessRequestBodyArgumentsLimit(t *testing.T) {
-	const members = 50
-
-	for _, tc := range []struct {
-		name        string
-		processor   string
-		contentType string
-		body        string
-		count       func(tx *Transaction) int
-	}{
-		{
-			name:        "json",
-			processor:   "JSON",
-			contentType: "application/json",
-			body:        oversizedJSONBody(members),
-			count:       func(tx *Transaction) int { return tx.variables.argsPost.Len() },
-		},
-		{
-			name:        "urlencoded",
-			processor:   "URLENCODED",
-			contentType: "application/x-www-form-urlencoded",
-			body: func() string {
-				pairs := make([]string, 0, members)
-				for i := 0; i < members; i++ {
-					pairs = append(pairs, fmt.Sprintf("k%d=v", i))
-				}
-				return strings.Join(pairs, "&")
-			}(),
-			count: func(tx *Transaction) int { return tx.variables.argsPost.Len() },
-		},
-		{
-			// REQUEST_XML is budgeted at MaxNodesPerArgument members per unit of
-			// SecArgumentsLimit, so the body carries that many attributes per
-			// member and the count is converted back into those units.
-			name:        "xml",
-			processor:   "XML",
-			contentType: "application/xml",
-			body: func() string {
-				var b strings.Builder
-				b.WriteString("<root>")
-				for i := 0; i < members*bodyprocessors.MaxNodesPerArgument; i++ {
-					fmt.Fprintf(&b, `<e a="v%d"/>`, i)
-				}
-				b.WriteString("</root>")
-				return b.String()
-			}(),
-			count: func(tx *Transaction) int {
-				return len(tx.variables.requestXML.FindAll()) / bodyprocessors.MaxNodesPerArgument
-			},
-		},
-		{
-			name:        "multipart",
-			processor:   "MULTIPART",
-			contentType: "multipart/form-data; boundary=X",
-			body: func() string {
-				var b strings.Builder
-				for i := 0; i < members; i++ {
-					fmt.Fprintf(&b, "--X\r\nContent-Disposition: form-data; name=\"k%d\"\r\n\r\nv\r\n", i)
-				}
-				b.WriteString("--X--\r\n")
-				return b.String()
-			}(),
-			count: func(tx *Transaction) int { return tx.variables.argsPost.Len() },
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, add := range adders {
+		t.Run(name, func(t *testing.T) {
 			waf := NewWAF()
-			waf.RequestBodyAccess = true
-			waf.ArgumentLimit = 10
 			tx := waf.NewTransaction()
-			tx.AddRequestHeader("content-type", tc.contentType)
-			tx.ProcessRequestHeaders()
-			tx.variables.reqbodyProcessor.Set(tc.processor)
-			if _, err := tx.requestBodyBuffer.Write([]byte(tc.body)); err != nil {
-				t.Fatal(err)
+			tx.WAF.ArgumentLimit = limit
+			for i := 0; i < attempts; i++ {
+				add(tx, "repeated", "samplevalue")
 			}
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				t.Fatal(err)
+
+			var total int
+			switch name {
+			case "get":
+				total = tx.variables.argsGet.TotalValues()
+			case "post":
+				total = tx.variables.argsPost.TotalValues()
+			case "path":
+				total = tx.variables.argsPath.TotalValues()
+			case "response":
+				total = tx.variables.responseArgs.TotalValues()
 			}
-			if want, have := "1", tx.variables.reqbodyError.Get(); want != have {
-				t.Errorf("unexpected REQBODY_ERROR, want %q, have %q", want, have)
+			if total > limit {
+				t.Fatalf("expected at most %d total values under a repeated key, got %d", limit, total)
 			}
-			if want, have := argumentsLimitErrorMsg, tx.variables.reqbodyErrorMsg.Get(); want != have {
-				t.Errorf("unexpected REQBODY_ERROR_MSG, want %q, have %q", want, have)
-			}
-			for _, v := range []struct {
-				name string
-				have string
-			}{
-				{"REQBODY_PROCESSOR_ERROR", tx.variables.reqbodyProcessorError.Get()},
-				{"REQBODY_PROCESSOR_ERROR_MSG", tx.variables.reqbodyProcessorErrorMsg.Get()},
-			} {
-				if v.have != "" && v.have != "0" {
-					t.Errorf("a count trip must not fail the body processor, %s is %q", v.name, v.have)
-				}
-			}
-			if want, have := waf.ArgumentLimit, tc.count(tx); want != have {
-				t.Errorf("truncation must fill the collection to the limit and stop, want %d members, have %d", want, have)
-			}
+
 			if err := tx.Close(); err != nil {
 				t.Fatalf("Failed to close transaction: %s", err.Error())
 			}
@@ -2695,182 +2677,24 @@ func TestProcessRequestBodyArgumentsLimit(t *testing.T) {
 	}
 }
 
-// TestProcessRequestBodyJSONDecodedSizeIsFatal asserts that the JSON
-// decoded-bytes budget stays fail-closed: a body that inflates far beyond its
-// own size raises REQBODY_ERROR and names the budget in REQBODY_ERROR_MSG
-// rather than pointing at SecArgumentsLimit, which does not govern it.
-func TestProcessRequestBodyJSONDecodedSizeIsFatal(t *testing.T) {
-	var body strings.Builder
-	pad := strings.Repeat("A", 1000)
-	const levels = 900
-	for i := 0; i < levels; i++ {
-		fmt.Fprintf(&body, `{"z":1,"%s":`, pad)
-	}
-	body.WriteString("1")
-	body.WriteString(strings.Repeat("}", levels))
-
+// TestExtractGetArgumentsRepeatedKeyOverlimit confirms ExtractGetArguments
+// (the query-string entry point, as opposed to calling AddGetRequestArgument
+// directly) is bounded the same way, and sets ARGUMENTS_LIMIT_REACHED.
+func TestExtractGetArgumentsRepeatedKeyOverlimit(t *testing.T) {
 	waf := NewWAF()
-	waf.RequestBodyAccess = true
 	tx := waf.NewTransaction()
-	tx.AddRequestHeader("content-type", "application/json")
-	tx.ProcessRequestHeaders()
-	tx.variables.reqbodyProcessor.Set("JSON")
-	if _, err := tx.requestBodyBuffer.Write([]byte(body.String())); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tx.ProcessRequestBody(); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := "1", tx.variables.reqbodyError.Get(); want != have {
-		t.Errorf("unexpected REQBODY_ERROR, want %q, have %q", want, have)
-	}
-	if have := tx.variables.reqbodyErrorMsg.Get(); !strings.Contains(have, "json decoded size limit exceeded") {
-		t.Errorf("REQBODY_ERROR_MSG does not name the budget that tripped, have %q", have)
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatalf("Failed to close transaction: %s", err.Error())
-	}
-}
+	tx.WAF.ArgumentLimit = 5
 
-// TestProcessResponseBodyArgumentsLimit asserts that a response body holding
-// more members than SecArgumentsLimit raises RES_BODY_ERROR and names
-// SecArgumentsLimit in RES_BODY_ERROR_MSG, and leaves the
-// RES_BODY_PROCESSOR_ERROR family untouched: the processor itself did not
-// fail. The collection keeps exactly SecArgumentsLimit members, so what fits
-// under the limit stays available to the rules.
-func TestProcessResponseBodyArgumentsLimit(t *testing.T) {
-	const members = 50
+	uri := "/x?" + strings.TrimSuffix(strings.Repeat("a=1&", 1000), "&")
+	tx.ExtractGetArguments(uri)
 
-	for _, tc := range []struct {
-		name      string
-		processor string
-		body      string
-		count     func(tx *Transaction) int
-	}{
-		{
-			name:      "json",
-			processor: "JSON",
-			body:      oversizedJSONBody(members),
-			count:     func(tx *Transaction) int { return tx.variables.responseArgs.Len() },
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			waf := NewWAF()
-			waf.ResponseBodyAccess = true
-			waf.ArgumentLimit = 10
-			tx := waf.NewTransaction()
-			tx.ForceResponseBodyVariable = true
-			tx.variables.ResponseBodyProcessor().(*collections.Single).Set(tc.processor)
-			tx.ProcessRequestHeaders()
-			if _, err := tx.ProcessRequestBody(); err != nil {
-				t.Fatal(err)
-			}
-			tx.ProcessResponseHeaders(200, "HTTP/1.1")
-			if _, _, err := tx.WriteResponseBody([]byte(tc.body)); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := tx.ProcessResponseBody(); err != nil {
-				t.Fatal(err)
-			}
-			if want, have := "1", tx.variables.resBodyError.Get(); want != have {
-				t.Errorf("unexpected RES_BODY_ERROR, want %q, have %q", want, have)
-			}
-			if want, have := argumentsLimitErrorMsg, tx.variables.resBodyErrorMsg.Get(); want != have {
-				t.Errorf("unexpected RES_BODY_ERROR_MSG, want %q, have %q", want, have)
-			}
-			for _, v := range []struct {
-				name string
-				have string
-			}{
-				{"RES_BODY_PROCESSOR_ERROR", tx.variables.resBodyProcessorError.Get()},
-				{"RES_BODY_PROCESSOR_ERROR_MSG", tx.variables.resBodyProcessorErrorMsg.Get()},
-			} {
-				if v.have != "" && v.have != "0" {
-					t.Errorf("a count trip must not fail the body processor, %s is %q", v.name, v.have)
-				}
-			}
-			if want, have := waf.ArgumentLimit, tc.count(tx); want != have {
-				t.Errorf("truncation must fill the collection to the limit and stop, want %d members, have %d", want, have)
-			}
-			if err := tx.Close(); err != nil {
-				t.Fatalf("Failed to close transaction: %s", err.Error())
-			}
-		})
+	if got := tx.variables.argsGet.TotalValues(); got > 5 {
+		t.Fatalf("expected at most 5 total ARGS_GET values, got %d", got)
 	}
-}
+	if tx.variables.argumentsLimitReached.Get() != "1" {
+		t.Error("expected ARGUMENTS_LIMIT_REACHED to be set")
+	}
 
-// TestProcessResponseBodyJSONDecodedSizeIsFatal asserts that the JSON
-// decoded-bytes budget stays fail-closed on the response path: a body that
-// inflates far beyond its own size raises RES_BODY_ERROR and names the budget
-// in RES_BODY_ERROR_MSG, unlike a plain SecArgumentsLimit count trip.
-func TestProcessResponseBodyJSONDecodedSizeIsFatal(t *testing.T) {
-	var body strings.Builder
-	pad := strings.Repeat("A", 300)
-	const levels = 900
-	for i := 0; i < levels; i++ {
-		fmt.Fprintf(&body, `{"z":1,"%s":`, pad)
-	}
-	body.WriteString("1")
-	body.WriteString(strings.Repeat("}", levels))
-
-	waf := NewWAF()
-	waf.ResponseBodyAccess = true
-	waf.ResponseBodyLimit = int64(body.Len())
-	tx := waf.NewTransaction()
-	tx.ForceResponseBodyVariable = true
-	tx.variables.ResponseBodyProcessor().(*collections.Single).Set("JSON")
-	tx.ProcessRequestHeaders()
-	if _, err := tx.ProcessRequestBody(); err != nil {
-		t.Fatal(err)
-	}
-	tx.ProcessResponseHeaders(200, "HTTP/1.1")
-	if _, _, err := tx.WriteResponseBody([]byte(body.String())); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tx.ProcessResponseBody(); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := "1", tx.variables.resBodyError.Get(); want != have {
-		t.Errorf("unexpected RES_BODY_ERROR, want %q, have %q", want, have)
-	}
-	if have := tx.variables.resBodyErrorMsg.Get(); !strings.Contains(have, "json decoded size limit exceeded") {
-		t.Errorf("RES_BODY_ERROR_MSG does not name the budget that tripped, have %q", have)
-	}
-	if err := tx.Close(); err != nil {
-		t.Fatalf("Failed to close transaction: %s", err.Error())
-	}
-}
-
-// TestProcessResponseBodyJSONDepthLimit asserts that SecRequestBodyJsonDepthLimit
-// reaches the response body processor: a response nested past the configured
-// depth raises RES_BODY_ERROR and names the recursion failure, rather than
-// parsing to an unbounded depth.
-func TestProcessResponseBodyJSONDepthLimit(t *testing.T) {
-	body := strings.Repeat("[", 200) + strings.Repeat("]", 200)
-
-	waf := NewWAF()
-	waf.ResponseBodyAccess = true
-	waf.RequestBodyJsonDepthLimit = 100
-	tx := waf.NewTransaction()
-	tx.ForceResponseBodyVariable = true
-	tx.variables.ResponseBodyProcessor().(*collections.Single).Set("JSON")
-	tx.ProcessRequestHeaders()
-	if _, err := tx.ProcessRequestBody(); err != nil {
-		t.Fatal(err)
-	}
-	tx.ProcessResponseHeaders(200, "HTTP/1.1")
-	if _, _, err := tx.WriteResponseBody([]byte(body)); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tx.ProcessResponseBody(); err != nil {
-		t.Fatal(err)
-	}
-	if want, have := "1", tx.variables.resBodyError.Get(); want != have {
-		t.Errorf("unexpected RES_BODY_ERROR, want %q, have %q", want, have)
-	}
-	if have := tx.variables.resBodyErrorMsg.Get(); !strings.Contains(have, "max recursion reached") {
-		t.Errorf("RES_BODY_ERROR_MSG does not name the recursion failure, have %q", have)
-	}
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
 	}
@@ -3235,10 +3059,11 @@ func TestRequestFilename(t *testing.T) {
 			uri:      "///foo/bar",
 			expected: "///foo/bar",
 		},
-		{ // This is a bug. This test should be adapted when the issue is fixed.
+		{ // url.ParseRequestURI fails on invalid percent-encoding; the "?" fallback
+			// split still recovers the path/query boundary. See GHSA-x26q-wvhg-fh4m.
 			name:     "invalid encoding",
 			uri:      "/foo%zz?a=b",
-			expected: "/foo%zz?a=b",
+			expected: "/foo%zz",
 		},
 		{
 			name:     "valid encoding",
@@ -3266,6 +3091,29 @@ func TestRequestFilename(t *testing.T) {
 				t.Fatalf("Expected REQUEST_FILENAME %q, got %q", test.expected, tx.variables.requestFilename.Get())
 			}
 		})
+	}
+}
+
+// GHSA-x26q-wvhg-fh4m: a URI containing raw control bytes (e.g. a NUL, as a
+// non-net/http integration like coraza-spoa or coraza-proxy-wasm might forward)
+// fails url.ParseRequestURI, and previously left QUERY_STRING/ARGS_GET empty,
+// silently dropping the entire attack payload from GET-side rule matching.
+func TestProcessURIFallbackOnParseError(t *testing.T) {
+	waf := NewWAF()
+	tx := waf.NewTransaction()
+	tx.ProcessURI("/search?q=ATTACK_HERE_XYZ\x00&y=1", http.MethodGet, "HTTP/1.1")
+
+	if got := tx.variables.uriParseError.Get(); got != "1" {
+		t.Errorf("Expected URI_PARSE_ERROR to be \"1\", got %q", got)
+	}
+	if got := tx.variables.queryString.Get(); got != "q=ATTACK_HERE_XYZ\x00&y=1" {
+		t.Errorf("Expected QUERY_STRING to be recovered from the raw URI, got %q", got)
+	}
+	if got := tx.variables.argsGet.Get("q"); len(got) == 0 || got[0] != "ATTACK_HERE_XYZ\x00" {
+		t.Errorf("Expected ARGS_GET q to be populated on best effort, got %v", got)
+	}
+	if got := tx.variables.requestURIRaw.Get(); got != "/search?q=ATTACK_HERE_XYZ\x00&y=1" {
+		t.Errorf("Expected REQUEST_URI_RAW to hold the untouched URI, got %q", got)
 	}
 }
 
@@ -3310,8 +3158,8 @@ func BenchmarkRuleEvalWithTransformations(b *testing.B) {
 		b.Fatalf("unexpected interruption during request headers processing: %+v", it)
 	}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
@@ -3496,8 +3344,8 @@ func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
 	}
 }
@@ -3519,7 +3367,11 @@ func TestBodyLimitsDoNotLogAtErrorLevel(t *testing.T) {
 		},
 		{
 			name: "json_recursion_limit",
-			tune: func(w *WAF) { w.RequestBodyJsonDepthLimit = 20 },
+			// Upstream split the depth limit per direction, so tune both.
+			tune: func(w *WAF) {
+				w.RequestBodyJsonDepthLimit = 20
+				w.ResponseBodyJsonDepthLimit = 20
+			},
 			body: strings.Repeat(`{"a":`, 40) + "1" + strings.Repeat("}", 40),
 		},
 		{

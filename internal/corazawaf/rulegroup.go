@@ -191,18 +191,6 @@ RulesLoop:
 		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
 		}
-		// The context is done: whoever was waiting for this phase is gone, so
-		// stop before this rule and remember that the phase is partial.
-		select {
-		case <-done:
-			tx.canceled = tx.contextCanceled()
-			tx.DebugLogger().Debug().
-				Int("phase", int(phase)).
-				Int("rule_id", r.ID_).
-				Msg("Stopping phase: the transaction context is done")
-			break RulesLoop
-		default:
-		}
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
 			// Execute the rule in inferred phases too if multiphase evaluation is enabled
@@ -281,6 +269,21 @@ RulesLoop:
 			}
 		case corazatypes.AllowTypeAll:
 			break RulesLoop
+		}
+		// The context is done: whoever was waiting for this phase is gone, so
+		// stop before this rule and remember that the phase is partial. Checked
+		// only for a rule about to run, so rules of other phases, removed or
+		// skipped ones neither pay for it nor mark a phase as cut short when
+		// nothing was left to evaluate.
+		select {
+		case <-done:
+			tx.canceled = tx.contextCanceled()
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Int("rule_id", r.ID_).
+				Msg("Stopping phase: the transaction context is done")
+			break RulesLoop
+		default:
 		}
 		// Reset matched_vars only when the previous rule actually populated it.
 		// In typical CRS evaluation most rules don't match, so this avoids

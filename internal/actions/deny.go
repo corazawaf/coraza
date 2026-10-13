@@ -17,7 +17,7 @@ import (
 // If status action is not used, deny action defaults to status 403.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule REQUEST_HEADERS:User-Agent "nikto" "log,deny,id:107,msg:'Nikto Scanners Identified'"
 // ```
 type denyFn struct{}

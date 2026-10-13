@@ -54,8 +54,8 @@ func TestCanBeSelectedMatchesKeyedCollection(t *testing.T) {
 
 	// Guards against a vacuous pass if Name() ever stops terminating the walk
 	// where the enum ends.
-	if want := int(variables.ScriptUsername); checked != want {
-		t.Errorf("walked %d variables, expected the whole enum through SCRIPT_USERNAME (%d)", checked, want)
+	if want := int(variables.ArgumentsLimitReached); checked != want {
+		t.Errorf("walked %d variables, expected the whole enum through ARGUMENTS_LIMIT_REACHED (%d)", checked, want)
 	}
 }
 

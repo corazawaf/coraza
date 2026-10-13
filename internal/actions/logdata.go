@@ -18,7 +18,7 @@ import (
 // The information is properly escaped for use with logging of binary data.
 //
 // Example:
-// ```
+// ```seclang
 // SecRule ARGS:p "@rx <script>" "phase:2,id:118,log,pass,logdata:%{MATCHED_VAR}"
 // ```
 type logdataFn struct{}
