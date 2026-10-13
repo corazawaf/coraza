@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"regexp"
 	"regexp/syntax"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -182,6 +184,32 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		// "bc", so "bc" is NOT a true prefix constraint.
 		{`^(?:a|.)bc.*$`, "xbc", true},
 		{`^(?:a|.)bc.*$`, "xyz", false},
+
+		// Regression: trie reconstruction glued a literal that follows a star onto
+		// the common prefix. The lab ruleset's XSS rule starts with
+		// &#0*60;|&#x0*3c;|&lt;..., which the parser factors into
+		// &(?:#(?:0*60;|x0*3c;)|lt;|...); the prefilter required "#60;" and
+		// "#3c;", neither of which is in "&#060;" or "&#x3c;", and rejected the
+		// payloads the regex matches (a missed attack under SecRxPreFilter On).
+		{`(?:&#0*60;|&#x0*3c;|&lt;)(?:script|javascript:)`, "&#060;javascript:", true},
+		{`(?:&#0*60;|&#x0*3c;|&lt;)(?:script|javascript:)`, "&#x3c;script", true},
+		{`(?:&#0*60;|&#x0*3c;|&lt;)(?:script|javascript:)`, "&#0060;script", true},
+		{`(?:&#0*60;|&#x0*3c;|&lt;)(?:script|javascript:)`, "&lt;script", true},
+		{`(?:&#0*60;|&#x0*3c;|&lt;)(?:script|javascript:)`, "benign text", false},
+		{`(?i)(?:&#0*60;|&#x0*3c;|&lt;|&amp;#0*60;|&amp;#x0*3c;|&amp;lt;)(?:script|javascript:)`, "&amp;#x3C;javascript:", true},
+		{`(?i)(?:&#0*60;|&#x0*3c;|&lt;|&amp;#0*60;|&amp;#x0*3c;|&amp;lt;)(?:script|javascript:)`, "&AMP;#0060;SCRIPT", true},
+
+		// The same mistake in the other shapes a suffix can take: after a star, an
+		// optional, a wildcard, or in front of a nested alternation.
+		{`s(?:x*elect|leep)`, "sxxelect", true},
+		{`s(?:x*elect|leep)`, "select", true},
+		{`a(?:b?cd|ef)`, "abcd", true},
+		{`a(?:b?cd|ef)`, "acd", true},
+		{`a(?:b.*cde|fg)`, "abxxcde", true},
+		{`a(?:x*bcd(?:ef|gh)|y)`, "axxbcdef", true},
+		{`a(?:x*(?:bcd|efg)|y)`, "axxbcd", true},
+		{`a(?:x*(?:bcd|efg)|yz)`, "ayz", true},
+		{`a(?:x*(?:bcd|efg)|yz)`, "nothing here", false},
 	}
 	for _, tc := range tests {
 		t.Run(fmt.Sprintf("%s/%s", tc.pattern, tc.input), func(t *testing.T) {
@@ -1696,24 +1724,63 @@ func TestInternalNodeCoverage(t *testing.T) {
 		}
 	})
 
-	// ── rawExtractSuffixes ────────────────────────────────────────────────────
+	// ── leadingLiterals ───────────────────────────────────────────────────────
 
-	t.Run("rawExtractSuffixes/RuneError_literal", func(t *testing.T) {
-		// rawExtractSuffixes must return nil for a literal containing RuneError
+	t.Run("leadingLiterals/RuneError_literal", func(t *testing.T) {
+		// leadingLiterals must return nil for a literal containing RuneError
 		// so the calling trieReconstruct bails out rather than building a wrong prefilter.
 		re := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune{utf8.RuneError}}
-		if got := rawExtractSuffixes(re, false); got != nil {
-			t.Errorf("rawExtractSuffixes(RuneError) = %v, want nil", got)
+		if got := leadingLiterals(re, false); got != nil {
+			t.Errorf("leadingLiterals(RuneError) = %v, want nil", got)
 		}
 	})
 
-	t.Run("rawExtractSuffixes/OpCapture", func(t *testing.T) {
-		// Capture groups are transparent — rawExtractSuffixes must unwrap them.
+	t.Run("leadingLiterals/OpCapture", func(t *testing.T) {
+		// Capture groups are transparent — leadingLiterals must unwrap them.
 		inner := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune("elect")}
 		cap := &syntax.Regexp{Op: syntax.OpCapture, Sub: []*syntax.Regexp{inner}}
-		got := rawExtractSuffixes(cap, false)
+		got := leadingLiterals(cap, false)
 		if len(got) != 1 || got[0] != "elect" {
-			t.Errorf("rawExtractSuffixes(OpCapture(elect)) = %v, want [elect]", got)
+			t.Errorf("leadingLiterals(OpCapture(elect)) = %v, want [elect]", got)
+		}
+	})
+
+	t.Run("leadingLiterals/anchored_at_start", func(t *testing.T) {
+		// Only text at the very start of the match counts. Whatever follows a
+		// star, an optional group or a class is not adjacent to a preceding
+		// prefix, so it must not be reported.
+		tests := []struct {
+			pattern string
+			want    []string // nil: no leading set; compared as a sorted set
+		}{
+			{`lect`, []string{"lect"}},
+			{`lect|t`, []string{"lect", "t"}},
+			{`e(?:lect|t)`, []string{"elect", "et"}},
+			{`(?:e)(?:lect|t)`, []string{"elect", "et"}},
+			{`ab+c`, []string{"ab"}},
+			{`(?:ab)+c`, []string{"ab"}},
+			{`ab*c`, []string{"a"}},
+			{`ab?cd`, []string{"a"}},
+			{`0*60;`, nil},
+			{`0*60;|x0*3c;`, nil},
+			{`x0*3c;`, []string{"x"}},
+			{`elect.*from`, []string{"elect"}},
+			{`.*elect`, nil},
+			{`[a-z]elect`, nil},
+			{`\belect`, nil},
+			{`(?:elect|)x`, nil},
+			{`(?:a|b*c)`, nil},
+		}
+		for _, tc := range tests {
+			re, err := syntax.Parse(tc.pattern, syntax.Perl)
+			if err != nil {
+				t.Fatalf("parse %q: %v", tc.pattern, err)
+			}
+			got := leadingLiterals(re.Simplify(), false)
+			sort.Strings(got)
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("leadingLiterals(%q) = %q, want %q", tc.pattern, got, tc.want)
+			}
 		}
 	})
 
