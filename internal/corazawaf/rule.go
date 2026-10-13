@@ -425,12 +425,13 @@ func (r *Rule) transformMultiMatchArg(arg types.MatchData) ([]string, []error) {
 	return r.executeTransformationsMultimatch(arg.Value())
 }
 
-// transformationCacheable reports whether the values of rv can key the transformation
-// cache, which requires a collection to hold them for the whole phase (see
-// transformationKey). Counts (&VARIABLE) and ARGS_COMBINED_SIZE are a new string on
-// every lookup, so an entry for them would never be found again. TX is left out
-// because setvar keeps replacing its values mid-phase, and each replaced value would
-// leave its entries behind.
+// transformationCacheable reports whether the values of rv are worth sending through
+// the transformation cache. This is about usefulness, not safety: a value that is a
+// fresh string every time is still keyed correctly (see transformationKey), but its
+// entries are never read again. Counts (&VARIABLE) and ARGS_COMBINED_SIZE are a new
+// string on every lookup, and setvar keeps replacing TX values mid-phase.
+// MATCHED_VAR, MATCHED_VAR_NAME, MATCHED_VARS_NAMES and RULE also change during a
+// phase, but rules rarely transform them, so they are left in.
 func transformationCacheable(rv ruleVariableParams) bool {
 	if rv.Count {
 		return false
@@ -443,7 +444,7 @@ func transformationCacheable(rv ruleVariableParams) bool {
 }
 
 // transformArg runs the rule's transformations on arg through the per-phase cache.
-// Callers must only pass values from variables that are transformationCacheable.
+// Callers skip it for variables that are not transformationCacheable.
 func (r *Rule) transformArg(arg types.MatchData, cache map[transformationKey]transformationValue) (string, []error) {
 	argValue := arg.Value()
 	if len(r.transformations) == 0 {
