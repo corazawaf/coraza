@@ -23,10 +23,10 @@ ruleset (7152 `SecRule` lines) handling one POST with a JSON object of 8 members
 and 4.7 MB in total (the `perf-cloudways-badday` lab shape of DEF-57621) shows
 `AhoCorasick.Iter` as 1209 MB of the 2025 MB allocated over 6 transactions, 60%
 of all allocations and about 200 MB, some 40 times the body, per transaction. The
-copy is also a share of the `memmove` and GC time that remain once
-`SecRxPreFilter` has removed most regular-expression work. The wafd process
-handles these bodies on its request path, so the allocations lengthen GC cycles
-for every request next to them.
+copy is also a share of the `memmove` time that remains once `SecRxPreFilter`
+has removed most regular-expression work. The wafd process handles these bodies
+on its request path, and allocation volume sets how often its GC runs, which
+every request next to them pays for.
 
 ## Decision Drivers
 
