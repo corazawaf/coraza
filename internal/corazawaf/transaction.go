@@ -51,6 +51,11 @@ type Transaction struct {
 	// The context associated to the transaction.
 	context context.Context
 
+	// canceled is why a request phase stopped before its last rule: the
+	// transaction's context was done. Nil while every phase evaluated so far
+	// ran to completion.
+	canceled error
+
 	// Contains the list of matched rules and associated match information
 	matchedRules []types.MatchedRule
 
@@ -1182,11 +1187,61 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	return tx.interruption, int(w), err
 }
 
+// ErrPhaseCanceled is wrapped by the error that reports a request phase cut
+// short because the transaction's context was done. The error also wraps the
+// context's own error.
+var ErrPhaseCanceled = errors.New("request phase canceled")
+
+type phaseCanceledError struct{ cause error }
+
+func (e phaseCanceledError) Error() string { return ErrPhaseCanceled.Error() + ": " + e.cause.Error() }
+
+func (e phaseCanceledError) Is(target error) bool { return target == ErrPhaseCanceled }
+
+func (e phaseCanceledError) Unwrap() error { return e.cause }
+
+// contextCanceled returns the error that reports the end of the context bounding
+// the request phases, or nil while that context is live.
+func (tx *Transaction) contextCanceled() error {
+	if tx.context == nil {
+		return nil
+	}
+	if err := tx.context.Err(); err != nil {
+		return phaseCanceledError{cause: err}
+	}
+	return nil
+}
+
+// PhaseContext returns the context that bounds the phase being evaluated. The
+// request phases (1 and 2) are bounded by the transaction's context. The later
+// phases, the logging phase above all, are not: a connector runs them after the
+// request has long been decided and they must still complete.
+//
+// Operators that wait on something outside the engine can use it to stop
+// waiting once the request phase has been cut short.
+func (tx *Transaction) PhaseContext() context.Context {
+	if tx.context == nil || tx.lastPhase > types.PhaseRequestBody {
+		return context.Background()
+	}
+	return tx.context
+}
+
+// evalRequestBody evaluates the request body phase and reports it cut short.
+func (tx *Transaction) evalRequestBody() (*types.Interruption, error) {
+	tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+	return tx.interruption, tx.canceled
+}
+
 // ProcessRequestBody Performs the analysis of the request body (if any)
 //
 // It is recommended to call this method even if it is not expected to have a body.
 // It permits to execute rules belonging to request body phase, but not necessarily
 // processing the request body.
+//
+// If the transaction's context is done before the phase has been evaluated to
+// its last rule, the evaluation stops before the next rule and the returned
+// error wraps ErrPhaseCanceled and the context's error. The phase is then
+// partial: its absence of an interruption does not mean the request is allowed.
 //
 // Remember to check for a possible intervention.
 func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
@@ -1214,9 +1269,16 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	// we won't process empty request bodies or disabled RequestBodyAccess
 	if !tx.RequestBodyAccess || tx.requestBodyBuffer.length == 0 {
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
+		return tx.evalRequestBody()
 	}
+	// Once the context is done nobody is waiting for the verdict, so do not
+	// even start parsing the body: evaluating the phase would stop at its first
+	// rule anyway.
+	if err := tx.contextCanceled(); err != nil {
+		tx.canceled = err
+		return tx.interruption, err
+	}
+
 	mimeType := ""
 	if m := tx.variables.requestHeaders.Get("content-type"); len(m) > 0 {
 		mimeType = m[0]
@@ -1245,14 +1307,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
+		return tx.evalRequestBody()
 	}
 	bodyprocessor, err := bodyprocessors.GetBodyProcessor(rbp)
 	if err != nil {
 		tx.generateRequestBodyError(errors.New("invalid body processor"))
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
+		return tx.evalRequestBody()
 	}
 
 	tx.debugLogger.Debug().
@@ -1280,12 +1340,10 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 			tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 			tx.generateRequestBodyError(err)
 		}
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
+		return tx.evalRequestBody()
 	}
 
-	tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-	return tx.interruption, nil
+	return tx.evalRequestBody()
 }
 
 // ProcessResponseHeaders performs the analysis on the response headers.

@@ -213,6 +213,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx := w.txPool.Get().(*Transaction)
 	tx.id = opts.ID
 	tx.context = opts.Context
+	tx.canceled = nil
 	tx.matchedRules = []types.MatchedRule{}
 	tx.interruption = nil
 	tx.detectionOnlyInterruption = nil
