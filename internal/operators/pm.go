@@ -11,6 +11,7 @@ import (
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
 // Description:
@@ -83,7 +84,11 @@ func minPatternLen(patterns []string) int {
 }
 
 func pmEvaluate(matcher ahocorasick.AhoCorasick, tx plugintypes.TransactionState, value string) bool {
-	iter := matcher.Iter(value)
+	// Iter(value) would copy the value into a []byte on every call: with a rule set
+	// of a few hundred @pm rules scanning every argument, a large body is copied
+	// once per rule and per argument (ADR-0061). The matcher only reads the
+	// haystack, so hand it a view of the string instead.
+	iter := matcher.IterByte(utils.UnsafeBytes(value))
 
 	if !tx.Capturing() {
 		// Not capturing so just one match is enough.

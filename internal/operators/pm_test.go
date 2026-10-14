@@ -4,6 +4,8 @@
 package operators
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -94,6 +96,32 @@ func TestPmMinLenWithSingleCharPattern(t *testing.T) {
 	// Single char that matches
 	if !p.Evaluate(tx, "a") {
 		t.Error("expected true for matching single char")
+	}
+}
+
+// BenchmarkPmLargeValue is the case ADR-0061 is about: one large value tested
+// against a keyword set. Every call used to copy the value into a []byte.
+func BenchmarkPmLargeValue(b *testing.B) {
+	op, err := newPM(plugintypes.OperatorOptions{
+		Arguments: "select insert update delete from where union injection script alert",
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+	p := op.(*pm)
+
+	tx := newTestTx()
+	b.Cleanup(func() { tx.Close() })
+
+	for _, size := range []int{1 << 10, 64 << 10, 1 << 20} {
+		value := strings.Repeat("a", size)
+		b.Run(strconv.Itoa(size>>10)+"KiB", func(b *testing.B) {
+			b.ReportAllocs()
+			b.SetBytes(int64(size))
+			for b.Loop() {
+				p.Evaluate(tx, value)
+			}
+		})
 	}
 }
 
