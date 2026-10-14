@@ -204,6 +204,13 @@ func TestWriteRequestBody(t *testing.T) {
 			limitReached:           false,
 		},
 		{
+			// A body of exactly the limit is not over the limit (#1045)
+			name:                   "LimitExactlyReachedIsNotExceeded",
+			requestBodyLimit:       urlencodedBodyLen,
+			requestBodyLimitAction: types.BodyLimitActionReject,
+			limitReached:           false,
+		},
+		{
 			name:                   "LimitReachedAndRejects",
 			requestBodyLimit:       urlencodedBodyLen - 3,
 			requestBodyLimitAction: types.BodyLimitActionReject,
@@ -328,6 +335,8 @@ func TestWriteRequestBodyOnLimitReached(t *testing.T) {
 					if err != nil {
 						t.Fatalf("unexpected error when writing to body buffer directly: %s", err.Error())
 					}
+					// State left behind by a previous write that exceeded the limit
+					tx.variables.inboundDataError.Set("1")
 					tx.interruption = tCase.preexistingInterruption
 
 					it, n, err := writer(tx, "c")
@@ -608,6 +617,13 @@ func TestWriteResponseBody(t *testing.T) {
 			limitReached:            false,
 		},
 		{
+			// A body of exactly the limit is not over the limit (#1045)
+			name:                    "LimitExactlyReachedIsNotExceeded",
+			responseBodyLimit:       urlencodedBodyLen,
+			responseBodyLimitAction: types.BodyLimitActionReject,
+			limitReached:            false,
+		},
+		{
 			name:                    "LimitReachedAndRejects",
 			responseBodyLimit:       urlencodedBodyLen - 3,
 			responseBodyLimitAction: types.BodyLimitActionReject,
@@ -734,6 +750,8 @@ func TestWriteResponseBodyOnLimitReached(t *testing.T) {
 					if err != nil {
 						t.Fatalf("unexpected error when writing to body buffer directly: %s", err.Error())
 					}
+					// State left behind by a previous write that exceeded the limit
+					tx.variables.outboundDataError.Set("1")
 					tx.interruption = tCase.preexistingInterruption
 
 					it, n, err := writer(tx, "c")
@@ -1193,7 +1211,7 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 // Transaction: when it does, make sure the field is reset on pool reuse, then
 // update wantFields.
 func TestTransactionFieldCount(t *testing.T) {
-	const wantFields = 35
+	const wantFields = 37
 	if got := reflect.TypeFor[Transaction]().NumField(); got != wantFields {
 		t.Fatalf("Transaction has %d fields, want %d. If you added a field, make sure it "+
 			"is reset on pool reuse in newTransaction() (or Close()), then update wantFields.", got, wantFields)

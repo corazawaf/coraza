@@ -257,6 +257,7 @@ type httpTest struct {
 	http2                   bool
 	reqURI                  string
 	reqBody                 string
+	chunkedReqBody          bool
 	echoReqBody             bool
 	reqBodyLimit            int
 	shouldRejectOnBodyLimit bool
@@ -363,6 +364,21 @@ func TestHttpServer(t *testing.T) {
 			expectedProto:           "HTTP/1.1",
 			expectedStatus:          403,
 			expectedRespHeadersKeys: expectedBlockingHeaders,
+		},
+		// A chunked body has no length hint, so the transaction probes one byte
+		// past the limit to tell "at the limit" from "over it"; under
+		// ProcessPartial that byte must still reach the handler.
+		"process partial chunked body beyond the limit keeps every byte": {
+			reqURI:         "/hello",
+			reqBody:        strings.Repeat("a", 2000),
+			chunkedReqBody: true,
+			echoReqBody:    true,
+			reqBodyLimit:   100,
+			expectedProto:  "HTTP/1.1",
+			expectedStatus: 201,
+			// The echoed body is streamed, so net/http sends it without Content-Length.
+			expectedRespHeadersKeys: []string{"Content-Type", "Coraza-Middleware", "Date"},
+			expectedRespBody:        strings.Repeat("a", 2000),
 		},
 	}
 
@@ -503,6 +519,11 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	var reqBody io.Reader
 	if tCase.reqBody != "" {
 		reqBody = strings.NewReader(tCase.reqBody)
+		if tCase.chunkedReqBody {
+			// Hide the concrete type so http.NewRequest cannot set
+			// Content-Length and the client sends the body chunked.
+			reqBody = struct{ io.Reader }{reqBody}
+		}
 	}
 	req, _ := http.NewRequest("POST", ts.URL+tCase.reqURI, reqBody)
 	// When sending a POST request, the "application/x-www-form-urlencoded" content-type header is needed
