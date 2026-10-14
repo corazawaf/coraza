@@ -15,7 +15,9 @@ func normalisePath(data string) (string, bool, error) {
 	if clean == "." {
 		return "", true, nil
 	}
-	if data[len(data)-1] == '/' {
+	// Keep a trailing separator as ModSecurity does, except for the root,
+	// which path.Clean already returns as "/".
+	if data[len(data)-1] == '/' && clean != "/" {
 		result := clean + "/"
 		return result, data != result, nil
 	}
