@@ -130,6 +130,6 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0059](0059-secresponsebodyjsondepthlimit.md) | GHSA-3c6w-j9xm-8h2h | 2026-09-26 | unreleased | F | `SecResponseBodyJsonDepthLimit` directive |
 | [0060](0060-json-bounded-recursion-prescan.md) | GHSA-6gcq-wc29-5xf2 | 2026-09-30 | unreleased | P | Iterative depth pre-scan before `gjson.Valid` in the JSON body processor |
 | [0061](0061-pm-zero-copy-haystack.md) | [#26](https://github.com/cloudlinux/coraza/pull/26) | 2026-10-14 (expected) | unreleased | ⚡ | Zero-copy haystack for the `@pm` Aho-Corasick matcher |
-| [0062](0062-force-request-body-variable-raw-default.md) | none yet | 2026-10-14 (expected) | unreleased | P | `ctl:forceRequestBodyVariable` falls back to the RAW processor |
+| [0062](0062-force-request-body-variable-raw-default.md) | [#28](https://github.com/cloudlinux/coraza/pull/28) | 2026-10-14 (expected) | unreleased | P | `ctl:forceRequestBodyVariable` falls back to the RAW processor |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

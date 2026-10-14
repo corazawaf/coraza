@@ -3,7 +3,7 @@
 - **Status:** proposed
 - **Date:** 2026-10-14 (expected; update before merge)
 - **Version:** unreleased (post-v3.8.1)
-- **PR:** No PR yet (cloudlinux/coraza fork; update when opened)
+- **PR:** [#28](https://github.com/cloudlinux/coraza/pull/28) (cloudlinux/coraza fork)
 - **Issue(s):** [#938](https://github.com/corazawaf/coraza/issues/938) (origin of the RAW processor and of the open question); fork tracking ticket DEF-55047
 - **Deciders:** CloudLinux WebShield team
 - **Category:** Parity (ModSecurity v2 `forceRequestBodyVariable`)
