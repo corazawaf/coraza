@@ -455,18 +455,20 @@ func (r *Rule) evaluate(logger debuglog.Logger, phase types.RulePhase, tx *Trans
 	return matchedValues
 }
 
-// depthFirstEvaluationLimit bounds the operator evaluations evalDepth spends
-// on the chained rules of one chain starter. Every parent match multiplies the
-// work of the rules below it, so a request with many arguments would otherwise
-// make a three link chain cubic. Past the limit the rest of the chain is
-// evaluated once, breadth first, as it would be without evalDepth.
+// depthFirstEvaluationLimit is a soft bound on the operator evaluations
+// evalDepth spends on the chained rules of one chain starter. Every parent
+// match multiplies the work of the rules below it, so a request with many
+// arguments would otherwise make a three link chain cubic. The budget is
+// checked between parent contexts, so one rule evaluation may overshoot the
+// limit. Once exhaustion is observed, the rest of the chain is evaluated once,
+// breadth first, as it would be without evalDepth.
 const depthFirstEvaluationLimit = 10000
 
 // evaluateDepthFirst evaluates r, and the rules chained after it, once for
 // each context in parents, restoring that context first. It returns the
 // parent match followed by the matches of the rest of the chain for the first
 // context the whole remaining chain matched with, or nil. budget is shared by
-// the whole chain and is checked before each evaluation of a chained rule.
+// the whole chain and is checked before evaluating each parent context.
 // ancestors are the matches of the path above the parents; together with one
 // parent they form the multiphase bookkeeping of that branch only, so matches
 // of a branch that failed never pair with those of another one.
