@@ -1121,6 +1121,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 			return nil, int(w), err
 		}
 	}
+	// Only a reader of unknown length can have set the overflow above.
 	if tx.requestBodyOverflow != nil {
 		tx.variables.inboundDataError.Set("1")
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
@@ -1385,6 +1386,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 			return nil, int(w), err
 		}
 	}
+	// Only a reader of unknown length can have set the overflow above.
 	if tx.responseBodyOverflow != nil {
 		tx.variables.outboundDataError.Set("1")
 		if tx.WAF.ResponseBodyLimitAction == types.BodyLimitActionReject {
