@@ -1294,13 +1294,11 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	// Default variables.ReqbodyProcessor values
 	// XML and JSON must be forced with ctl:requestBodyProcessor=JSON
 	if tx.ForceRequestBodyVariable {
-		// We force URLENCODED if mimeType is x-www... or we have an empty RBP and ForceRequestBodyVariable
+		// A form Content-Type has already selected URLENCODED or MULTIPART. Any other
+		// body is kept as REQUEST_BODY only: parsing an unknown body as urlencoded
+		// would fill ARGS_POST with garbage and spend time decoding it.
 		if rbp == "" {
-			// TODO(4.x): Evaluate if the new RAW body parser fits better than URLENCODED for the
-			// default forced body processor. See some reasoning in https://github.com/corazawaf/coraza/issues/938:
-			// "meaning that parsing a body of unknown type might waste some time by trying to parse it as urlencoded
-			// for nothing (and possibly set some "garbage" variables if you happen to have a & in it)"
-			rbp = "URLENCODED"
+			rbp = "RAW"
 		}
 		tx.variables.reqbodyProcessor.Set(rbp)
 	}

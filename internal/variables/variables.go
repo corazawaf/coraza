@@ -181,8 +181,8 @@ const (
 	// body processors. MULTIPART, XML, and JSON processors parse the body into their own
 	// collections and do not populate this variable.
 	// ```ctl:forceRequestBodyVariable=on``` can be used in the REQUEST_HEADERS phase to force
-	// the population of this variable by setting URLENCODED as the processor when no processor
-	// would otherwise be selected.
+	// the population of this variable by setting RAW as the processor when no processor
+	// would otherwise be selected. RAW populates only this variable and parses no arguments.
 	// ---
 	// ```seclang
 	// SecRule REQUEST_BODY "@contains foo" "id:1001,phase:2,deny,log"
