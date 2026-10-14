@@ -871,6 +871,49 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 	}
 }
 
+// TestTransformationCacheRepeatedKeys: values stored under one key share the key
+// string, so the cache must tell them apart by value: rule 2 has to see "0" on every
+// request, whatever order ARGS_GET returns its values in. It is not a profile because
+// a regression only shows on some map iteration orders, so it needs many runs.
+func TestTransformationCacheRepeatedKeys(t *testing.T) {
+	ident := func(v string) (string, bool, error) { return v, false, nil }
+	waf := NewWAF()
+	waf.RuleEngine = types.RuleEngineOn
+	for _, id := range []int{1, 2} {
+		r := NewRule()
+		r.ID_, r.LogID_, r.Phase_ = id, strconv.Itoa(id), types.PhaseRequestHeaders
+		if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
+			t.Fatal(err)
+		}
+		if err := r.AddTransformation("ident", ident); err != nil {
+			t.Fatal(err)
+		}
+		r.SetOperator(&dummyEqOperator{}, "@eq", "0") // matches only "0"
+		if err := waf.Rules.Add(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := 0; i < 2000; i++ {
+		tx := waf.NewTransaction()
+		tx.AddGetRequestArgument("q", "benign")
+		tx.AddGetRequestArgument("q", "0")
+		for _, k := range []string{"a", "b", "c", "d", "e", "f"} {
+			tx.AddGetRequestArgument(k, "x")
+		}
+		tx.ProcessRequestHeaders()
+		matched := false
+		for _, mr := range tx.matchedRules {
+			matched = matched || mr.Rule().ID() == 2
+		}
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if !matched {
+			t.Fatalf("iteration %d: rule 2 did not see the repeated key's second value", i)
+		}
+	}
+}
+
 func TestCaptureNotPropagatedToInnerChainRule(t *testing.T) {
 	r := NewRule()
 	r.ID_ = 1
