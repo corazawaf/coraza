@@ -896,6 +896,63 @@ func TestMultipartFilenameDuplicateName(t *testing.T) {
 	}
 }
 
+// TestMultipartInvalidPart covers MULTIPART_INVALID_PART, which is set to 1
+// when a structurally invalid part is seen while parsing: a part with no
+// Content-Disposition header, or one whose Content-Disposition header could
+// not be parsed. A body whose parts all carry a well-formed Content-Disposition
+// must leave the variable empty.
+func TestMultipartInvalidPart(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		want    string
+	}{
+		{
+			name: "well-formed parts leave it unset",
+			payload: "--X\r\n" +
+				"Content-Disposition: form-data; name=\"field\"\r\n\r\n" +
+				"value" +
+				"\r\n--X\r\n" +
+				"Content-Disposition: form-data; name=\"upload\"; filename=\"a.txt\"\r\n" +
+				"Content-Type: text/plain\r\n\r\n" +
+				"file content" +
+				"\r\n--X--\r\n",
+			want: "",
+		},
+		{
+			name: "part with no Content-Disposition header",
+			payload: "--X\r\n" +
+				"Content-Type: text/plain\r\n\r\n" +
+				"orphan content" +
+				"\r\n--X--\r\n",
+			want: "1",
+		},
+		{
+			name: "part with an unparseable Content-Disposition header",
+			payload: "--X\r\n" +
+				"Content-Disposition: form-data; name=\"upload\"; filename*=UTF-8''sh\"ell.php\r\n\r\n" +
+				"file content" +
+				"\r\n--X--\r\n",
+			want: "1",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mp := multipartProcessor(t)
+			v := corazawaf.NewTransactionVariables()
+			if err := mp.ProcessRequest(strings.NewReader(tc.payload), v, plugintypes.BodyProcessorOptions{
+				Mime: "multipart/form-data; boundary=X",
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if got := v.MultipartInvalidPart().Get(); got != tc.want {
+				t.Errorf("MULTIPART_INVALID_PART = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func BenchmarkMultipartFilenameStar(b *testing.B) {
 	tests := []struct {
 		name   string

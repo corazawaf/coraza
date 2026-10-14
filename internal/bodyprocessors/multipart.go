@@ -77,6 +77,17 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		if fields.invalidQuoting {
 			v.MultipartInvalidQuoting().(*collections.Single).Set("1")
 		}
+		// A part is structurally invalid when it carries no Content-Disposition
+		// header at all (RFC 7578 section 4.2 requires one on every part) or
+		// when the header is present but could not be parsed (fields.malformed).
+		// Both signals are already computed here, so MULTIPART_INVALID_PART just
+		// surfaces them as its own variable instead of leaving it inert. This is
+		// kept separate from MULTIPART_STRICT_ERROR: a part missing
+		// Content-Disposition has never raised the strict error in Coraza, and
+		// folding it in now would change which requests rule 200003 rejects.
+		if p.Header.Get("Content-Disposition") == "" || fields.malformed {
+			v.MultipartInvalidPart().(*collections.Single).Set("1")
+		}
 		if duplicateHeader || fields.duplicateParam || fields.malformed || fields.invalidQuoting {
 			v.MultipartStrictError().(*collections.Single).Set("1")
 		}
