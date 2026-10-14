@@ -93,6 +93,11 @@ func nidCl(nid string) bool {
 	}
 	nid = strings.ToLower(nid)
 	nid = nonDigitOrK.ReplaceAllString(nid, "")
+	// The rule regex may select a substring with no digit at all; after
+	// stripping there is nothing left to validate.
+	if len(nid) < 2 {
+		return false
+	}
 	rut, _ := strconv.Atoi(nid[:len(nid)-1])
 	dv := nid[len(nid)-1:]
 
