@@ -31,7 +31,6 @@ var _ = profile.RegisterProfile(profile.Profile{
 								4,
 								100,
 								103,
-								105,
 							},
 							NonTriggeredRules: []int{
 								2,
@@ -39,8 +38,48 @@ var _ = profile.RegisterProfile(profile.Profile{
 								5,
 								6,
 								7,
+								105,
+								106,
 								444,
 							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "forceRequestBodyVariable keeps a binary body raw",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method:  "POST",
+							URI:     "/test.php",
+							Headers: map[string]string{"Content-Type": "image/jpeg"},
+							Data:    "pineapple=pizza&\x89PNG\r\n\x1a\n\x00\x01&\xff=\xfe",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{100, 103},
+							NonTriggeredRules: []int{105, 106},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "forceRequestBodyVariable keeps the form content type processor",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method:  "POST",
+							URI:     "/test.php",
+							Headers: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+							Data:    "pineapple=pizza",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{103, 105, 106},
+							NonTriggeredRules: []int{100},
 						},
 					},
 				},
@@ -303,9 +342,10 @@ SecRule ARGS_GET "1234" "id: 6, phase: 1, log, tag:test-tag"
 SecRule ARGS_GET "1234" "id: 7, phase: 1, log, msg:'sometest'"
 
 # should match
-SecRule REQBODY_PROCESSOR "URLENCODED" "id:100,log,phase:2"
+SecRule REQBODY_PROCESSOR "RAW" "id:100,log,phase:2"
 SecRule REQUEST_BODY "pizza" "id:103,log,phase:2"
 SecRule ARGS_POST:pineapple "pizza" "id:105,log,phase:2"
+SecRule REQBODY_PROCESSOR "URLENCODED" "id:106,log,phase:2"
 
 SecAction "id:444,phase:2,log"
 

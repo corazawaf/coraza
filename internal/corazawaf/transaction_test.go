@@ -2752,7 +2752,7 @@ func TestForceRequestBodyOverride(t *testing.T) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		t.Fatalf("Failed to process request body: %v", err)
 	}
-	if tx.variables.RequestBodyProcessor().Get() != "URLENCODED" {
+	if tx.variables.RequestBodyProcessor().Get() != "RAW" {
 		t.Fatalf("Failed to force request body variable, got RBP: %q", tx.variables.RequestBodyProcessor().Get())
 	}
 
