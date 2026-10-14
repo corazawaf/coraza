@@ -529,12 +529,13 @@ func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
 //	select|sleep|substr  →  s(?:elect|leep|ubstr)
 //	    AST: OpConcat([OpLiteral("s"), OpAlternate([...])])
 //
-// It prepends the raw prefix literal to every element returned by
-// rawExtractSuffixes, recovering the full literal words. The result is returned
-// as anyRequired so the caller knows "at least one of these must be present".
+// It prepends the raw prefix literal to every string that leadingLiterals says
+// the alternation must begin with, recovering the full literal words. The result
+// is returned as anyRequired so the caller knows "at least one of these must be
+// present".
 //
-// Handles arbitrary nesting depth: rawExtractSuffixes recurses back into
-// extractLiterals → trieReconstruct for inner OpConcat nodes, so patterns like
+// Handles arbitrary nesting depth: leadingLiterals recurses through nested
+// alternations and concatenations, so patterns like
 //
 //	select|set|sleep  →  s(?:e(?:lect|t)|leep)
 //
@@ -555,100 +556,104 @@ func trieReconstruct(concat *syntax.Regexp, ci bool) anyRequired {
 		return nil
 	}
 
-	// Collect suffix candidates from remaining children using the permissive
-	// extractor that allows short literals (they will be combined with prefix).
-	var suffixes []string
-	for _, sub := range concat.Sub[1:] {
-		lits := rawExtractSuffixes(sub, ci)
-		if lits == nil {
-			continue
-		}
-		suffixes = append(suffixes, lits...)
-	}
+	// The second child directly follows the prefix, so every match of the
+	// concat contains prefix+s for one of the strings s that the child must
+	// begin with. Only text at the very start of the child can be glued to the
+	// prefix: a literal further in (after a star, an optional group, a class...)
+	// is not adjacent to it and would make a phantom string, e.g. the "60;" of
+	// &#0*60; must not become "#60;" because the input "&#060;" has no such
+	// substring.
+	suffixes := leadingLiterals(concat.Sub[1], ci)
 	if len(suffixes) == 0 {
 		return nil
 	}
 
 	result := make(anyRequired, 0, len(suffixes))
 	for _, s := range suffixes {
-		if full := prefix + s; len(full) >= 2 {
-			result = append(result, full)
+		full := prefix + s
+		if len(full) < 2 {
+			// Cannot happen (both parts are non-empty), but never drop an
+			// element of an anyRequired set: that would reject its matches.
+			return nil
 		}
-	}
-	if len(result) == 0 {
-		return nil
+		result = append(result, full)
 	}
 	return result
 }
 
-// rawExtractSuffixes extracts literal candidates from a regex subtree for use
-// as trie-reconstruction suffixes. Unlike extractLiterals it permits short
-// literals (< 2 bytes) because they will be combined with a prefix by the
-// caller, producing a longer and more selective string.
+// maxLeadingLiterals bounds the number of strings leadingLiterals builds.
+const maxLeadingLiterals = anyRequiredMaxN
+
+// leadingLiterals returns a set of non-empty strings such that every match of
+// re begins with at least one of them, or nil when it cannot say. Unlike
+// extractLiterals it permits short literals (< 2 bytes), because the caller
+// (trieReconstruct) combines them with a prefix into a longer string.
 //
-// Returns nil if any branch of an alternation has no extractable literal (same
-// semantics as extractLiterals for OpAlternate: we can't safely omit a branch).
-func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
+// The strings are anchored at the start of the match. That is what makes it safe
+// to glue them to a literal that directly precedes re: nothing may be skipped
+// between the two. A node that can consume other text first (a star, an optional
+// or class, a zero-width assertion) stops the walk, and so does anything that
+// is not a fixed string, after contributing what it knows its match starts with.
+//
+// An alternation needs a leading set from every branch; one branch without it
+// makes the whole alternation nil, as in extractLiterals, because that branch
+// could match without any of the strings.
+func leadingLiterals(re *syntax.Regexp, ci bool) []string {
 	switch re.Op {
 	case syntax.OpLiteral:
-		s := rawLiteral(re, ci)
-		if s == "" {
-			return nil
-		}
-		return []string{s}
-
-	case syntax.OpAlternate:
-		var result []string
-		for _, sub := range re.Sub {
-			lits := rawExtractSuffixes(sub, ci)
-			if lits == nil {
-				return nil // one branch has no extractable suffix → bail
-			}
-			result = append(result, lits...)
-		}
-		return result
-
-	case syntax.OpConcat:
-		// Try the full extractLiterals pipeline first (handles deeper nesting
-		// through the trieReconstruct fallback it already calls).
-		lits := extractLiterals(re, ci)
-		if lits != nil {
-			switch v := lits.(type) {
-			case allRequired:
-				// Only safe to return a single trie suffix when the concat
-				// collapses to exactly one contiguous literal. Multiple
-				// allRequired elements mean there are wildcards between them
-				// (e.g. "elect.*from" → allRequired{"elect","from"}). Joining
-				// them would produce "electfrom" — a phantom string that never
-				// appears contiguously in a real input — causing false negatives
-				// on valid matches like "select x from". Return nil here so the
-				// caller falls back to the safer anyRequired propagation instead.
-				if len(v) == 1 {
-					return []string{v[0]}
-				}
-				return nil
-			case anyRequired:
-				return []string(v)
-			case combinedRequired:
-				// For trie-reconstruction we need a suffix that is *always* present
-				// when this sub-concat fires. The .all elements are guaranteed;
-				// .any elements are only conditionally present (one of them must be
-				// present, but not a specific one). Returning a .any element would
-				// let the outer prefix combine with a wrong suffix (e.g. "s"+"execute"
-				// instead of "s"+"p_"+"execute" → "sp_execute"), producing a phantom
-				// literal that never appears contiguously in real input.
-				// Return the single longest .all element as the guaranteed suffix.
-				rep := longest([]string(v.all))
-				if rep == "" {
-					return nil
-				}
-				return []string{rep}
-			}
+		if s := rawLiteral(re, ci); s != "" {
+			return []string{s}
 		}
 		return nil
 
-	case syntax.OpCapture:
-		return rawExtractSuffixes(re.Sub[0], ci)
+	case syntax.OpCapture, syntax.OpPlus:
+		return leadingLiterals(re.Sub[0], ci)
+
+	case syntax.OpRepeat:
+		if re.Min >= 1 {
+			return leadingLiterals(re.Sub[0], ci)
+		}
+		return nil
+
+	case syntax.OpAlternate:
+		var out []string
+		for _, sub := range re.Sub {
+			lits := leadingLiterals(sub, ci)
+			if lits == nil {
+				return nil
+			}
+			out = append(out, lits...)
+			if len(out) > maxLeadingLiterals {
+				return nil
+			}
+		}
+		return out
+
+	case syntax.OpConcat:
+		// Start from the empty string and extend it child by child. A fixed
+		// literal lets the walk continue to the next child; any other child
+		// ends it after contributing its own leading strings.
+		acc := []string{""}
+		for _, sub := range re.Sub {
+			lits := leadingLiterals(sub, ci)
+			if lits == nil || len(acc)*len(lits) > maxLeadingLiterals {
+				break
+			}
+			next := make([]string, 0, len(acc)*len(lits))
+			for _, a := range acc {
+				for _, l := range lits {
+					next = append(next, a+l)
+				}
+			}
+			acc = next
+			if sub.Op != syntax.OpLiteral {
+				break
+			}
+		}
+		if len(acc) == 1 && acc[0] == "" {
+			return nil
+		}
+		return acc
 
 	default:
 		return nil
