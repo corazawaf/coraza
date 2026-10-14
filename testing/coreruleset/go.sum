@@ -8,10 +8,10 @@ github.com/Masterminds/sprig/v3 v3.3.0 h1:mQh0Yrg1XPo6vjYXgtf5OtijNAKJRNcTdOOGZe
 github.com/Masterminds/sprig/v3 v3.3.0/go.mod h1:Zy1iXRYNqNLUolqCpL4uhk6SHUMAOSCzdgBfDb35Lz0=
 github.com/bmatcuk/doublestar/v4 v4.10.0 h1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=
 github.com/bmatcuk/doublestar/v4 v4.10.0/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
-github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.25.0 h1:vGQio+fNSnMPmI0e95fK27kVkkKAQMax7Z/a9sc+XSg=
-github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.25.0/go.mod h1:yf3Gc7mGKBR1wchr4EXZHG10En6WQ4W4MJCg3ix91wQ=
-github.com/corazawaf/coraza-coreruleset/crs/v4 v4.25.0 h1:4MhvUcbNYjIMtj5WFecWAUX8+YWu4RiGV3TY4GyAyo4=
-github.com/corazawaf/coraza-coreruleset/crs/v4 v4.25.0/go.mod h1:1yaQUjecpEJ/cWXhJaFto+vRuezJCCfVxGQlaQxAGt0=
+github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.30.0 h1:ZX0xWXpQgRXV/4sdfw21mOZBmmzQSb1+JiR51YOLv8I=
+github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.30.0/go.mod h1:yf3Gc7mGKBR1wchr4EXZHG10En6WQ4W4MJCg3ix91wQ=
+github.com/corazawaf/coraza-coreruleset/crs/v4 v4.30.0 h1:XMYT7VOFM2VrpIKMUn4vFWyoFNYg1ZaYiexs76AmxzQ=
+github.com/corazawaf/coraza-coreruleset/crs/v4 v4.30.0/go.mod h1:1yaQUjecpEJ/cWXhJaFto+vRuezJCCfVxGQlaQxAGt0=
 github.com/corazawaf/libinjection-go v0.3.4 h1:jX2Tit2xZxYJJyVryNXucYBZtQqS7473x9Nc6lgRRbk=
 github.com/corazawaf/libinjection-go v0.3.4/go.mod h1:Ik/+w3UmTWH9yn366RgS9D95K3y7Atb5m/H/gXzzPCk=
 github.com/coreruleset/albedo v0.3.0 h1:GC0CbI8/qzzBbiP95z7A+58pjlN8P5jheVrUwEfzRfQ=
