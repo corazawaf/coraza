@@ -804,6 +804,36 @@ func TestMultipartFilenameStar(t *testing.T) {
 
 // TestMultipartDuplicatePartHeader covers a part repeating a whole header,
 // which the single-Content-Disposition payload above cannot express.
+// TestMultipartContentTransferEncodingKeptRaw checks that a part declaring
+// Content-Transfer-Encoding is stored byte for byte. Go's NextPart would
+// decode quoted-printable (and drop the header), but PHP, Django, Rack,
+// busboy and ModSecurity hand the application the raw bytes, so decoding
+// here would make rules inspect a different string than the backend sees.
+// Not a profile: it asserts collection contents, not a rule outcome.
+func TestMultipartContentTransferEncodingKeptRaw(t *testing.T) {
+	payload := strings.TrimSpace(`
+--X
+Content-Disposition: form-data; name="q"
+Content-Transfer-Encoding: quoted-printable
+
+<img src=3Ddata:text/html;base64,PHNjcmlwdD4=3D>
+--X--
+`)
+	mp := multipartProcessor(t)
+	v := corazawaf.NewTransactionVariables()
+	if err := mp.ProcessRequest(strings.NewReader(payload), v, plugintypes.BodyProcessorOptions{
+		Mime: "multipart/form-data; boundary=X",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if want, have := "<img src=3Ddata:text/html;base64,PHNjcmlwdD4=3D>", v.ArgsPost().Get("q"); len(have) != 1 || have[0] != want {
+		t.Errorf("ARGS_POST:q = %q, want %q", have, want)
+	}
+	if have := v.MultipartPartHeaders().Get("q"); !slices.Contains(have, "Content-Transfer-Encoding: quoted-printable") {
+		t.Errorf("MULTIPART_PART_HEADERS:q = %q, want the Content-Transfer-Encoding header kept", have)
+	}
+}
+
 func TestMultipartDuplicatePartHeader(t *testing.T) {
 	tests := []struct {
 		name          string
