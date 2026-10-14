@@ -446,11 +446,13 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 //
 // Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
 func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	opts := strings.TrimSpace(options.Opts)
+	if len(opts) == 0 {
 		return errEmptyOptions
 	}
 
-	options.WAF.Rules.DeleteByTag(options.Opts)
+	opts = utils.MaybeRemoveQuotes(opts)
+	options.WAF.Rules.DeleteByTag(opts)
 	return nil
 }
 
@@ -473,11 +475,13 @@ func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 // SecRuleRemoveByMsg "My Custom Rule Msg"
 // ```
 func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	opts := strings.TrimSpace(options.Opts)
+	if len(opts) == 0 {
 		return errEmptyOptions
 	}
 
-	options.WAF.Rules.DeleteByMsg(options.Opts)
+	opts = utils.MaybeRemoveQuotes(opts)
+	options.WAF.Rules.DeleteByMsg(opts)
 	return nil
 }
 
