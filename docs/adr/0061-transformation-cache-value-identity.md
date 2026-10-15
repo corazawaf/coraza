@@ -1,7 +1,7 @@
 # ADR-0061: Key the transformation cache by value identity
 
-- **Status:** proposed
-- **Date:** 2026-10-13 (expected; update before merge)
+- **Status:** accepted
+- **Date:** 2026-10-15
 - **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1682](https://github.com/corazawaf/coraza/pull/1682)
 - **Issue(s):** [#1681](https://github.com/corazawaf/coraza/issues/1681)
@@ -18,9 +18,8 @@ of an argument changes from one rule to the next inside the same phase. Rules
 that share a target and a transformation chain therefore missed each other's
 entries, re-ran the chain and stored duplicates.
 
-Matching was never affected: a duplicate holds the value the rule would have
-computed anyway. The cost is memory. Go maps do not shrink, so a pooled
-transaction keeps a table sized for the largest phase it ever ran.
+The duplicates cost memory, and Go maps do not shrink, so a pooled transaction
+keeps a table sized for the largest phase it ever ran.
 
 ## Decision Drivers
 
@@ -63,6 +62,12 @@ variable in `transformationCacheable`:
 fresh strings during a phase and stay cached. That is accepted: the cost is
 entries that are never read again, never a wrong result (see the review
 summarised below).
+
+A rule that resumes from a cached prefix now caps the cached error slice
+(`cached.errs[:n:n]` in `rule.go`) before appending to it. Before, two rules
+sharing a transformation prefix appended into the same backing array and could
+overwrite each other's last cached error; `TestTransformArgPrefixSharingKeepsErrors`
+guards it.
 
 `Transaction.Close()` empties the cache, so a transaction waiting in the pool
 does not keep the last phase's values alive through the cache keys.
