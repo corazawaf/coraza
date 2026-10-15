@@ -1354,22 +1354,22 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 	return nil
 }
 
-// Description: Configures the maximum request body size Coraza will accept for
-// buffering, excluding the size of any files being transported in the request.
+// Description: Configures the maximum non-file request body data Coraza will
+// accept for processing.
 // This directive is useful to reduce susceptibility to DoS attacks when someone is
 // sending request bodies of very large sizes. Web applications that require file uploads
-// must configure `SecRequestBodyLimit` to a high value, but because large files are streamed
-// to disk, file uploads will not increase memory consumption. However, it’s still possible
-// for someone to take advantage of a large request body limit and send non-upload requests
-// with large body sizes. This directive eliminates that loophole.
-// Default: 1048576 (1 MB)
+// must configure `SecRequestBodyLimit` to a high value. A separate
+// `SecRequestBodyInMemoryLimit` can spill buffered uploads to disk, but does
+// not bound the data a body processor might materialize. This directive
+// bounds non-file data independently of the overall upload limit.
+// Coraza default: unset (no separate non-file limit until configured).
 // Syntax: SecRequestBodyNoFilesLimit 131072
 // ---
-// Generally speaking, the default value is not small enough. For most applications, you
-// should be able to reduce it down to 128 KB or lower. Anything over the limit will be
-// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GiB.
-//
-// Note: not implemented yet
+// Set this below SecRequestBodyLimit when accepting large uploads. Multipart
+// part headers and ordinary form fields count; boundary framing and uploaded
+// file content do not. Values above the limit use SecRequestBodyLimitAction
+// (Reject returns 413; ProcessPartial evaluates the bounded non-multipart
+// prefix or completed multipart parts before the over-limit part).
 //
 // Example:
 // ```seclang

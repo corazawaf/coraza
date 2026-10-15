@@ -5,8 +5,10 @@ package corazawaf
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"reflect"
@@ -15,12 +17,14 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -30,6 +34,590 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+type testBodyProcessor struct{}
+
+func (*testBodyProcessor) ProcessRequest(reader io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	_, err := io.Copy(io.Discard, reader)
+	return err
+}
+
+func (*testBodyProcessor) ProcessResponse(reader io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	_, err := io.Copy(io.Discard, reader)
+	return err
+}
+
+// The declarative engine profiles cannot assert reader consumption and
+// multipart file-byte accounting across transaction entry points.
+func TestRequestBodyNoFilesLimitStreaming(t *testing.T) {
+	newTx := func(limit int64, action types.BodyLimitAction) *Transaction {
+		waf := NewWAF()
+		waf.RequestBodyAccess = true
+		waf.RequestBodyLimit = 1 << 20
+		waf.RequestBodyNoFilesLimit = limit
+		waf.RequestBodyLimitAction = action
+		tx := waf.NewTransaction()
+		tx.ProcessURI("/", "POST", "HTTP/1.1")
+		return tx
+	}
+
+	for _, tc := range []struct {
+		name   string
+		body   string
+		action types.BodyLimitAction
+		status int
+		stored string
+	}{
+		{"below", strings.Repeat("x", 15), types.BodyLimitActionReject, 0, strings.Repeat("x", 15)},
+		{"equal", strings.Repeat("x", 16), types.BodyLimitActionReject, 0, strings.Repeat("x", 16)},
+		{"above", strings.Repeat("x", 17), types.BodyLimitActionReject, 413, strings.Repeat("x", 17)},
+		{"partial", strings.Repeat("x", 17), types.BodyLimitActionProcessPartial, 0, strings.Repeat("x", 17)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tx := newTx(16, tc.action)
+			defer tx.Close()
+			tx.AddRequestHeader("Content-Type", "application/octet-stream")
+			tx.ProcessRequestHeaders()
+			interruption, read, err := tx.ReadRequestBodyFrom(strings.NewReader(tc.body))
+			if err != nil || read != len(tc.body) {
+				t.Fatalf("read=%d err=%v", read, err)
+			}
+			if (interruption == nil) != (tc.status == 0) {
+				t.Fatalf("interruption=%v, want status %d", interruption, tc.status)
+			}
+			if interruption != nil && interruption.Status != tc.status {
+				t.Fatalf("status=%d, want %d", interruption.Status, tc.status)
+			}
+			reader, err := tx.RequestBodyReader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			stored, err := io.ReadAll(reader)
+			if err != nil || string(stored) != tc.stored {
+				t.Fatalf("stored=%q err=%v", stored, err)
+			}
+			if tc.status == 413 || tc.name == "partial" {
+				if tx.variables.inboundDataError.Get() != "1" || tx.variables.reqbodyError.Get() != "1" {
+					t.Fatal("limit error state not set")
+				}
+			}
+		})
+	}
+
+	t.Run("multipart unknown-length reader", func(t *testing.T) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		if err := writer.WriteField("field", "value"); err != nil {
+			t.Fatal(err)
+		}
+		part, err := writer.CreateFormFile("file", "upload.bin")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := io.WriteString(part, strings.Repeat("f", 1<<15)); err != nil {
+			t.Fatal(err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatal(err)
+		}
+		tx := newTx(512, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.AddRequestHeader("Content-Type", writer.FormDataContentType())
+		tx.ProcessRequestHeaders()
+		interruption, n, err := tx.ReadRequestBodyFrom(iotest.OneByteReader(bytes.NewReader(body.Bytes())))
+		if err != nil || interruption != nil || n != body.Len() {
+			t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+		}
+		if interruption, err := tx.ProcessRequestBody(); err != nil || interruption != nil {
+			t.Fatalf("interruption=%v err=%v", interruption, err)
+		}
+		if got := tx.variables.argsPost.Get("field"); len(got) != 1 || got[0] != "value" {
+			t.Fatalf("ARGS_POST:field=%v", got)
+		}
+		if got := tx.variables.files.Get(""); len(got) != 1 || got[0] != "upload.bin" {
+			t.Fatalf("FILES=%v", got)
+		}
+	})
+
+	for _, tc := range []struct {
+		name        string
+		processor   string
+		contentType string
+	}{
+		{"absent type", "", ""},
+		{"unknown type", "", "application/unknown"},
+		{"explicit urlencoded", "URLENCODED", "application/octet-stream"},
+		{"explicit raw", "RAW", "application/octet-stream"},
+		{"explicit json", "JSON", "application/json"},
+		{"explicit xml", "XML", "application/xml"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tx := newTx(16, types.BodyLimitActionReject)
+			defer tx.Close()
+			if tc.contentType != "" {
+				tx.AddRequestHeader("Content-Type", tc.contentType)
+			}
+			tx.AddRequestHeader("Content-Length", "1")
+			tx.variables.reqbodyProcessor.Set(tc.processor)
+			tx.ProcessRequestHeaders()
+			interruption, n, err := tx.ReadRequestBodyFrom(iotest.OneByteReader(strings.NewReader(strings.Repeat("x", 32))))
+			if err != nil || n != 17 || interruption == nil || interruption.Status != 413 {
+				t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+			}
+			if got := tx.variables.argsPost.TotalValues(); got != 0 {
+				t.Fatalf("ARGS_POST populated: %d", got)
+			}
+		})
+	}
+
+	t.Run("multiple writes", func(t *testing.T) {
+		tx := newTx(16, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.ProcessRequestHeaders()
+		if _, n, err := tx.WriteRequestBody([]byte("12345678")); n != 8 || err != nil {
+			t.Fatalf("first write=%d err=%v", n, err)
+		}
+		interruption, n, err := tx.WriteRequestBody([]byte("123456789"))
+		if interruption == nil || interruption.Status != 413 || n != 0 || err != nil {
+			t.Fatalf("interruption=%v written=%d err=%v", interruption, n, err)
+		}
+	})
+
+	t.Run("forced binary never reaches collections", func(t *testing.T) {
+		tx := newTx(16, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.ForceRequestBodyVariable = true
+		tx.AddRequestHeader("Content-Type", "application/octet-stream")
+		tx.ProcessRequestHeaders()
+		interruption, _, err := tx.WriteRequestBody([]byte("payload=" + strings.Repeat("x", 32)))
+		if err != nil || interruption == nil || interruption.Status != 413 {
+			t.Fatalf("interruption=%v err=%v", interruption, err)
+		}
+		if got := tx.variables.requestBody.Get(); got != "" {
+			t.Fatalf("REQUEST_BODY was materialized: %d bytes", len(got))
+		}
+		if got := tx.variables.argsPost.TotalValues(); got != 0 {
+			t.Fatalf("ARGS_POST was populated: %d values", got)
+		}
+	})
+
+	t.Run("reader error", func(t *testing.T) {
+		tx := newTx(16, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.ProcessRequestHeaders()
+		wantErr := errors.New("reader failed")
+		interruption, n, err := tx.ReadRequestBodyFrom(io.MultiReader(strings.NewReader("abc"), iotest.ErrReader(wantErr)))
+		if interruption != nil || n != 3 || !errors.Is(err, wantErr) {
+			t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+		}
+	})
+
+	t.Run("unconfigured default", func(t *testing.T) {
+		tx := newTx(0, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.ForceRequestBodyVariable = true
+		tx.ProcessRequestHeaders()
+		body := "payload=" + strings.Repeat("x", 32)
+		interruption, n, err := tx.ReadRequestBodyFrom(strings.NewReader(body))
+		if err != nil || interruption != nil || n != len(body) {
+			t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+		}
+		if _, err := tx.ProcessRequestBody(); err != nil {
+			t.Fatal(err)
+		}
+		if got := tx.variables.argsPost.Get("payload"); len(got) != 1 || got[0] != strings.Repeat("x", 32) {
+			t.Fatalf("default ARGS_POST=%v", got)
+		}
+	})
+
+	t.Run("request body access disabled", func(t *testing.T) {
+		tx := newTx(16, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.RequestBodyAccess = false
+		interruption, n, err := tx.ReadRequestBodyFrom(strings.NewReader(strings.Repeat("x", 32)))
+		if err != nil || interruption != nil || n != 0 {
+			t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+		}
+		if tx.variables.inboundDataError.Get() != "" || tx.variables.reqbodyError.Get() != "0" {
+			t.Fatalf("limit state: inbound=%q reqbody=%q", tx.variables.inboundDataError.Get(), tx.variables.reqbodyError.Get())
+		}
+	})
+
+	t.Run("detection only partial", func(t *testing.T) {
+		tx := newTx(16, types.BodyLimitActionProcessPartial)
+		defer tx.Close()
+		tx.RuleEngine = types.RuleEngineDetectionOnly
+		tx.ForceRequestBodyVariable = true
+		tx.ProcessRequestHeaders()
+		interruption, n, err := tx.ReadRequestBodyFrom(strings.NewReader("payload=" + strings.Repeat("x", 32)))
+		if err != nil || interruption != nil || n != 17 {
+			t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+		}
+		if tx.variables.inboundDataError.Get() != "1" || tx.variables.reqbodyError.Get() != "1" {
+			t.Fatalf("limit state: inbound=%q reqbody=%q", tx.variables.inboundDataError.Get(), tx.variables.reqbodyError.Get())
+		}
+		if got := tx.variables.argsPost.Get("payload"); len(got) != 1 || got[0] != strings.Repeat("x", 8) {
+			t.Fatalf("partial ARGS_POST=%v", got)
+		}
+	})
+
+	t.Run("partial keeps probe for connector replay", func(t *testing.T) {
+		tx := newTx(16, types.BodyLimitActionProcessPartial)
+		defer tx.Close()
+		tx.ForceRequestBodyVariable = true
+		tx.ProcessRequestHeaders()
+		body := "payload=" + strings.Repeat("x", 32)
+		input := strings.NewReader(body)
+		interruption, n, err := tx.ReadRequestBodyFrom(input)
+		if err != nil || interruption != nil || n != 17 {
+			t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+		}
+		buffered, err := tx.RequestBodyReader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		replayed, err := io.ReadAll(io.MultiReader(buffered, input))
+		if err != nil || string(replayed) != body {
+			t.Fatalf("replay=%q err=%v", replayed, err)
+		}
+		if got := tx.variables.argsPost.Get("payload"); len(got) != 1 || got[0] != strings.Repeat("x", 8) {
+			t.Fatalf("partial ARGS_POST=%v", got)
+		}
+		if got := tx.variables.requestBodyLength.Get(); got != "16" {
+			t.Fatalf("REQUEST_BODY_LENGTH=%q", got)
+		}
+	})
+
+	for _, tc := range []struct {
+		name       string
+		fields     []string
+		files      []string
+		fileFirst  bool
+		interleave bool
+		limit      int64
+		status     int
+	}{
+		{"large file", []string{"x"}, []string{strings.Repeat("f", 1<<18)}, false, false, 512, 0},
+		{"file before field", []string{"x"}, []string{strings.Repeat("f", 1<<18)}, true, false, 512, 0},
+		{"several files", []string{"x"}, []string{strings.Repeat("f", 8192), strings.Repeat("g", 8192)}, false, false, 768, 0},
+		{"interleaved", []string{"x", "y"}, []string{strings.Repeat("f", 8192), strings.Repeat("g", 8192)}, false, true, 768, 0},
+		{"large field", []string{strings.Repeat("a", 8192)}, nil, false, false, 512, 413},
+		{"cumulative fields", []string{strings.Repeat("a", 200), strings.Repeat("b", 200)}, nil, false, false, 300, 413},
+		{"many tiny fields", strings.Fields(strings.Repeat("x ", 100)), nil, false, false, 512, 413},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var body bytes.Buffer
+			writer := multipart.NewWriter(&body)
+			writeFields := func() {
+				for i, field := range tc.fields {
+					if err := writer.WriteField(fmt.Sprintf("field%d", i), field); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			writeFiles := func() {
+				for i, file := range tc.files {
+					part, err := writer.CreateFormFile(fmt.Sprintf("file%d", i), "upload.bin")
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := io.WriteString(part, file); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			switch {
+			case tc.interleave:
+				for i := range tc.fields {
+					if err := writer.WriteField(fmt.Sprintf("field%d", i), tc.fields[i]); err != nil {
+						t.Fatal(err)
+					}
+					part, err := writer.CreateFormFile(fmt.Sprintf("file%d", i), "upload.bin")
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := io.WriteString(part, tc.files[i]); err != nil {
+						t.Fatal(err)
+					}
+				}
+			case tc.fileFirst:
+				writeFiles()
+				writeFields()
+			default:
+				writeFields()
+				writeFiles()
+			}
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
+			}
+			tx := newTx(tc.limit, types.BodyLimitActionReject)
+			defer tx.Close()
+			if tc.name == "large file" && environment.HasAccessToFS {
+				tx.requestBodyBuffer.options.MemoryLimit = 128
+			}
+			tx.AddRequestHeader("Content-Type", writer.FormDataContentType())
+			tx.ProcessRequestHeaders()
+			if interruption, written, err := tx.WriteRequestBody(body.Bytes()); interruption != nil || err != nil || written != body.Len() {
+				t.Fatalf("write: interruption=%v written=%d err=%v", interruption, written, err)
+			}
+			if tc.name == "large file" && environment.HasAccessToFS && tx.requestBodyBuffer.writer == nil {
+				t.Fatal("expected disk-backed request body")
+			}
+			interruption, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (interruption == nil) != (tc.status == 0) {
+				t.Fatalf("interruption=%v, want status %d", interruption, tc.status)
+			}
+			if interruption != nil && interruption.Status != tc.status {
+				t.Fatalf("status=%d, want %d", interruption.Status, tc.status)
+			}
+			if tc.status == 413 && len(tc.fields) > 0 {
+				last := fmt.Sprintf("field%d", len(tc.fields)-1)
+				if got := tx.variables.argsPost.Get(last); len(got) != 0 {
+					t.Fatalf("over-limit multipart field %s entered ARGS_POST: %v", last, got)
+				}
+			}
+			if tc.status == 0 && len(tx.variables.files.Get("")) != len(tc.files) {
+				t.Fatalf("files=%v, want %d, error=%q strict=%q", tx.variables.files.Get(""), len(tc.files), tx.variables.reqbodyErrorMsg.Get(), tx.variables.multipartStrictError.Get())
+			}
+			if tc.status == 0 && len(tc.fields) > 0 {
+				if got := tx.variables.argsPost.Get("field0"); len(got) != 1 || got[0] != tc.fields[0] {
+					t.Fatalf("ARGS_POST:field0=%v, error=%q strict=%q", got, tx.variables.reqbodyErrorMsg.Get(), tx.variables.multipartStrictError.Get())
+				}
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		name        string
+		firstIsFile bool
+		malformed   bool
+	}{
+		{"partial keeps completed field", false, false},
+		{"partial keeps completed file", true, false},
+		{"parser error keeps completed field", false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var body bytes.Buffer
+			body.WriteString("--b\r\nContent-Disposition: form-data; name=\"keep\"")
+			if tc.firstIsFile {
+				body.WriteString("; filename=\"keep.txt\"")
+			}
+			body.WriteString("\r\n\r\nok\r\n--b\r\n")
+			if tc.malformed {
+				body.WriteString("malformed header\r\n\r\ndrop\r\n--b--\r\n")
+			} else {
+				body.WriteString("Content-Disposition: form-data; name=\"drop\"\r\n")
+				if tc.firstIsFile {
+					body.WriteString("X-Pad: x" + strings.Repeat(" ", 256) + "\r\n")
+				}
+				body.WriteString("\r\n")
+				body.WriteString(strings.Repeat("x", 1024))
+				body.WriteString("\r\n--b--\r\n")
+			}
+
+			tx := newTx(128, types.BodyLimitActionProcessPartial)
+			defer tx.Close()
+			tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=b")
+			tx.ProcessRequestHeaders()
+			if _, _, err := tx.WriteRequestBody(body.Bytes()); err != nil {
+				t.Fatal(err)
+			}
+			interruption, err := tx.ProcessRequestBody()
+			if err != nil || interruption != nil {
+				t.Fatalf("interruption=%v err=%v", interruption, err)
+			}
+			if tc.malformed {
+				if got := tx.variables.reqbodyProcessorError.Get(); got != "1" {
+					t.Fatalf("REQBODY_PROCESSOR_ERROR=%q", got)
+				}
+			} else if tx.variables.inboundDataError.Get() != "1" || tx.variables.reqbodyError.Get() != "1" {
+				t.Fatalf("limit state: inbound=%q reqbody=%q", tx.variables.inboundDataError.Get(), tx.variables.reqbodyError.Get())
+			}
+			if tc.firstIsFile {
+				if got := tx.variables.files.Get(""); len(got) != 1 || got[0] != "keep.txt" {
+					t.Fatalf("FILES=%v", got)
+				}
+				if got := tx.variables.filesCombinedSize.Get(); got != "2" {
+					t.Fatalf("FILES_COMBINED_SIZE=%q", got)
+				}
+			} else if got := tx.variables.argsPost.Get("keep"); len(got) != 1 || got[0] != "ok" {
+				t.Fatalf("ARGS_POST:keep=%v", got)
+			}
+			if got := tx.variables.argsPost.Get("drop"); len(got) != 0 {
+				t.Fatalf("ARGS_POST:drop=%v", got)
+			}
+		})
+	}
+
+	// ModSecurity counts raw part headers, their blank separator, and ordinary
+	// field payload. Boundary framing and file payload are excluded.
+	for _, hasFile := range []bool{false, true} {
+		for _, payload := range []string{"payload", ""} {
+			var body bytes.Buffer
+			writer := multipart.NewWriter(&body)
+			if err := writer.SetBoundary("b"); err != nil {
+				t.Fatal(err)
+			}
+			if hasFile {
+				part, err := writer.CreateFormFile("f", "f.txt")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := io.WriteString(part, payload); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := writer.WriteField("f", payload); err != nil {
+				t.Fatal(err)
+			}
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
+			}
+			counted := int64(body.Len() - len("--b\r\n") - len("\r\n--b--\r\n"))
+			if hasFile {
+				counted -= int64(len(payload))
+			}
+			for _, delta := range []int64{0, -1} {
+				name := fmt.Sprintf("multipart-file=%t-empty=%t-delta=%d", hasFile, payload == "", delta)
+				t.Run(name, func(t *testing.T) {
+					tx := newTx(counted+delta, types.BodyLimitActionReject)
+					defer tx.Close()
+					tx.AddRequestHeader("Content-Type", writer.FormDataContentType())
+					tx.ProcessRequestHeaders()
+					if _, _, err := tx.WriteRequestBody(body.Bytes()); err != nil {
+						t.Fatal(err)
+					}
+					interruption, err := tx.ProcessRequestBody()
+					if err != nil {
+						t.Fatal(err)
+					}
+					if (interruption == nil) != (delta == 0) {
+						t.Fatalf("counted=%d limit=%d interruption=%v", counted, counted+delta, interruption)
+					}
+				})
+			}
+		}
+	}
+
+	t.Run("epilogue excluded", func(t *testing.T) {
+		body := "--b\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nx\r\n--b--\r\n" + strings.Repeat("e", 4096)
+		counted := int64(len("Content-Disposition: form-data; name=\"f\"\r\n\r\nx"))
+		tx := newTx(counted, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=b")
+		tx.ProcessRequestHeaders()
+		if _, _, err := tx.WriteRequestBody([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+		if interruption, err := tx.ProcessRequestBody(); err != nil || interruption != nil {
+			t.Fatalf("interruption=%v err=%v", interruption, err)
+		}
+	})
+
+	for _, delta := range []int64{0, -1} {
+		t.Run(fmt.Sprintf("quoted-printable-delta=%d", delta), func(t *testing.T) {
+			headers := "Content-Disposition: form-data; name=\"f\"\r\n" +
+				"Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+			payload := "=41"
+			body := "--b\r\n" + headers + payload + "\r\n--b--\r\n"
+			limit := int64(len(headers)+len(payload)) + delta
+			tx := newTx(limit, types.BodyLimitActionReject)
+			defer tx.Close()
+			tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=b")
+			tx.ProcessRequestHeaders()
+			if _, _, err := tx.WriteRequestBody([]byte(body)); err != nil {
+				t.Fatal(err)
+			}
+			interruption, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (interruption == nil) != (delta == 0) {
+				t.Fatalf("limit=%d interruption=%v", limit, interruption)
+			}
+			if delta == 0 {
+				if got := tx.variables.argsPost.Get("f"); len(got) != 1 || got[0] != "A" {
+					t.Fatalf("ARGS_POST:f=%v", got)
+				}
+			}
+		})
+	}
+
+	for _, tc := range []struct {
+		name   string
+		body   string
+		action types.BodyLimitAction
+		status int
+	}{
+		{"large header", "--b\r\nX-Long: " + strings.Repeat("h", 1<<15) + "\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nx\r\n--b--\r\n", types.BodyLimitActionReject, 413},
+		{"trailing whitespace header", "--b\r\nContent-Disposition: form-data; name=\"f\"\r\nX-Pad: x" + strings.Repeat(" ", 1024) + "\r\n\r\nx\r\n--b--\r\n", types.BodyLimitActionReject, 413},
+		{"folded whitespace header", "--b\r\nContent-Disposition: form-data; name=\"f\"\r\nX-Pad: x\r\n\t" + strings.Repeat(" ", 1024) + "y\r\n\r\nx\r\n--b--\r\n", types.BodyLimitActionReject, 413},
+		{"metadata header over", "--b\r\nX-Long: " + strings.Repeat("h", 1024) + "\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nx\r\n--b--\r\n", types.BodyLimitActionProcessPartial, 0},
+		{"truncated field", "--b\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\n" + strings.Repeat("a", 4096), types.BodyLimitActionReject, 413},
+		{"truncated file", "--b\r\nContent-Disposition: form-data; name=\"f\"; filename=\"upload.bin\"\r\n\r\n" + strings.Repeat("f", 4096), types.BodyLimitActionReject, 413},
+		{"empty filename", "--b\r\nContent-Disposition: form-data; name=\"f\"; filename=\"\"\r\n\r\n" + strings.Repeat("a", 4096) + "\r\n--b--\r\n", types.BodyLimitActionReject, 413},
+		{"partial field", "--b\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\n" + strings.Repeat("a", 4096) + "\r\n--b--\r\n", types.BodyLimitActionProcessPartial, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tx := newTx(512, tc.action)
+			defer tx.Close()
+			tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=b")
+			tx.ProcessRequestHeaders()
+			if _, _, err := tx.WriteRequestBody([]byte(tc.body)); err != nil {
+				t.Fatal(err)
+			}
+			interruption, err := tx.ProcessRequestBody()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (interruption == nil) != (tc.status == 0) {
+				t.Fatalf("interruption=%v, want status %d", interruption, tc.status)
+			}
+			if tx.variables.inboundDataError.Get() != "1" || tx.variables.reqbodyError.Get() != "1" {
+				t.Fatalf("limit state: inbound=%q reqbody=%q", tx.variables.inboundDataError.Get(), tx.variables.reqbodyError.Get())
+			}
+			if tx.variables.reqbodyErrorMsg.Get() == "" || tx.variables.reqbodyProcessorError.Get() != "0" {
+				t.Fatalf("processor error state: msg=%q processor=%q", tx.variables.reqbodyErrorMsg.Get(), tx.variables.reqbodyProcessorError.Get())
+			}
+			if tc.name != "truncated field" && tc.name != "truncated file" && tx.variables.multipartStrictError.Get() == "1" {
+				t.Fatal("limit was classified as malformed multipart")
+			}
+			if len(tx.variables.argsPost.Get("f")) != 0 {
+				t.Fatalf("over-limit field entered ARGS_POST: %d values", len(tx.variables.argsPost.Get("f")))
+			}
+			if tc.name == "metadata header over" && len(tx.variables.multipartPartHeaders.Get("f")) != 0 {
+				t.Fatal("over-limit part header entered MULTIPART_PART_HEADERS")
+			}
+		})
+	}
+
+	t.Run("custom multipart processor", func(t *testing.T) {
+		builtin, err := bodyprocessors.GetBodyProcessor("multipart")
+		if err != nil {
+			t.Fatal(err)
+		}
+		bodyprocessors.RegisterBodyProcessor("multipart", func() plugintypes.BodyProcessor {
+			return &testBodyProcessor{}
+		})
+		t.Cleanup(func() {
+			bodyprocessors.RegisterBodyProcessor("multipart", func() plugintypes.BodyProcessor {
+				return builtin
+			})
+		})
+
+		tx := newTx(16, types.BodyLimitActionReject)
+		defer tx.Close()
+		tx.variables.reqbodyProcessor.Set("MULTIPART")
+		tx.AddRequestHeader("Content-Type", "multipart/form-data; boundary=b")
+		tx.ProcessRequestHeaders()
+		interruption, n, err := tx.ReadRequestBodyFrom(strings.NewReader(strings.Repeat("x", 32)))
+		if err != nil || n != 17 || interruption == nil || interruption.Status != 413 {
+			t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+		}
+	})
+}
 
 func TestTxSettersMultipart(t *testing.T) {
 	tx := makeTransactionMultipart(t)
@@ -1193,7 +1781,7 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 // Transaction: when it does, make sure the field is reset on pool reuse, then
 // update wantFields.
 func TestTransactionFieldCount(t *testing.T) {
-	const wantFields = 35
+	const wantFields = 37
 	if got := reflect.TypeFor[Transaction]().NumField(); got != wantFields {
 		t.Fatalf("Transaction has %d fields, want %d. If you added a field, make sure it "+
 			"is reset on pool reuse in newTransaction() (or Close()), then update wantFields.", got, wantFields)

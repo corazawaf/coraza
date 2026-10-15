@@ -7,11 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"mime"
 	"mime/multipart"
+	"mime/quotedprintable"
 	"os"
 	"strings"
 
+	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -20,6 +23,268 @@ import (
 type multipartBodyProcessor struct{}
 
 func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
+	return mbp.processRequest(reader, v, options, 0)
+}
+
+// ProcessMultipartWithNoFilesLimit keeps the accounting contract internal to
+// the built-in parser. A registered replacement processor is never treated as
+// file-aware by the transaction.
+func ProcessMultipartWithNoFilesLimit(processor plugintypes.BodyProcessor, reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions, limit int64) error {
+	if builtin, ok := processor.(*multipartBodyProcessor); ok {
+		return builtin.processRequest(reader, v, options, limit)
+	}
+	return ErrNoFilesLimit
+}
+
+// IsBuiltInMultipart reports whether processor has the built-in file
+// accounting behavior. Custom processors receive the ordinary body limit.
+func IsBuiltInMultipart(processor plugintypes.BodyProcessor) bool {
+	_, ok := processor.(*multipartBodyProcessor)
+	return ok
+}
+
+// ErrNoFilesLimit reports that multipart non-file data exceeded its budget.
+var ErrNoFilesLimit = errors.New("request body exceeds SecRequestBodyNoFilesLimit")
+
+// multipartBudgetReader bounds standard-library parser read-ahead. The
+// no-files count is maintained separately because multipart boundary framing
+// is not part of ModSecurity's counter.
+type multipartBudgetReader struct {
+	reader            io.Reader
+	remaining         int64
+	read              int64
+	limited           bool
+	boundary          []byte
+	wireMode          multipartWireMode
+	lineEligible      bool
+	lineLast          byte
+	boundaryMatch     int
+	boundarySuffix    multipartBoundarySuffix
+	headerLineSize    int64
+	headerSize        int64
+	completedHeaders  []int64
+	usesCRLFBoundary  bool
+	boundaryModeKnown bool
+}
+
+const multipartReadAhead = 8192
+
+type multipartWireMode uint8
+
+const (
+	multipartWirePreamble multipartWireMode = iota
+	multipartWireHeaders
+	multipartWireBody
+	multipartWireDone
+)
+
+type multipartBoundarySuffix uint8
+
+const (
+	multipartBoundarySuffixStart multipartBoundarySuffix = iota
+	multipartBoundarySuffixDash
+	multipartBoundarySuffixOpenPadding
+	multipartBoundarySuffixOpenCR
+	multipartBoundarySuffixClosePadding
+	multipartBoundarySuffixCloseCR
+	multipartBoundarySuffixInvalid
+)
+
+func newMultipartBudgetReader(reader io.Reader, boundary string) *multipartBudgetReader {
+	r := &multipartBudgetReader{
+		reader:       reader,
+		boundary:     []byte("--" + boundary),
+		wireMode:     multipartWirePreamble,
+		lineEligible: true,
+	}
+	r.resetBoundaryCandidate(true)
+	return r
+}
+
+func (r *multipartBudgetReader) begin(remaining int64) {
+	r.remaining = remaining
+	r.read = 0
+	r.limited = true
+}
+
+func (r *multipartBudgetReader) unlimited() {
+	r.limited = false
+}
+
+func (r *multipartBudgetReader) Read(p []byte) (int, error) {
+	if r.limited {
+		available := r.remaining - r.read
+		if available <= math.MaxInt64-multipartReadAhead {
+			available += multipartReadAhead
+		} else {
+			available = math.MaxInt64
+		}
+		if available <= 0 {
+			return 0, ErrNoFilesLimit
+		}
+		if int64(len(p)) > available {
+			p = p[:available]
+		}
+	}
+	n, err := r.reader.Read(p)
+	r.read += int64(n)
+	r.scanWire(p[:n])
+	return n, err
+}
+
+func (r *multipartBudgetReader) resetBoundaryCandidate(eligible bool) {
+	r.lineEligible = eligible
+	r.lineLast = 0
+	r.boundaryMatch = 0
+	r.boundarySuffix = multipartBoundarySuffixStart
+}
+
+func (r *multipartBudgetReader) scanWire(data []byte) {
+	for _, b := range data {
+		if r.wireMode == multipartWireDone {
+			return
+		}
+		if r.wireMode == multipartWireHeaders {
+			r.headerSize++
+			if b == '\n' {
+				blank := r.headerLineSize == 0 || r.headerLineSize == 1 && r.lineLast == '\r'
+				r.headerLineSize = 0
+				r.lineLast = 0
+				if blank {
+					r.completedHeaders = append(r.completedHeaders, r.headerSize)
+					r.headerSize = 0
+					r.wireMode = multipartWireBody
+					r.resetBoundaryCandidate(true)
+				}
+				continue
+			}
+			r.headerLineSize++
+			r.lineLast = b
+			continue
+		}
+
+		if b == '\n' {
+			lineEndedCR := r.lineLast == '\r'
+			open, close := r.boundaryLineKind()
+			switch {
+			case open:
+				if !r.boundaryModeKnown {
+					r.usesCRLFBoundary = lineEndedCR
+					r.boundaryModeKnown = true
+				}
+				r.wireMode = multipartWireHeaders
+				r.headerLineSize = 0
+				r.headerSize = 0
+				r.lineLast = 0
+			case close:
+				r.wireMode = multipartWireDone
+			default:
+				eligible := r.wireMode == multipartWirePreamble || !r.boundaryModeKnown || !r.usesCRLFBoundary || lineEndedCR
+				r.resetBoundaryCandidate(eligible)
+			}
+			continue
+		}
+
+		r.lineLast = b
+		if !r.lineEligible || r.boundarySuffix == multipartBoundarySuffixInvalid {
+			continue
+		}
+		if r.boundaryMatch < len(r.boundary) {
+			if b != r.boundary[r.boundaryMatch] {
+				r.boundarySuffix = multipartBoundarySuffixInvalid
+				continue
+			}
+			r.boundaryMatch++
+			continue
+		}
+		switch r.boundarySuffix {
+		case multipartBoundarySuffixStart:
+			switch b {
+			case '-':
+				r.boundarySuffix = multipartBoundarySuffixDash
+			case ' ', '\t':
+				r.boundarySuffix = multipartBoundarySuffixOpenPadding
+			case '\r':
+				r.boundarySuffix = multipartBoundarySuffixOpenCR
+			default:
+				r.boundarySuffix = multipartBoundarySuffixInvalid
+			}
+		case multipartBoundarySuffixDash:
+			if b == '-' {
+				r.boundarySuffix = multipartBoundarySuffixClosePadding
+			} else {
+				r.boundarySuffix = multipartBoundarySuffixInvalid
+			}
+		case multipartBoundarySuffixOpenPadding:
+			if b == '\r' {
+				r.boundarySuffix = multipartBoundarySuffixOpenCR
+			} else if b != ' ' && b != '\t' {
+				r.boundarySuffix = multipartBoundarySuffixInvalid
+			}
+		case multipartBoundarySuffixClosePadding:
+			if b == '\r' {
+				r.boundarySuffix = multipartBoundarySuffixCloseCR
+			} else if b != ' ' && b != '\t' {
+				r.boundarySuffix = multipartBoundarySuffixInvalid
+			}
+		case multipartBoundarySuffixOpenCR, multipartBoundarySuffixCloseCR:
+			r.boundarySuffix = multipartBoundarySuffixInvalid
+		}
+	}
+}
+
+func (r *multipartBudgetReader) boundaryLineKind() (bool, bool) {
+	if !r.lineEligible || r.boundaryMatch != len(r.boundary) {
+		return false, false
+	}
+	switch r.boundarySuffix {
+	case multipartBoundarySuffixStart, multipartBoundarySuffixOpenPadding, multipartBoundarySuffixOpenCR:
+		return true, false
+	case multipartBoundarySuffixClosePadding, multipartBoundarySuffixCloseCR:
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func (r *multipartBudgetReader) nextHeaderSize() (int64, bool) {
+	if len(r.completedHeaders) == 0 {
+		return 0, false
+	}
+	size := r.completedHeaders[0]
+	r.completedHeaders = r.completedHeaders[1:]
+	return size, true
+}
+
+type multipartPartAccountingReader struct {
+	reader io.Reader
+	raw    int64
+	count  func(int64) error
+}
+
+func (r *multipartPartAccountingReader) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	r.raw += int64(n)
+	if r.count != nil {
+		if accountingErr := r.count(int64(n)); accountingErr != nil {
+			return n, accountingErr
+		}
+	}
+	return n, err
+}
+
+func addMultipartCount(counted *int64, limit, size int64) error {
+	if size < 0 || *counted > math.MaxInt64-size {
+		return errors.New("invalid multipart accounting state")
+	}
+	*counted += size
+	if *counted > limit {
+		return ErrNoFilesLimit
+	}
+	return nil
+}
+
+func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions, noFilesLimit int64) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
 	mediaType, params, err := mime.ParseMediaType(mimeType)
@@ -30,8 +295,20 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	if !strings.HasPrefix(mediaType, "multipart/") {
 		return errors.New("not a multipart body")
 	}
+	var budget *multipartBudgetReader
+	var noFilesSize int64
+	if noFilesLimit > 0 {
+		budget = newMultipartBudgetReader(reader, params["boundary"])
+		budget.begin(noFilesLimit)
+		reader = budget
+	}
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
+	type pendingUpdate struct {
+		collection collection.Map
+		key, value string
+		setIndex   bool
+	}
 	filesCol := v.Files()
 	filesTmpNamesCol := v.FilesTmpNames()
 	fileSizesCol := v.FilesSizes()
@@ -44,7 +321,10 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	multipartFilenameLanguageCol := v.MultipartFilenameLanguage()
 	multipartNameCol := v.MultipartName()
 	for {
-		p, err := mr.NextPart()
+		if budget != nil {
+			budget.begin(noFilesLimit - noFilesSize)
+		}
+		p, err := mr.NextRawPart()
 		if err == io.EOF {
 			break
 		}
@@ -57,8 +337,49 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 			break
 		}
 		if err != nil {
+			if errors.Is(err, ErrNoFilesLimit) {
+				return err
+			}
 			v.MultipartStrictError().(*collections.Single).Set("1")
 			return err
+		}
+		if budget != nil {
+			headerSize, ok := budget.nextHeaderSize()
+			if !ok {
+				return errors.New("multipart header accounting desynchronized")
+			}
+			if err := addMultipartCount(&noFilesSize, noFilesLimit, headerSize); err != nil {
+				return err
+			}
+		}
+		quotedPrintable := strings.EqualFold(p.Header.Get("Content-Transfer-Encoding"), "quoted-printable")
+		if quotedPrintable {
+			// NextPart hides this header and transparently decodes the part.
+			p.Header.Del("Content-Transfer-Encoding")
+		}
+		var pending []pendingUpdate
+		add := func(col collection.Map, key, value string) {
+			if budget == nil {
+				col.Add(key, value)
+			} else {
+				pending = append(pending, pendingUpdate{collection: col, key: key, value: value})
+			}
+		}
+		setIndex := func(col collection.Map, key, value string) {
+			if budget == nil {
+				col.SetIndex(key, 0, value)
+			} else {
+				pending = append(pending, pendingUpdate{collection: col, key: key, value: value, setIndex: true})
+			}
+		}
+		commit := func() {
+			for _, update := range pending {
+				if update.setIndex {
+					update.collection.SetIndex(update.key, 0, update.value)
+				} else {
+					update.collection.Add(update.key, update.value)
+				}
+			}
 		}
 		partName := p.FormName()
 		duplicateHeader := false
@@ -67,7 +388,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				duplicateHeader = true
 			}
 			for _, value := range values {
-				headersNames.Add(partName, fmt.Sprintf("%s: %s", key, value))
+				add(headersNames, partName, fmt.Sprintf("%s: %s", key, value))
 			}
 		}
 		fields := originFileName(p)
@@ -87,20 +408,20 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		// ModSecurity's GHSA-5pww-8rfg-9crf, which names this "a second,
 		// distinct bypass" fixed by keeping MULTIPART_FILENAME/_NAME as
 		// multi-valued collections rather than single overwritable slots.
-		multipartNameCol.Add(partName, partName)
+		add(multipartNameCol, partName, partName)
 		if fields.filename != "" {
-			multipartFilenameCol.Add(partName, fields.filename)
+			add(multipartFilenameCol, partName, fields.filename)
 		}
 		// altFilename is the reading a backend using different filename*
 		// precedence than Coraza would resolve instead: added alongside the
 		// primary one rather than picking a side, so a rule matches whichever
 		// name is actually used downstream.
 		if fields.altFilename != "" {
-			multipartFilenameCol.Add(partName, fields.altFilename)
+			add(multipartFilenameCol, partName, fields.altFilename)
 		}
 		if fields.hasExtended {
-			multipartFilenameCharsetCol.Add(partName, fields.charset)
-			multipartFilenameLanguageCol.Add(partName, fields.language)
+			add(multipartFilenameCharsetCol, partName, fields.charset)
+			add(multipartFilenameLanguageCol, partName, fields.language)
 		}
 		// if is a file
 		filename := fields.filename
@@ -115,6 +436,14 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 		if filename != "" {
 			var size int64
 			seenUnexpectedEOF := false
+			rawReader := &multipartPartAccountingReader{reader: p}
+			partReader := io.Reader(rawReader)
+			if quotedPrintable {
+				partReader = quotedprintable.NewReader(rawReader)
+			}
+			if budget != nil {
+				budget.unlimited()
+			}
 			if environment.HasAccessToFS {
 				// Only copy file to temp when not running in TinyGo
 				temp, err := os.CreateTemp(storagePath, "crzmp*")
@@ -122,7 +451,8 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
 				}
-				sz, err := io.Copy(temp, p)
+				var sz int64
+				sz, err = io.CopyBuffer(temp, partReader, make([]byte, 4096))
 				if cerr := temp.Close(); cerr != nil && err == nil {
 					err = cerr
 				}
@@ -131,6 +461,9 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				// FILES_TMPNAMES gets cleaned up when the transaction closes.
 				filesTmpNamesCol.Add("", temp.Name())
 				if err != nil {
+					if errors.Is(err, ErrNoFilesLimit) {
+						return err
+					}
 					if !errors.Is(err, io.ErrUnexpectedEOF) {
 						v.MultipartStrictError().(*collections.Single).Set("1")
 						return err
@@ -140,8 +473,12 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				}
 				size = sz
 			} else {
-				sz, err := io.Copy(io.Discard, p)
+				var sz int64
+				sz, err = io.CopyBuffer(io.Discard, partReader, make([]byte, 4096))
 				if err != nil {
+					if errors.Is(err, ErrNoFilesLimit) {
+						return err
+					}
 					if !errors.Is(err, io.ErrUnexpectedEOF) {
 						v.MultipartStrictError().(*collections.Single).Set("1")
 						return err
@@ -152,26 +489,48 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				size = sz
 			}
 			totalSize += size
-			filesCol.Add("", filename)
-			fileSizesCol.SetIndex(filename, 0, fmt.Sprintf("%d", size))
+			if seenUnexpectedEOF && budget != nil && v.InboundDataError().Get() != "1" {
+				// A truncated file part has no verified closing boundary.
+				// Do not exempt its payload as a complete upload.
+				if err := addMultipartCount(&noFilesSize, noFilesLimit, rawReader.raw); err != nil {
+					return err
+				}
+			}
+			add(filesCol, "", filename)
+			setIndex(fileSizesCol, filename, fmt.Sprintf("%d", size))
 			if fields.altFilename != "" && fields.altFilename != filename {
 				// Same part, same bytes, same size -- just a second name a
 				// differently-implemented backend might resolve instead.
 				// (Skipped when equal to filename: that happens when
 				// fields.filename was empty and altFilename was already
 				// promoted to primary above -- not two distinct readings.)
-				filesCol.Add("", fields.altFilename)
-				fileSizesCol.SetIndex(fields.altFilename, 0, fmt.Sprintf("%d", size))
+				add(filesCol, "", fields.altFilename)
+				setIndex(fileSizesCol, fields.altFilename, fmt.Sprintf("%d", size))
 			}
-			filesNamesCol.Add("", p.FormName())
+			add(filesNamesCol, "", p.FormName())
+			commit()
 			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 			if seenUnexpectedEOF {
 				break
 			}
 		} else {
 			// if is a field
-			data, err := io.ReadAll(p)
+			rawReader := &multipartPartAccountingReader{reader: p}
+			if budget != nil {
+				budget.begin(noFilesLimit - noFilesSize)
+				rawReader.count = func(size int64) error {
+					return addMultipartCount(&noFilesSize, noFilesLimit, size)
+				}
+			}
+			fieldReader := io.Reader(rawReader)
+			if quotedPrintable {
+				fieldReader = quotedprintable.NewReader(rawReader)
+			}
+			data, err := io.ReadAll(fieldReader)
 			if err != nil {
+				if errors.Is(err, ErrNoFilesLimit) {
+					return err
+				}
 				if !errors.Is(err, io.ErrUnexpectedEOF) {
 					v.MultipartStrictError().(*collections.Single).Set("1")
 					return err
@@ -179,7 +538,8 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				flagUnexpectedEOF(v)
 			}
 			totalSize += int64(len(data))
-			postCol.Add(p.FormName(), string(data))
+			add(postCol, p.FormName(), string(data))
+			commit()
 			filesCombinedSizeCol.(*collections.Single).Set(fmt.Sprintf("%d", totalSize))
 			if errors.Is(err, io.ErrUnexpectedEOF) {
 				break
