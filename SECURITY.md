@@ -12,7 +12,7 @@ Versions currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-To report a security issue, please follow [this link](https://github.com/corazawaf/coraza/security/advisories/new) and add a description of the issue, the steps you took to create the issue, affected versions, and, if known, mitigations for the issue.
+To report a security issue, please follow [this link](https://github.com/corazawaf/coraza/security/advisories/new) and add a description of the issue, the steps you took to create the issue, affected versions, and, if known, mitigations for the issue. If you cannot use GitHub, email <security@coraza.io>; that address is also where automated scanning services send their findings.
 
 Our vulnerability management team will respond within 3 working days of your report. If the issue is confirmed as a vulnerability, we will open a Security Advisory. This project follows a 90 day disclosure timeline.
 
