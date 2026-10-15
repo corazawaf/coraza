@@ -217,10 +217,24 @@
       "name" : "normalisePath"
    },
    {
-      "output" : "//",
-      "ret" : 0,
+      "output" : "/",
+      "ret" : 1,
       "type" : "tfn",
       "input" : "//",
+      "name" : "normalisePath"
+   },
+   {
+      "output" : "/",
+      "ret" : 0,
+      "type" : "tfn",
+      "input" : "/",
+      "name" : "normalisePath"
+   },
+   {
+      "output" : "/",
+      "ret" : 1,
+      "type" : "tfn",
+      "input" : "/a/../",
       "name" : "normalisePath"
    }
 ]

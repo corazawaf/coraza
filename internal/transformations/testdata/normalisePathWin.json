@@ -217,8 +217,8 @@
       "type" : "tfn"
    },
    {
-      "output" : "//",
-      "ret" : 0,
+      "output" : "/",
+      "ret" : 1,
       "input" : "//",
       "name" : "normalisePathWin",
       "type" : "tfn"

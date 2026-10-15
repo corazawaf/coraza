@@ -50,7 +50,7 @@ func TestNormalisePathWin(t *testing.T) {
 			want:  "C:/inetpub/wwwroot/web.config",
 		},
 		{
-			// A leading ".." run that filepath.Clean can't resolve further
+			// A leading ".." run that path.Clean can't resolve further
 			// must not be mistaken for a trailing-dot filename and
 			// stripped away.
 			input: `..\..\web.config.`,
