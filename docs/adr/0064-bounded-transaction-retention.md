@@ -1,4 +1,4 @@
-# ADR-0061: Bound what a pooled transaction retains and stream body reads
+# ADR-0064: Bound what a pooled transaction retains and stream body reads
 
 - **Status:** proposed
 - **Date:** 2026-10-19 (expected merge date)
