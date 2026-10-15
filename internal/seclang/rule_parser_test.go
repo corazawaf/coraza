@@ -595,6 +595,11 @@ func TestEvalDepthOnlyInChainStarter(t *testing.T) {
 SecRule TX:1 "a" ""`,
 		},
 		{
+			name:    "standalone rule",
+			rules:   `SecRule ARGS "a" "id:404,phase:2,evalDepth"`,
+			wantErr: "evalDepth can only be specified in the chain starter rule",
+		},
+		{
 			name: "second link",
 			rules: `SecRule ARGS "@rx (a)" "id:401,phase:2,chain"
 SecRule TX:1 "a" "evalDepth"`,

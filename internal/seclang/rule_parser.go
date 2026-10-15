@@ -446,6 +446,9 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		parent.Raw_ += " \n" + options.Raw
 		return nil, nil
 	} else {
+		if rule.EvalDepth && !rule.HasChain {
+			return nil, fmt.Errorf("evalDepth can only be specified in the chain starter rule")
+		}
 		// we only want Raw for the parent
 		rule.Raw_ = options.Raw
 	}
