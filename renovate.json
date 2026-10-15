@@ -8,7 +8,7 @@
   ],
   "packageRules": [
     {
-      "description": "Hold kaptinlin/jsonschema at v0.4.x: v0.9.8+ requires Go 1.26.5, which drops the supported Go 1.25.x. Remove when Coraza raises its minimum Go to 1.26.",
+      "description": "Hold kaptinlin/jsonschema at v0.4.x: v0.9.8 and v0.9.9 require Go 1.26.5 and v0.9.10+ requires Go 1.27, both above the go 1.26.0 floor. Remove when Coraza raises its minimum Go accordingly.",
       "matchManagers": ["gomod"],
       "matchPackageNames": ["github.com/kaptinlin/jsonschema"],
       "allowedVersions": "<0.5.0"

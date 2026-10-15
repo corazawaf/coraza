@@ -24,9 +24,10 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.25.x]
-        # tinygo-version is meant to stay aligned with the one used in corazawaf/coraza-proxy-wasm
-        tinygo-version: [0.40.1]
+        go-version: [1.26.x]
+        # tinygo-version must support the go-version above: 0.41 is the first release that
+        # builds with Go 1.26.
+        tinygo-version: [0.41.1]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     permissions:
