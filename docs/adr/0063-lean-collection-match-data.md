@@ -94,4 +94,4 @@ writing.
 
 - PR: https://github.com/corazawaf/coraza/pull/1752
 - Issue: https://github.com/corazawaf/coraza/issues/1749
-- Related ADRs: ADR-0061, ADR-0062 (same tracking issue)
+- Related ADRs: ADR-0062, ADR-0064 (same tracking issue)
