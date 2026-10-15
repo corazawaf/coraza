@@ -37,8 +37,10 @@ RUN go vet ./... \
 
 # `go run mage.go lint` fetches golangci-lint, addlicense and gosimports with `go run pkg@version`
 # (versions pinned in magefile.go); running it once here caches them so `go run mage.go check`
-# works offline. It also regenerates and tidies, which is a no-op on a clean checkout.
-RUN go run mage.go lint || echo "WARNING: mage lint reported failures"
+# works offline. It also regenerates and tidies, which is a no-op on a clean checkout. A
+# failure here fails the build: the tools it did not get to are unreachable once the network
+# is gone, and a lint failure on a clean checkout is a CI failure anyway.
+RUN go run mage.go lint
 
 # Run the cheap tests so you know the image works, but do not let a failing test abort the build.
 # As root, TestConcurrentWriterFailsOnInit and TestSerialWriterFailsOnInitForUnexistingFile fail

@@ -13,7 +13,7 @@ an HTTP middleware, a sidecar) feeds it one HTTP transaction at a time through t
 `ProcessRequestHeaders`, `WriteRequestBody`/`ReadRequestBodyFrom`, `ProcessRequestBody`,
 `AddResponseHeader`, `ProcessResponseHeaders`, `WriteResponseBody`, `ProcessResponseBody`,
 `ProcessLogging`). Coraza evaluates SecLang rules (ModSecurity v2/v3 compatible, normally
-the OWASP Core Rule Set) against the transaction and returns an interruption when a rule
+the OWASP CRS) against the transaction and returns an interruption when a rule
 blocks.
 
 **Every byte of the request and of the response is attacker-controlled**: the method, URI,
@@ -63,7 +63,7 @@ Less: `debuglog/`, `experimental/` (plugin registries; the plugin *interfaces* m
 registration code does not), `internal/sync/` (TinyGo shims), `examples/`, `testing/` (the
 harness itself), `magefile.go`, `docs/`.
 
-Out of scope: the OWASP Core Rule Set's own detection logic (report to
+Out of scope: the OWASP CRS's own detection logic (report to
 github.com/coreruleset/coreruleset), libinjection's own false negatives in
 `@detectSQLi`/`@detectXSS` (we vendor `libinjection-go`), `testing/modsecurity/` (a
 comparison suite against the C library, not built in this image), TinyGo-only code paths
@@ -71,11 +71,13 @@ comparison suite against the C library, not built in this image), TinyGo-only co
 
 ## How to exercise it
 
-- `go test ./...` runs everything; `go run mage.go test` runs CI's build-tag matrix
-  (`coraza.no_memoize`, `coraza.rule.multiphase_evaluation`,
-  `coraza.rule.no_regex_multiline`, `coraza.rule.case_sensitive_args_keys`, ...). Test
-  binaries for every tag are already compiled into the build cache, so the matrix runs
-  offline.
+- `go test ./...` runs the engine's own tests and `examples/http-server`; in this image it
+  does not cover `testing/modsecurity` (needs the libmodsecurity C library, not built) or
+  the TinyGo build (`internal/sync/pool_tinygo.go` and friends; TinyGo is not installed).
+  `go run mage.go test` runs CI's build-tag matrix (`coraza.no_memoize`,
+  `coraza.rule.multiphase_evaluation`, `coraza.rule.no_regex_multiline`,
+  `coraza.rule.case_sensitive_args_keys`, ...). Test binaries for every tag are already
+  compiled into the build cache, so the matrix runs offline.
 - The clearest way to state "these rules + this request should/should not match" is a
   declarative profile: see `testing/engine/*.go` and the `Testing` section of `AGENTS.md`.
   A reproducer in that form, or a small `_test.go` using `coraza.NewWAF(...)` and
@@ -108,7 +110,10 @@ we apply (see `SECURITY.md`, "CVSS scores are triaged, not accepted as submitted
   something outside the attacker's control (a specific backend behaviour, winning a race).
   That gives Medium (5.8 / 4.0) for most bypasses. A required *configuration* (a
   non-default directive, a custom rule) is scored as if present and does not raise Attack
-  Complexity, but say what the precondition is. Rate High only when a default
+  Complexity, unless that configuration deliberately weakens security or conflicts with
+  our guidance (`coraza.conf-recommended`, `RATIONALE.md`), in which case it is the
+  operator's choice and not a finding; either way, say what the precondition is. Rate
+  High only when a default
   `coraza.conf-recommended` + CRS deployment at paranoia level 1 misses an entire
   attack class.
 - **Denial of service**: memory or CPU that grows beyond what the configured limits bound
