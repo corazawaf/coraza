@@ -193,7 +193,7 @@ const (
 	ResponseXML = variables.ResponseXML
 	// RequestXML contains the request parsed XML
 	RequestXML = variables.RequestXML
-	// XML is a pointer to ResponseXML
+	// XML is a pointer to RequestXML
 	XML = variables.XML
 	// MultipartPartHeaders contains the multipart headers
 	MultipartPartHeaders = variables.MultipartPartHeaders
