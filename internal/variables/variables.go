@@ -587,8 +587,12 @@ const (
 	// ResponseArgs contains the response parsed arguments
 	ResponseArgs // CanBeSelected
 	// Description: Collection for interacting with the response XML body via XPath expressions.
-	//
-	// **Not Implemented yet**
+	// Requires the XML response body processor to be active (`ctl:responseBodyProcessor=XML`).
+	// ---
+	// ```seclang
+	// SecRule RESPONSE_HEADERS:Content-Type "^text/xml$" "phase:3,id:89,t:lowercase,nolog,pass,ctl:responseBodyProcessor=XML"
+	// SecRule RESPONSE_XML://@* "sensitive" "phase:4,id:90,deny,log"
+	// ```
 	ResponseXML // CanBeSelected
 	// RequestXML contains the request body parsed as XML. Populated by the XML body processor.
 	RequestXML // CanBeSelected
