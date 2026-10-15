@@ -62,6 +62,22 @@ func (c *Map) Get(key string) []string {
 	return result
 }
 
+// First returns the first value stored under key without copying the value
+// slice, for callers (macro expansion, setvar) that only need one value.
+func (c *Map) First(key string) (string, bool) {
+	if len(c.data) == 0 {
+		return "", false
+	}
+	if !c.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
+	values := c.data[key]
+	if len(values) == 0 {
+		return "", false
+	}
+	return values[0].value, true
+}
+
 // FindRegex returns all map elements whose key matches the regular expression.
 func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	n := 0
@@ -76,12 +92,12 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	if n == 0 {
 		return nil
 	}
-	buf := make([]corazarules.MatchData, n)
+	buf := make([]corazarules.VariableMatch, n)
 	result := make([]types.MatchData, n)
 	i := 0
 	for _, data := range matched {
 		for _, d := range data {
-			buf[i] = corazarules.MatchData{
+			buf[i] = corazarules.VariableMatch{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.value,
@@ -108,10 +124,10 @@ func (c *Map) FindString(key string) []types.MatchData {
 	if !ok || len(e) == 0 {
 		return nil
 	}
-	buf := make([]corazarules.MatchData, len(e))
+	buf := make([]corazarules.VariableMatch, len(e))
 	result := make([]types.MatchData, len(e))
 	for i, aVar := range e {
-		buf[i] = corazarules.MatchData{
+		buf[i] = corazarules.VariableMatch{
 			Variable_: c.variable,
 			Key_:      aVar.key,
 			Value_:    aVar.value,
@@ -130,12 +146,12 @@ func (c *Map) FindAll() []types.MatchData {
 	if n == 0 {
 		return nil
 	}
-	buf := make([]corazarules.MatchData, n)
+	buf := make([]corazarules.VariableMatch, n)
 	result := make([]types.MatchData, n)
 	i := 0
 	for _, data := range c.data {
 		for _, d := range data {
-			buf[i] = corazarules.MatchData{
+			buf[i] = corazarules.VariableMatch{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.value,

@@ -65,11 +65,22 @@ func (m *macro) Expand(tx plugintypes.TransactionState) string {
 	return res.String()
 }
 
+// firstGetter is implemented by the built-in keyed collections.
+type firstGetter interface {
+	First(key string) (string, bool)
+}
+
 func expandToken(tx plugintypes.TransactionState, token macroToken) string {
 	if token.variable == variables.Unknown {
 		return token.text
 	}
 	switch col := tx.Collection(token.variable).(type) {
+	case firstGetter:
+		// Built-in maps expose First to hand back one value without copying
+		// the whole value slice Get returns.
+		if v, ok := col.First(token.key); ok {
+			return v
+		}
 	case collection.Keyed:
 		if c := col.Get(token.key); len(c) > 0 {
 			return c[0]
