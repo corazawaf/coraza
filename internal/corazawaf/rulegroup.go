@@ -152,6 +152,10 @@ func (rg *RuleGroup) Count() int {
 // Rules are evaluated in syntactic order and the evaluation finishes
 // as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
+// maxRetainedTransformationCache is the largest transformation cache a
+// transaction keeps across phases and in the pool; see Eval.
+const maxRetainedTransformationCache = 4096
+
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.DebugLogger().Debug().
 		Int("phase", int(phase)).
@@ -160,10 +164,15 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
-	transformationCache := tx.transformationCache
-	for k := range transformationCache {
-		delete(transformationCache, k)
+	// CRS phase 2 fills ~600 entries for a request with a handful of arguments;
+	// the cache scales with the argument count, so after an argument flood it is
+	// rebuilt rather than kept at that size in the pooled transaction.
+	if len(tx.transformationCache) > maxRetainedTransformationCache {
+		tx.transformationCache = map[transformationKey]transformationValue{}
+	} else {
+		clear(tx.transformationCache)
 	}
+	transformationCache := tx.transformationCache
 RulesLoop:
 	for i := range rg.rules {
 		r := &rg.rules[i]
