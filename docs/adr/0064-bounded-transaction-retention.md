@@ -79,8 +79,17 @@ instead of `io.ReadAll` + `string(...)`, removing one body-sized copy.
 
 ## Technical Discussion
 
-No substantive technical discussion recorded on the PR thread at the time of
-writing; the thresholds come from the measurements in #1749.
+> **Handle short writes in `bodyBufferReader.WriteTo`.**
+> `io.Copy` calls `WriteTo` directly for this reader. The memory branch returns nil when `w.Write` writes only a prefix with no error, so `io.Copy` can report success with a truncated body. Return `io.ErrShortWrite` when the write is short.
+>
+> — @coderabbitai ([comment](https://github.com/corazawaf/coraza/pull/1751#discussion_r4249303506))
+
+> Taken: the in-memory branch now returns `io.ErrShortWrite` when the writer reports fewer bytes than remained without an error, the same guard `io.copyBuffer` applies. The count and position are still advanced by what was actually written. [...]
+>
+> — @fzipi ([comment](https://github.com/corazawaf/coraza/pull/1751#discussion_r4250619655))
+
+The retention thresholds themselves drew no review discussion; they come from
+the measurements in #1749.
 
 ## Participants
 
