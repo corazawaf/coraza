@@ -4,9 +4,11 @@
 package bodyprocessors_test
 
 import (
+	"io"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
@@ -21,60 +23,83 @@ func xmlProcessor(t *testing.T) plugintypes.BodyProcessor {
 	return bp
 }
 
-func TestXMLProcessRequest(t *testing.T) {
+func TestXMLProcess(t *testing.T) {
+	tests := []struct {
+		name         string
+		isResponse   bool
+		body         io.Reader
+		wantErr      bool
+		wantAttrs    int
+		wantContents []string
+	}{
+		{
+			name:         "process request succeeds",
+			isResponse:   false,
+			body:         strings.NewReader(`<bookstore><book id="1" secret="value"><title>Harry Potter</title></book></bookstore>`),
+			wantAttrs:    2,
+			wantContents: []string{"Harry Potter"},
+		},
+		{
+			name:         "process response succeeds",
+			isResponse:   true,
+			body:         strings.NewReader(`<response status="ok" code="200"><data>SecretPayload</data></response>`),
+			wantAttrs:    2,
+			wantContents: []string{"SecretPayload"},
+		},
+		{
+			name:       "process request reader error",
+			isResponse: false,
+			body:       errReader{},
+			wantErr:    true,
+		},
+		{
+			name:       "process response reader error",
+			isResponse: true,
+			body:       errReader{},
+			wantErr:    true,
+		},
+	}
+
 	bp := xmlProcessor(t)
-	v := corazawaf.NewTransactionVariables()
 
-	body := `<bookstore><book id="1" secret="value"><title>Harry Potter</title></book></bookstore>`
-	if err := bp.ProcessRequest(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{}); err != nil {
-		t.Fatal(err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := corazawaf.NewTransactionVariables()
+			var err error
+			if tt.isResponse {
+				err = bp.ProcessResponse(tt.body, v, plugintypes.BodyProcessorOptions{})
+			} else {
+				err = bp.ProcessRequest(tt.body, v, plugintypes.BodyProcessorOptions{})
+			}
 
-	attrs := v.RequestXML().Get("//@*")
-	if len(attrs) != 2 {
-		t.Errorf("Expected 2 attributes in RequestXML, got %d", len(attrs))
-	}
-	contents := v.RequestXML().Get("/*")
-	if len(contents) != 1 || contents[0] != "Harry Potter" {
-		t.Errorf("Expected ['Harry Potter'] in RequestXML, got %v", contents)
-	}
-}
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("unexpected error status: got %v, wantErr: %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
 
-func TestXMLProcessResponse(t *testing.T) {
-	bp := xmlProcessor(t)
-	v := corazawaf.NewTransactionVariables()
+			var col collection.Map
+			if tt.isResponse {
+				col = v.ResponseXML()
+			} else {
+				col = v.RequestXML()
+			}
 
-	body := `<response status="ok" code="200"><data>SecretPayload</data></response>`
-	if err := bp.ProcessResponse(strings.NewReader(body), v, plugintypes.BodyProcessorOptions{}); err != nil {
-		t.Fatal(err)
-	}
-
-	attrs := v.ResponseXML().Get("//@*")
-	if len(attrs) != 2 {
-		t.Errorf("Expected 2 attributes in ResponseXML, got %d", len(attrs))
-	}
-	contents := v.ResponseXML().Get("/*")
-	if len(contents) != 1 || contents[0] != "SecretPayload" {
-		t.Errorf("Expected ['SecretPayload'] in ResponseXML, got %v", contents)
-	}
-}
-
-func TestXMLProcessRequestReaderError(t *testing.T) {
-	bp := xmlProcessor(t)
-	v := corazawaf.NewTransactionVariables()
-
-	err := bp.ProcessRequest(errReader{}, v, plugintypes.BodyProcessorOptions{})
-	if err == nil {
-		t.Fatal("expected error from failing reader, got nil")
-	}
-}
-
-func TestXMLProcessResponseReaderError(t *testing.T) {
-	bp := xmlProcessor(t)
-	v := corazawaf.NewTransactionVariables()
-
-	err := bp.ProcessResponse(errReader{}, v, plugintypes.BodyProcessorOptions{})
-	if err == nil {
-		t.Fatal("expected error from failing reader, got nil")
+			attrs := col.Get("//@*")
+			if len(attrs) != tt.wantAttrs {
+				t.Errorf("expected %d attributes, got %d", tt.wantAttrs, len(attrs))
+			}
+			contents := col.Get("/*")
+			if len(contents) != len(tt.wantContents) {
+				t.Errorf("expected %v contents, got %v", tt.wantContents, contents)
+			} else {
+				for i, want := range tt.wantContents {
+					if contents[i] != want {
+						t.Errorf("contents[%d] = %q, want %q", i, contents[i], want)
+					}
+				}
+			}
+		})
 	}
 }
