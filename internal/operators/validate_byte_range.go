@@ -47,7 +47,7 @@ func newValidateByteRange(options plugintypes.OperatorOptions) (plugintypes.Oper
 	}
 
 	var validBytes [256]bool
-	for _, br := range strings.Split(data, ",") {
+	for br := range strings.SplitSeq(data, ",") {
 		br = strings.TrimSpace(br)
 		start, end, ok := strings.Cut(br, "-")
 
