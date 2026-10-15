@@ -95,4 +95,4 @@ writing beyond the request for this record.
 - PR: https://github.com/corazawaf/coraza/pull/1750
 - Issue: https://github.com/corazawaf/coraza/issues/1749
 - Supersedes the rationale in #1606 (no ADR was written for it)
-- Related ADRs: ADR-0061 (bounded transaction retention, same tracking issue)
+- Related ADRs: ADR-0064 (bounded transaction retention, same tracking issue)
