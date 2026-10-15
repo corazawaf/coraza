@@ -34,6 +34,44 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "mime type matched case-insensitively and without surrounding spaces",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test.php?id=12345",
+						},
+						Output: profile.ExpectedOutput{
+							Headers: map[string]string{
+								"content-type": " Secret/Mime ; charset=utf-8",
+							},
+							Data:           `<?php echo "Hello World!\n" ?>`,
+							TriggeredRules: []int{953120},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "mime type not listed is not inspected",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test.php?id=12345",
+						},
+						Output: profile.ExpectedOutput{
+							Headers: map[string]string{
+								"content-type": "other/mime",
+							},
+							Data:              `<?php echo "Hello World!\n" ?>`,
+							NonTriggeredRules: []int{953120},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecResponseBodyAccess On
