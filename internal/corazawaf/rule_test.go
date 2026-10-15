@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -622,7 +623,7 @@ func TestTransformArgSimple(t *testing.T) {
 	rule := NewRule()
 	_ = rule.AddTransformation("AppendA", transformationAppendA)
 	_ = rule.AddTransformation("AppendB", transformationAppendB)
-	arg, errs := rule.transformArg(md, 0, transformationCache)
+	arg, errs := rule.transformArg(md, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
@@ -634,7 +635,7 @@ func TestTransformArgSimple(t *testing.T) {
 		t.Errorf("Expected 2 transformations in cache (one per step), got %d", len(transformationCache))
 	}
 	// Repeating the same transformation, expecting still two elements in the cache (cache hit)
-	arg, errs = rule.transformArg(md, 0, transformationCache)
+	arg, errs = rule.transformArg(md, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors executing transformations: %v", errs)
 	}
@@ -643,27 +644,6 @@ func TestTransformArgSimple(t *testing.T) {
 	}
 	if len(transformationCache) != 2 {
 		t.Errorf("Expected 2 transformations in cache, got %d", len(transformationCache))
-	}
-}
-
-func TestTransformArgNoCacheForTXVariable(t *testing.T) {
-	transformationCache := map[transformationKey]transformationValue{}
-	md := &corazarules.MatchData{
-		Variable_: variables.TX,
-		Key_:      "Custom_TX_Variable",
-		Value_:    "test",
-	}
-	rule := NewRule()
-	_ = rule.AddTransformation("AppendA", transformationAppendA)
-	arg, errs := rule.transformArg(md, 0, transformationCache)
-	if errs != nil {
-		t.Fatalf("Unexpected errors executing transformations: %v", errs)
-	}
-	if arg != "testA" {
-		t.Errorf("Expected \"testA\", got \"%s\"", arg)
-	}
-	if len(transformationCache) != 0 {
-		t.Errorf("Expected 0 transformations in cache, got %d. It is not expected to cache TX variable transformations", len(transformationCache))
 	}
 }
 
@@ -685,7 +665,7 @@ func TestTransformArgPrefixSharing(t *testing.T) {
 	_ = rule2.AddTransformation("AppendB", transformationAppendB)
 
 	// Evaluate rule1 first — caches the AppendA intermediate
-	arg1, errs := rule1.transformArg(md, 0, transformationCache)
+	arg1, errs := rule1.transformArg(md, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors: %v", errs)
 	}
@@ -697,7 +677,7 @@ func TestTransformArgPrefixSharing(t *testing.T) {
 	}
 
 	// Evaluate rule2 — should reuse the cached AppendA result and only compute AppendB
-	arg2, errs := rule2.transformArg(md, 0, transformationCache)
+	arg2, errs := rule2.transformArg(md, transformationCache)
 	if errs != nil {
 		t.Fatalf("Unexpected errors: %v", errs)
 	}
@@ -729,8 +709,8 @@ func TestClearTransformationsResetsID(t *testing.T) {
 	_ = ruleB.AddTransformation("AppendA", transformationAppendA)
 	_ = ruleB.AddTransformation("AppendB", transformationAppendB)
 
-	argA, _ := ruleA.transformArg(md, 0, transformationCache)
-	argB, _ := ruleB.transformArg(md, 0, transformationCache)
+	argA, _ := ruleA.transformArg(md, transformationCache)
+	argB, _ := ruleB.transformArg(md, transformationCache)
 
 	if argA != "testB" {
 		t.Errorf("Rule A (t:none resets): expected \"testB\", got %q", argA)
@@ -742,6 +722,195 @@ func TestClearTransformationsResetsID(t *testing.T) {
 	// they'd collide in the cache and one would get the wrong result.
 	if argA == argB {
 		t.Error("Rule A and Rule B produced the same result — ClearTransformations likely didn't reset transformationsID")
+	}
+}
+
+// TestTransformArgPrefixSharingKeepsErrors is not a profile because it asserts on the
+// errors transformArg returns, which only reach the debug log.
+func TestTransformArgPrefixSharingKeepsErrors(t *testing.T) {
+	failWith := func(msg string) plugintypes.Transformation {
+		return func(string) (string, bool, error) { return "", false, errors.New(msg) }
+	}
+	newRule := func(last string) *Rule {
+		rule := NewRule()
+		for _, name := range []string{"fail1", "fail2", "fail3", last} {
+			_ = rule.AddTransformation(name, failWith(name))
+		}
+		return rule
+	}
+	transformationCache := map[transformationKey]transformationValue{}
+	md := &corazarules.MatchData{
+		Variable_: variables.RequestURI,
+		Key_:      "REQUEST_URI",
+		Value_:    "/test",
+	}
+
+	// ruleA and ruleB share a three-step prefix and differ in the last step.
+	ruleA, ruleB := newRule("fail4a"), newRule("fail4b")
+	_, _ = ruleA.transformArg(md, transformationCache)
+	_, _ = ruleB.transformArg(md, transformationCache)
+
+	tests := []struct {
+		name string
+		rule *Rule
+		want string
+	}{
+		{name: "rule that cached the prefix", rule: ruleA, want: "fail4a"},
+		{name: "rule that reused the prefix", rule: ruleB, want: "fail4b"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, errs := tt.rule.transformArg(md, transformationCache)
+			if len(errs) != 4 {
+				t.Fatalf("got %d errors, want 4", len(errs))
+			}
+			if got := errs[3].Error(); got != tt.want {
+				t.Errorf("last error is %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestTransformationCacheAcrossRules checks which values the per-phase cache holds
+// when several rules share a target and a transformation chain. It is not a profile
+// because it asserts on the number of transformation runs and of cache entries, which
+// no profile output exposes.
+func TestTransformationCacheAcrossRules(t *testing.T) {
+	const (
+		nRules = 5
+		nArgs  = 10
+	)
+
+	tests := []struct {
+		name     string
+		variable variables.RuleVariable
+		key      string
+		count    bool
+		// wantRuns is how many times the transformation runs in the phase
+		wantRuns int
+		// wantEntries is the cache size at the end of the phase
+		wantEntries int
+	}{
+		{
+			// Map-backed collections return FindAll() results in Go map iteration
+			// order, so the entries must not depend on an argument's position.
+			name:        "collection values run once and are shared by every rule",
+			variable:    variables.ArgsGet,
+			wantRuns:    nArgs,
+			wantEntries: nArgs,
+		},
+		{
+			name:        "TX runs for every rule and is not cached",
+			variable:    variables.TX,
+			key:         "probe",
+			wantRuns:    nRules,
+			wantEntries: 0,
+		},
+		{
+			name:        "count runs for every rule and is not cached",
+			variable:    variables.ArgsGet,
+			count:       true,
+			wantRuns:    nRules,
+			wantEntries: 0,
+		},
+		{
+			name:        "ARGS_COMBINED_SIZE runs for every rule and is not cached",
+			variable:    variables.ArgsCombinedSize,
+			wantRuns:    nRules,
+			wantEntries: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runs := 0
+			waf := NewWAF()
+			waf.RuleEngine = types.RuleEngineOn
+
+			for i := 0; i < nRules; i++ {
+				r := NewRule()
+				r.ID_ = 1000 + i
+				r.LogID_ = strconv.Itoa(1000 + i)
+				r.Phase_ = types.PhaseRequestHeaders
+				if err := r.AddVariable(tt.variable, tt.key, tt.count); err != nil {
+					t.Fatal(err)
+				}
+				if err := r.AddTransformation("countingAppendA", func(v string) (string, bool, error) {
+					runs++
+					return v + "A", true, nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+				// never matches, so evaluation always walks every argument
+				r.SetOperator(&dummyEqOperator{}, "@eq", "0")
+				if err := waf.Rules.Add(r); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			tx := waf.NewTransaction()
+			for i := 0; i < nArgs; i++ {
+				tx.AddGetRequestArgument(fmt.Sprintf("arg%d", i), fmt.Sprintf("value-%d", i))
+			}
+			tx.variables.tx.Set("probe", []string{"value"})
+			tx.ProcessRequestHeaders()
+
+			if runs != tt.wantRuns {
+				t.Errorf("transformation ran %d times, want %d", runs, tt.wantRuns)
+			}
+			if got := len(tx.transformationCache); got != tt.wantEntries {
+				t.Errorf("cache holds %d entries after the phase, want %d", got, tt.wantEntries)
+			}
+			if err := tx.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if got := len(tx.transformationCache); got != 0 {
+				t.Errorf("cache holds %d entries after Close, want 0", got)
+			}
+		})
+	}
+}
+
+// TestTransformationCacheRepeatedKeys: values stored under one key share the key
+// string, so the cache must tell them apart by value: rule 2 has to see "0" on every
+// request, whatever order ARGS_GET returns its values in. It is not a profile because
+// a regression only shows on some map iteration orders, so it needs many runs.
+func TestTransformationCacheRepeatedKeys(t *testing.T) {
+	ident := func(v string) (string, bool, error) { return v, false, nil }
+	waf := NewWAF()
+	waf.RuleEngine = types.RuleEngineOn
+	for _, id := range []int{1, 2} {
+		r := NewRule()
+		r.ID_, r.LogID_, r.Phase_ = id, strconv.Itoa(id), types.PhaseRequestHeaders
+		if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
+			t.Fatal(err)
+		}
+		if err := r.AddTransformation("ident", ident); err != nil {
+			t.Fatal(err)
+		}
+		r.SetOperator(&dummyEqOperator{}, "@eq", "0") // matches only "0"
+		if err := waf.Rules.Add(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := 0; i < 2000; i++ {
+		tx := waf.NewTransaction()
+		tx.AddGetRequestArgument("q", "benign")
+		tx.AddGetRequestArgument("q", "0")
+		for _, k := range []string{"a", "b", "c", "d", "e", "f"} {
+			tx.AddGetRequestArgument(k, "x")
+		}
+		tx.ProcessRequestHeaders()
+		matched := false
+		for _, mr := range tx.matchedRules {
+			matched = matched || mr.Rule().ID() == 2
+		}
+		if err := tx.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if !matched {
+			t.Fatalf("iteration %d: rule 2 did not see the repeated key's second value", i)
+		}
 	}
 }
 
