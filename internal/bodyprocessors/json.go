@@ -133,10 +133,7 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]s
 	res = make(map[string][]string)
 	key := []byte("json")
 
-	byteBudget := len(s) * flattenBytesFactor
-	if byteBudget < flattenBytesFloor {
-		byteBudget = flattenBytesFloor
-	}
+	byteBudget := max(len(s)*flattenBytesFactor, flattenBytesFloor)
 
 	// The walk runs before the validity check on purpose: a body with a valid
 	// prefix still populates ARGS on a best-effort basis, which rules can act

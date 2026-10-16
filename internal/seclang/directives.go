@@ -503,8 +503,7 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	idsOrRanges := strings.Fields(options.Opts)
-	for _, idOrRange := range idsOrRanges {
+	for idOrRange := range strings.FieldsSeq(options.Opts) {
 		if idx := strings.Index(idOrRange, "-"); idx == -1 {
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
@@ -1750,7 +1749,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	}
 	var arr []string
 	data := strings.Trim(d, "`")
-	for _, s := range strings.Split(data, "\n") {
+	for s := range strings.SplitSeq(data, "\n") {
 		s = strings.TrimSpace(s)
 		if s == "" || s[0] == '#' {
 			continue

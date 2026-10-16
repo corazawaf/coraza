@@ -827,7 +827,7 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 			waf := NewWAF()
 			waf.RuleEngine = types.RuleEngineOn
 
-			for i := 0; i < nRules; i++ {
+			for i := range nRules {
 				r := NewRule()
 				r.ID_ = 1000 + i
 				r.LogID_ = strconv.Itoa(1000 + i)
@@ -849,7 +849,7 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 			}
 
 			tx := waf.NewTransaction()
-			for i := 0; i < nArgs; i++ {
+			for i := range nArgs {
 				tx.AddGetRequestArgument(fmt.Sprintf("arg%d", i), fmt.Sprintf("value-%d", i))
 			}
 			tx.variables.tx.Set("probe", []string{"value"})
@@ -893,7 +893,7 @@ func TestTransformationCacheRepeatedKeys(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		tx := waf.NewTransaction()
 		tx.AddGetRequestArgument("q", "benign")
 		tx.AddGetRequestArgument("q", "0")
