@@ -1369,7 +1369,10 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // part headers and ordinary form fields count; boundary framing and uploaded
 // file content do not. Values above the limit use SecRequestBodyLimitAction
 // (Reject returns 413; ProcessPartial evaluates the bounded non-multipart
-// prefix or completed multipart parts before the over-limit part).
+// prefix or completed multipart parts before the over-limit part). Both
+// actions set INBOUND_DATA_ERROR and REQBODY_ERROR, so under ProcessPartial a
+// phase-2 rule on REQBODY_ERROR (rule 200002 in coraza.conf-recommended)
+// still denies the request.
 //
 // Example:
 // ```seclang

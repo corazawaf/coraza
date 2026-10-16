@@ -3,7 +3,7 @@
 - **Status:** proposed
 - **Date:** 2026-10-15
 - **Version:** unreleased
-- **PR:** TBD
+- **PR:** [#1770](https://github.com/corazawaf/coraza/pull/1770)
 - **Issue(s):** [#896](https://github.com/corazawaf/coraza/issues/896), [#1628](https://github.com/corazawaf/coraza/issues/1628)
 - **Deciders:** Coraza maintainers
 - **Category:** Parity
@@ -73,7 +73,9 @@ existing overall `SecRequestBodyLimit` partial-path state and is intentional.
 
 ## Technical Discussion
 
-No substantive technical discussion recorded.
+No substantive technical discussion recorded on the PR #1770 thread. Issues
+#896 and #1628 contain the feature request and triage, but do not discuss how
+multipart data should be counted.
 
 ## Participants
 
@@ -91,4 +93,5 @@ No substantive technical discussion recorded.
 
 ## References
 
+- PR: https://github.com/corazawaf/coraza/pull/1770
 - Issues: https://github.com/corazawaf/coraza/issues/896 and https://github.com/corazawaf/coraza/issues/1628
