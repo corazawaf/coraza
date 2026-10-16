@@ -384,24 +384,30 @@ func (m Message) ErrorMessage() string {
 }
 
 func (m Message) Data() plugintypes.AuditLogMessageData {
+	if m.Data_ == nil {
+		return nil
+	}
+
 	return m.Data_
 }
 
 // MessageData contains information about the triggered
 // rules in detail
 type MessageData struct {
-	File_     string             `json:"file"`
-	Line_     int                `json:"line"`
-	ID_       int                `json:"id"`
-	Rev_      string             `json:"rev"`
-	Msg_      string             `json:"msg"`
-	Data_     string             `json:"data"`
-	Severity_ types.RuleSeverity `json:"severity"`
-	Ver_      string             `json:"ver"`
-	Maturity_ int                `json:"maturity"`
-	Accuracy_ int                `json:"accuracy"`
-	Tags_     []string           `json:"tags"`
-	Raw_      string             `json:"raw"`
+	File_      string             `json:"file"`
+	Line_      int                `json:"line"`
+	ID_        int                `json:"id"`
+	Rev_       string             `json:"rev"`
+	Msg_       string             `json:"msg"`
+	Data_      string             `json:"data"`
+	Severity_  types.RuleSeverity `json:"severity"`
+	Ver_       string             `json:"ver"`
+	Maturity_  int                `json:"maturity"`
+	Accuracy_  int                `json:"accuracy"`
+	Tags_      []string           `json:"tags"`
+	Raw_       string             `json:"raw"`
+	Match_     string             `json:"-"`
+	Reference_ string             `json:"-"`
 }
 
 var _ plugintypes.AuditLogMessageData = (*MessageData)(nil)
@@ -452,4 +458,22 @@ func (md *MessageData) Tags() []string {
 
 func (md *MessageData) Raw() string {
 	return md.Raw_
+}
+
+// Match returns the structured operator match detail, when available.
+func (md *MessageData) Match() string {
+	if md == nil {
+		return ""
+	}
+
+	return md.Match_
+}
+
+// Reference returns the ModSecurity-compatible match reference, when available.
+func (md *MessageData) Reference() string {
+	if md == nil {
+		return ""
+	}
+
+	return md.Reference_
 }
