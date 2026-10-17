@@ -191,10 +191,6 @@ const noID = 0
 func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue) []types.MatchData {
 	tx.Capture = r.Capture
 
-	if multiphaseEvaluation {
-		computeRuleChainMinPhase(r)
-	}
-
 	var matchedValues []types.MatchData
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")

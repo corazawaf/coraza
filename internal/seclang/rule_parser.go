@@ -441,6 +441,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		// TODO we must remove defaultactions from chains
 		rule.Phase_ = 0
 		lastChain.Chain = rule
+		parent.ComputeChainMinPhase()
 		// This way we store the raw rule in the parent
 		parent.Raw_ += " \n" + options.Raw
 		return nil, nil
