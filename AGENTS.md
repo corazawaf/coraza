@@ -788,11 +788,13 @@ honestly: the checklist is a contract, not decoration.
 - **Credit the tool as `finder`, the human as `reporter`.** GitHub never infers
   credits, so whoever creates or triages the advisory sets them. An agent that
   drafts an advisory credits its own model's vendor-maintained GitHub account
-  (Claude: `claude`) as `finder` and the maintainer it works with as `reporter`;
-  at triage, a report whose disclosure says a tool found the bug gets the same
-  treatment, with the submitter as `reporter`. A tool with no GitHub account is
-  named in the text instead. The REST `credits` field replaces the whole list,
-  so re-send the existing entries with the new one.
+  (Claude: `claude`) as `finder` and, as `reporter`, the maintainer who reproduced
+  and verified the finding and submits it; at triage, a report whose disclosure
+  says a tool found the bug gets the same treatment, with `reporter` going to the
+  person whose disclosed review reproduced and verified it. Forwarded tool output
+  with no such review earns no `reporter` credit (see `SECURITY.md`, "Credit").
+  A tool with no GitHub account is named in the text instead. The REST `credits`
+  field replaces the whole list, so re-send the existing entries with the new one.
 - A fix for a reported vulnerability is developed on a private fork / advisory
   branch, not on a public PR, until the advisory is published.
 - An ADR required by that fix (see [Architecture Decision Records](#architecture-decision-records))
