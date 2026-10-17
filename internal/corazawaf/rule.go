@@ -249,7 +249,6 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 			v.Exceptions = slices.Clip(v.Exceptions)
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
-					// TODO shall we check the pointer?
 					v.Exceptions = append(v.Exceptions, ruleVariableException{c.KeyStr, c.KeyRx})
 				}
 			}
