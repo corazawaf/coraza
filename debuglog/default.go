@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 )
 
@@ -121,7 +122,7 @@ func (l defaultLogger) With(fs ...ContextField) Logger {
 		printer:       l.printer,
 		factory:       l.factory,
 		level:         l.level,
-		defaultFields: append(l.defaultFields, e.(*defaultEvent).fields...),
+		defaultFields: append(slices.Clip(l.defaultFields), e.(*defaultEvent).fields...),
 	}
 }
 
@@ -130,7 +131,7 @@ func (l defaultLogger) Trace() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelTrace, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelTrace, fields: slices.Clip(l.defaultFields)}
 }
 
 func (l defaultLogger) Debug() Event {
@@ -138,7 +139,7 @@ func (l defaultLogger) Debug() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelDebug, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelDebug, fields: slices.Clip(l.defaultFields)}
 }
 
 func (l defaultLogger) Info() Event {
@@ -146,7 +147,7 @@ func (l defaultLogger) Info() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelInfo, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelInfo, fields: slices.Clip(l.defaultFields)}
 }
 
 func (l defaultLogger) Warn() Event {
@@ -154,7 +155,7 @@ func (l defaultLogger) Warn() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelWarn, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelWarn, fields: slices.Clip(l.defaultFields)}
 }
 
 func (l defaultLogger) Error() Event {
@@ -162,7 +163,7 @@ func (l defaultLogger) Error() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelError, fields: l.defaultFields}
+	return &defaultEvent{printer: l.printer, level: LevelError, fields: slices.Clip(l.defaultFields)}
 }
 
 // Default returns a default logger that writes to stderr.

@@ -181,3 +181,44 @@ func TestWithLoggerAccumulative(t *testing.T) {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 }
+
+// Derived loggers and events must not share a backing array with their parent,
+// otherwise siblings overwrite each other's fields (e.g. per-transaction tx_id).
+func TestWithLoggerNoAliasing(t *testing.T) {
+	buf := bytes.Buffer{}
+	parent := Default().WithOutput(&buf).(defaultLogger)
+	parent.defaultFields = make([]byte, 0, 64) // spare capacity, as after a few With calls
+
+	testCases := map[string]struct {
+		log      func()
+		expected string
+	}{
+		"sibling loggers": {
+			log: func() {
+				l1 := parent.With(Str("tx_id", "AAA"))
+				_ = parent.With(Str("tx_id", "BBB"))
+				l1.Info().Msg("m")
+			},
+			expected: "[INFO] m tx_id=\"AAA\"\n",
+		},
+		"sibling events": {
+			log: func() {
+				l := parent.With(Str("tx_id", "AAA"))
+				e1 := l.Info().Str("k", "1")
+				_ = l.Info().Str("k", "2")
+				e1.Msg("m")
+			},
+			expected: "[INFO] m tx_id=\"AAA\" k=\"1\"\n",
+		},
+	}
+	for name, tCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			buf.Reset()
+			tCase.log()
+			// [20:] Skips the timestamp.
+			if want, have := tCase.expected, buf.String()[20:]; want != have {
+				t.Fatalf("unexpected message, want %q, have %q", want, have)
+			}
+		})
+	}
+}
