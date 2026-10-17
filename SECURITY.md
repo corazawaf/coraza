@@ -66,6 +66,10 @@ When AI tools have materially contributed to the finding, the report **must** di
 
 Using AI, or disclosing that AI was used, does not by itself invalidate a report. Rejection is always tied to the "Core Principles" above: a missing reproducible PoC or unsupported/speculative claims. Omitting the disclosure above when AI materially contributed is itself treated as such an unsupported claim, and the report is closed as invalid on that basis.
 
+### Credit
+
+Advisory credits reflect who did what. When the disclosure says an AI tool found the vulnerability, the published advisory credits the **finding** to that tool (e.g. Claude, GPT, Copilot, through the GitHub account its vendor maintains for it) and credits the person who reproduced, verified and submitted the report as the **reporter**. A tool with no GitHub account to credit is named in the advisory text instead. Forwarding a tool's output without the review described above earns no reporter credit: the finding is the tool's, and the reporter credit goes with the verification. Whether such a report is valid is decided by the criteria above, not by this section.
+
 ## :trophy: Hall of Fame :trophy:
 
 1. No records
