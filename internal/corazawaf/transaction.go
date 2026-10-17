@@ -94,6 +94,10 @@ type Transaction struct {
 
 	// Handles request body buffers
 	requestBodyBuffer *BodyBuffer
+	// requestBodyInspectLength limits ProcessPartial to the inspected prefix while
+	// retaining any probe byte read from an io.Reader for connector replay.
+	requestBodyInspectLength        int64
+	requestBodyNoFilesLimitExceeded bool
 
 	// Handles response body buffers
 	responseBodyBuffer *BodyBuffer
@@ -954,6 +958,36 @@ func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Inte
 	return tx.interruption, 0, nil
 }
 
+func (tx *Transaction) nonMultipartBodyLimit() int64 {
+	limit := tx.WAF.RequestBodyNoFilesLimit
+	if limit <= 0 || limit >= tx.RequestBodyLimit {
+		return 0
+	}
+	processor, err := bodyprocessors.GetBodyProcessor("multipart")
+	if strings.EqualFold(tx.variables.reqbodyProcessor.Get(), "MULTIPART") && err == nil && bodyprocessors.IsBuiltInMultipart(processor) {
+		if values := tx.variables.requestHeaders.Get("content-type"); len(values) > 0 {
+			mediaType, _, err := mime.ParseMediaType(values[0])
+			if err == nil && strings.HasPrefix(mediaType, "multipart/") {
+				return 0
+			}
+		}
+	}
+	return limit
+}
+
+func (tx *Transaction) exceedNoFilesLimit() (*types.Interruption, int, error) {
+	tx.requestBodyNoFilesLimitExceeded = true
+	tx.variables.inboundDataError.Set("1")
+	tx.variables.reqbodyError.Set("1")
+	tx.variables.reqbodyErrorMsg.Set("request body exceeds SecRequestBodyNoFilesLimit")
+	if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
+		return setAndReturnBodyLimitInterruption(tx, 413)
+	}
+	tx.requestBodyInspectLength = tx.WAF.RequestBodyNoFilesLimit
+	_, err := tx.ProcessRequestBody()
+	return tx.interruption, 0, err
+}
+
 // WriteRequestBody writes bytes from a slice of bytes into the request body,
 // it returns an interruption if the writing bytes go beyond the request body limit.
 // It won't copy the bytes if the body access isn't accessible.
@@ -964,6 +998,9 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 
 	if !tx.RequestBodyAccess {
 		return nil, 0, nil
+	}
+	if tx.requestBodyNoFilesLimitExceeded {
+		return tx.interruption, 0, nil
 	}
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
@@ -987,6 +1024,19 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		// Overflow, failing. MaxInt64 is not a realistic payload size. Furthermore, it has been tested that
 		// bytes.Buffer does not work with this kind of sizes. See comments in BodyBuffer Write(data []byte)
 		return nil, 0, errors.New("overflow reached while writing request body")
+	}
+	if limit := tx.nonMultipartBodyLimit(); limit > 0 &&
+		tx.requestBodyBuffer.length+writingBytes > limit {
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
+			return tx.exceedNoFilesLimit()
+		}
+		remaining := limit - tx.requestBodyBuffer.length
+		w, err := tx.requestBodyBuffer.Write(b[:remaining])
+		if err != nil {
+			return nil, 0, err
+		}
+		interruption, _, err := tx.exceedNoFilesLimit()
+		return interruption, w, err
 	}
 
 	if tx.requestBodyBuffer.length+writingBytes >= tx.RequestBodyLimit {
@@ -1030,6 +1080,9 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 	if !tx.RequestBodyAccess {
 		return nil, 0, nil
 	}
+	if tx.requestBodyNoFilesLimitExceeded {
+		return tx.interruption, 0, nil
+	}
 
 	if tx.RequestBodyLimit == tx.requestBodyBuffer.length {
 		// tx.RequestBodyLimit will never be zero so if this happened, we have an
@@ -1041,6 +1094,20 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionProcessPartial {
 			return nil, 0, nil
 		}
+	}
+	if limit := tx.nonMultipartBodyLimit(); limit > 0 {
+		// Read one byte beyond the budget to distinguish equality from overflow.
+		// Keep that byte in the buffer so connectors can replay the exact input.
+		remaining := limit - tx.requestBodyBuffer.length
+		w, err := io.CopyN(tx.requestBodyBuffer, r, remaining+1)
+		if w > remaining {
+			interruption, _, err := tx.exceedNoFilesLimit()
+			return interruption, int(w), err
+		}
+		if err != nil && err != io.EOF {
+			return nil, int(w), err
+		}
+		return nil, int(w), nil
 	}
 
 	var (
@@ -1138,6 +1205,9 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	if err != nil {
 		return nil, err
 	}
+	if tx.requestBodyInspectLength > 0 {
+		reader = io.LimitReader(reader, tx.requestBodyInspectLength)
+	}
 
 	rbp := tx.variables.reqbodyProcessor.Get()
 
@@ -1171,14 +1241,32 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		Str("body_processor", rbp).
 		Msg("Attempting to process request body")
 
-	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
+	options := plugintypes.BodyProcessorOptions{
 		Mime:                      mimeType,
 		StoragePath:               tx.WAF.UploadDir,
 		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 		ArgumentLimit:             tx.WAF.ArgumentLimit,
-	}); err != nil {
-		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
-		tx.generateRequestBodyError(err)
+	}
+	var processErr error
+	if rbp == "multipart" && tx.WAF.RequestBodyNoFilesLimit > 0 && bodyprocessors.IsBuiltInMultipart(bodyprocessor) {
+		processErr = bodyprocessors.ProcessMultipartWithNoFilesLimit(bodyprocessor, reader, tx.Variables(), options, tx.WAF.RequestBodyNoFilesLimit)
+	} else {
+		processErr = bodyprocessor.ProcessRequest(reader, tx.Variables(), options)
+	}
+	if errors.Is(processErr, bodyprocessors.ErrNoFilesLimit) {
+		tx.variables.inboundDataError.Set("1")
+		tx.variables.reqbodyError.Set("1")
+		tx.variables.reqbodyErrorMsg.Set(processErr.Error())
+		if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
+			interruption, _, err := setAndReturnBodyLimitInterruption(tx, 413)
+			return interruption, err
+		}
+		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
+		return tx.interruption, nil
+	}
+	if processErr != nil {
+		tx.debugLogger.Error().Err(processErr).Msg("Failed to process request body")
+		tx.generateRequestBodyError(processErr)
 		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
 		return tx.interruption, nil
 	}
