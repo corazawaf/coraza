@@ -186,8 +186,9 @@ func TestRemoveRuleTargetDoesNotWriteIntoRule(t *testing.T) {
 	tx.AddGetRequestArgument("test", "0")
 	tx.RemoveRuleTargetByID(1, variables.ArgsGet, "test", nil)
 	var matchedValues []types.MatchData
-	r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
-
+	if got := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache); len(got) != 0 {
+		t.Fatalf("removed target still matched: %v", got)
+	}
 	if !slices.Equal(before, exceptions) {
 		t.Error("exclusion from ctl:ruleRemoveTarget was written into the rule shared by all transactions")
 	}
