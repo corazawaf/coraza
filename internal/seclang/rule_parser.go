@@ -124,7 +124,10 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 			}
 		case 1:
 			switch {
-			case len(curKey) == 0 && (string(curVar) == "XML" || string(curVar) == "JSON"):
+			case len(curKey) == 0 && (strings.EqualFold(string(curVar), "XML") ||
+				strings.EqualFold(string(curVar), "REQUEST_XML") ||
+				strings.EqualFold(string(curVar), "RESPONSE_XML") ||
+				strings.EqualFold(string(curVar), "JSON")):
 				// We are starting a XPATH
 				curr = 3
 				curKey = append(curKey, c)
