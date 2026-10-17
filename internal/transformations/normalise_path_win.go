@@ -66,7 +66,7 @@ func stripWindowsADS(data string) string {
 // stripWindowsTrailingDotsAndSpaces mimics the Windows API (CreateFile et
 // al.), which silently strips trailing '.' and ' ' from every path
 // component before resolving it. A component that is entirely dots (".",
-// "..", a leading ".." that filepath.Clean couldn't resolve further, or an
+// "..", a leading ".." that path.Clean couldn't resolve further, or an
 // empty component from a repeated "/") is left untouched -- those are
 // navigation syntax, not a filename to canonicalize. A component that
 // trims down to nothing (e.g. " ") is dropped entirely, matching how

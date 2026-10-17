@@ -41,7 +41,7 @@ func newIPMatch(options plugintypes.OperatorOptions) (plugintypes.Operator, erro
 	data := options.Arguments
 
 	var subnets []net.IPNet
-	for _, sb := range strings.Split(data, ",") {
+	for sb := range strings.SplitSeq(data, ",") {
 		sb = strings.TrimSpace(sb)
 		if sb == "" {
 			continue

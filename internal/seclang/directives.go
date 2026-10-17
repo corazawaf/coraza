@@ -503,8 +503,7 @@ func directiveSecRuleRemoveByID(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	idsOrRanges := strings.Fields(options.Opts)
-	for _, idOrRange := range idsOrRanges {
+	for idOrRange := range strings.FieldsSeq(options.Opts) {
 		if idx := strings.Index(idOrRange, "-"); idx == -1 {
 			id, err := strconv.Atoi(idOrRange)
 			if err != nil {
@@ -1131,7 +1130,7 @@ func directiveSecAuditLogFileMode(options *DirectiveOptions) error {
 //
 // Example:
 // ```seclang
-// SecAuditLogRelevantStatus "^(?:5|40[1235])"
+// SecAuditLogRelevantStatus "^(?:5|4(?:0[0-35-9]|[1-9][0-9]))"
 // ```
 // This example would log all 5xx and 4xx level status codes,
 // except for 404s. Although you could achieve the same effect with a rule in phase 5,
@@ -1543,7 +1542,7 @@ func hasDisruptiveActions(actions []ruleAction) bool {
 // ```seclang
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
-// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+// The rule ID can be single IDs or ranges of IDs.
 func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1664,9 +1663,7 @@ func updateActionBySingleID(id int, actions string, options *DirectiveOptions) e
 // ---
 // As an alternative to `SecRuleUpdateTargetById`, this directive will append variables to the specified rule
 // with the targets provided in the second parameter. It can be handy for updating an entire group of rules.
-// Matching is by case-sensitive string equality.
-// This directive will append variables to the specified rule with the targets provided in the second parameter.
-// The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+// Matching is by case-sensitive string equality. The targets are separated by a pipe character.
 //
 // Note: OWASP CRS provides a list of [supported tags](https://coreruleset.org/docs/3-about-rules/metadata/#tags-about-rule-classification).
 //
@@ -1752,7 +1749,7 @@ func directiveSecDataset(options *DirectiveOptions) error {
 	}
 	var arr []string
 	data := strings.Trim(d, "`")
-	for _, s := range strings.Split(data, "\n") {
+	for s := range strings.SplitSeq(data, "\n") {
 		s = strings.TrimSpace(s)
 		if s == "" || s[0] == '#' {
 			continue

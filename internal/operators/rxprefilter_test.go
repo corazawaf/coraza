@@ -1280,7 +1280,6 @@ func TestTrieReconstructionBasic(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			pf := prefilterFunc(tc.pattern)
 			if pf == nil {
@@ -1549,7 +1548,7 @@ func TestIndexedMatcherEdgeCases(t *testing.T) {
 func TestAnyRequiredThresholdBoundary(t *testing.T) {
 	genWords := func(n int) []string {
 		words := make([]string, n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			words[i] = fmt.Sprintf("%cword%d", 'a'+rune(i%26), i)
 		}
 		return words
@@ -1805,7 +1804,7 @@ func TestPrefilterConcurrentSafety(t *testing.T) {
 	const goroutines = 100
 	errs := make(chan error, goroutines*len(inputs))
 	done := make(chan struct{})
-	for g := 0; g < goroutines; g++ {
+	for range goroutines {
 		go func() {
 			defer func() { done <- struct{}{} }()
 			for _, inp := range inputs {
@@ -1819,7 +1818,7 @@ func TestPrefilterConcurrentSafety(t *testing.T) {
 			}
 		}()
 	}
-	for i := 0; i < goroutines; i++ {
+	for range goroutines {
 		<-done
 	}
 	close(errs)

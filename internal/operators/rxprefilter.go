@@ -347,16 +347,14 @@ type combinedRequired struct {
 //
 // The ci parameter controls case-insensitive mode: when true, extracted
 // literals are lowercased so the caller can compare case-insensitively.
-func extractLiterals(re *syntax.Regexp, ci bool) interface{} {
+func extractLiterals(re *syntax.Regexp, ci bool) any {
 	switch re.Op {
 	case syntax.OpLiteral:
 		// U+FFFD in a literal matches single invalid UTF-8 bytes in Go's regexp,
 		// but strings.Contains searches for the 3-byte encoding. Bail out to
 		// avoid false negatives.
-		for _, r := range re.Rune {
-			if r == utf8.RuneError {
-				return nil
-			}
+		if slices.Contains(re.Rune, utf8.RuneError) {
+			return nil
 		}
 		s := string(re.Rune)
 		if ci {
@@ -663,10 +661,8 @@ func rawLiteral(re *syntax.Regexp, ci bool) string {
 	if re.Op != syntax.OpLiteral {
 		return ""
 	}
-	for _, r := range re.Rune {
-		if r == utf8.RuneError {
-			return ""
-		}
+	if slices.Contains(re.Rune, utf8.RuneError) {
+		return ""
 	}
 	s := string(re.Rune)
 	if ci {
@@ -781,10 +777,7 @@ func newIndexedMatcher(needles []string, ci bool) *indexedMatcher {
 		}
 	}
 
-	ml := im.minLen
-	if ml > 255 {
-		ml = 255
-	}
+	ml := min(im.minLen, 255)
 	for i := range im.shift {
 		im.shift[i] = uint8(ml)
 	}
@@ -1244,10 +1237,8 @@ func extractExactMatch(re *syntax.Regexp) (lit string, ci bool) {
 	if middle.Op != syntax.OpLiteral {
 		return "", false
 	}
-	for _, r := range middle.Rune {
-		if r == utf8.RuneError {
-			return "", false
-		}
+	if slices.Contains(middle.Rune, utf8.RuneError) {
+		return "", false
 	}
 	return string(middle.Rune), middle.Flags&syntax.FoldCase != 0
 }

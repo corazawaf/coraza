@@ -3,20 +3,21 @@
 
 package transformations
 
-import (
-	"path/filepath"
-)
+import "path"
 
 func normalisePath(data string) (string, bool, error) {
 	leng := len(data)
 	if leng < 1 {
 		return data, false, nil
 	}
-	clean := filepath.Clean(data)
+	// SecLang paths use slash separators on every platform.
+	clean := path.Clean(data)
 	if clean == "." {
 		return "", true, nil
 	}
-	if data[len(data)-1] == '/' {
+	// Keep a trailing separator as ModSecurity does, except for the root,
+	// which path.Clean already returns as "/".
+	if data[len(data)-1] == '/' && clean != "/" {
 		result := clean + "/"
 		return result, data != result, nil
 	}

@@ -334,7 +334,7 @@ func BenchmarkValidationOverhead(b *testing.B) {
 			json: func() string {
 				var sb strings.Builder
 				sb.WriteString("[")
-				for i := 0; i < 100; i++ {
+				for i := range 100 {
 					if i > 0 {
 						sb.WriteString(",")
 					}
@@ -377,7 +377,7 @@ func BenchmarkValidationOverhead(b *testing.B) {
 func TestReadJSONArgumentLimit(t *testing.T) {
 	var sb strings.Builder
 	sb.WriteString("[")
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		if i > 0 {
 			sb.WriteString(",")
 		}
@@ -403,7 +403,7 @@ func TestReadJSONArgumentLimitNested(t *testing.T) {
 	// collection everywhere, not just at the top level.
 	var sb strings.Builder
 	sb.WriteString(`{"a":{"b":[`)
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		if i > 0 {
 			sb.WriteString(",")
 		}
@@ -434,7 +434,7 @@ func TestReadJSONArgumentLimitCountsCollidedValues(t *testing.T) {
 	const limit = 1000
 	var sb strings.Builder
 	sb.WriteString("{")
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		if i > 0 {
 			sb.WriteString(",")
 		}
@@ -500,7 +500,7 @@ func TestReadJSONArgumentLimitTruncationEnforcesRecursionLimit(t *testing.T) {
 
 	var sb strings.Builder
 	sb.WriteString("[")
-	for i := 0; i < limit; i++ {
+	for range limit {
 		sb.WriteString("1,")
 	}
 	// A single element that is itself nested past the limit, hidden right
@@ -537,7 +537,7 @@ func TestReadJSONNoArgumentLimit(t *testing.T) {
 func BenchmarkReadJSONArgumentLimit(b *testing.B) {
 	var sb strings.Builder
 	sb.WriteString("[")
-	for i := 0; i < 100000; i++ {
+	for i := range 100000 {
 		if i > 0 {
 			sb.WriteString(",")
 		}
@@ -577,7 +577,7 @@ func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 
 	var padded strings.Builder
 	padded.WriteString("{")
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		padded.WriteString(`"p` + strconv.Itoa(i) + `":[{}],`)
 	}
 	padded.WriteString(`"items":[1,2,3]}`)
@@ -650,11 +650,11 @@ func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 	const limit = 1000
 
 	var longPaths strings.Builder
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		longPaths.WriteString(`{"` + strings.Repeat("p", 200) + strconv.Itoa(i) + `":`)
 	}
 	longPaths.WriteString("{")
-	for i := 0; i < 999; i++ {
+	for i := range 999 {
 		if i > 0 {
 			longPaths.WriteString(",")
 		}
@@ -693,10 +693,7 @@ func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 					stored += len(v)
 				}
 			}
-			budget := len(tt.body) * flattenBytesFactor
-			if budget < flattenBytesFloor {
-				budget = flattenBytesFloor
-			}
+			budget := max(len(tt.body)*flattenBytesFactor, flattenBytesFloor)
 			if stored > budget {
 				t.Errorf("flattened form retained %d bytes, over the %d byte budget for a %d byte body",
 					stored, budget, len(tt.body))
@@ -719,7 +716,7 @@ func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 func TestReadJSONLeavesOrdinaryPayloadsIntact(t *testing.T) {
 	var sb strings.Builder
 	sb.WriteString(`{"users":[`)
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		if i > 0 {
 			sb.WriteString(",")
 		}

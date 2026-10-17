@@ -1789,7 +1789,7 @@ func BenchmarkTxGetField(b *testing.B) {
 func makeTransactionWithJSONArgs(t testing.TB) *Transaction {
 	t.Helper()
 	tx := makeTransaction(t)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		tx.AddGetRequestArgument(fmt.Sprintf("json.%d.jobdescription", i), "value")
 	}
 	return tx
@@ -2244,7 +2244,7 @@ func TestAddArgsRepeatedKeyOverlimit(t *testing.T) {
 			waf := NewWAF()
 			tx := waf.NewTransaction()
 			tx.WAF.ArgumentLimit = limit
-			for i := 0; i < attempts; i++ {
+			for range attempts {
 				add(tx, "repeated", "samplevalue")
 			}
 
