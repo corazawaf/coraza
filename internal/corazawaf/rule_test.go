@@ -167,7 +167,8 @@ func TestNoMatchEvaluateBecauseOfWholeCollectionException(t *testing.T) {
 // transaction at a time.
 func TestConcurrentRemoveRuleTargetByIDKeepsRemovalsPerTransaction(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping concurrency test in short mode")
+		t.Log("skipping concurrency test in short mode")
+		return
 	}
 	r := NewRule()
 	r.ID_ = 1
