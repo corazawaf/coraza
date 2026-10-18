@@ -606,13 +606,11 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 	}
 	var re *regexp.Regexp
 	if isRegex, rx := hasRegex(key); isRegex {
-		if !caseSensitiveVariable(v) {
-			rx = strings.ToLower(rx)
-		}
-		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		// Keys are stored lower-cased unless the variable is an ARGS one and
+		// case_sensitive_args_keys is enabled, so match caseless in every other case.
+		var err error
+		if re, err = r.compileKeyRegex(rx, !caseSensitiveVariable(v) || !shouldUseCaseSensitiveNamedCollection); err != nil {
 			return err
-		} else {
-			re = vare.(*regexp.Regexp)
 		}
 	}
 
@@ -651,20 +649,18 @@ func needToSplitConcatenatedVariable(v variables.RuleVariable, ve variables.Rule
 // OK: SecRule !ARGS:id "..."
 // ERROR: SecRule !ARGS: "..."
 func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
-	var re *regexp.Regexp
-	if isRegex, rx := hasRegex(key); isRegex {
-		if !caseSensitiveVariable(v) {
-			rx = strings.ToLower(rx)
-		}
-		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
-			return err
-		} else {
-			re = vare.(*regexp.Regexp)
-		}
-	}
 	// Prevent sigsev
 	if r == nil {
 		return fmt.Errorf("cannot create a variable exception for an undefined rule")
+	}
+	var re *regexp.Regexp
+	if isRegex, rx := hasRegex(key); isRegex {
+		// Exceptions are matched against the lower-cased key (see Transaction.GetField),
+		// so they are always caseless, like ModSecurity.
+		var err error
+		if re, err = r.compileKeyRegex(rx, true); err != nil {
+			return err
+		}
 	}
 	for i, rv := range r.variables {
 		// Even when Args and ArgsNames are one map, the exceptions must be created for the individual maps the
@@ -782,6 +778,20 @@ func (r *Rule) SetMemoizer(m plugintypes.Memoizer) {
 // Memoizer returns the memoizer used for caching compiled regexes in variable selectors.
 func (r *Rule) Memoizer() plugintypes.Memoizer {
 	return r.memoizer
+}
+
+// compileKeyRegex compiles a variable key regex, caseless if requested.
+// The pattern is prefixed with (?i) rather than lower-cased, which would
+// corrupt escapes such as \D, \S or \W.
+func (r *Rule) compileKeyRegex(rx string, caseless bool) (*regexp.Regexp, error) {
+	if caseless {
+		rx = "(?i)" + rx
+	}
+	re, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) })
+	if err != nil {
+		return nil, fmt.Errorf("compiling variable key regex: %w", err)
+	}
+	return re.(*regexp.Regexp), nil
 }
 
 func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {

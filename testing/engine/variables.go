@@ -51,11 +51,14 @@ var _ = profile.RegisterProfile(profile.Profile{
 								123123,
 								9123,
 								99999,
+								930,
 							},
 							NonTriggeredRules: []int{
 								800,
 								900,
 								1100,
+								910,
+								920,
 								920274,
 								9124,
 							},
@@ -92,6 +95,10 @@ SecRule ARGS|!ARGS:t1 "aaa" "id:800,log,phase:1"
 SecRule ARGS|!ARGS:/t.*/ "aaa" "id:900,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "bbb" "id:1000,log,phase:1"
 SecRule ARGS|!ARGS:/js.*/ "74B0CB414BD77D17B5680A6386EF1666" "id:1100,log,phase:1"
+# Key regexes are caseless and keep their escapes intact.
+SecRule ARGS|!ARGS:/^T1$/ "aaa" "id:910,log,phase:1"
+SecRule REQUEST_HEADERS|!REQUEST_HEADERS:/^\D+-agent$/ "ModSecurity" "id:920,log,phase:1"
+SecRule REQUEST_HEADERS:/^User-\D+$/ "ModSecurity" "id:930,log,phase:1"
 
 SecRule REQUEST_HEADERS|!REQUEST_HEADERS:User-Agent|!REQUEST_HEADERS:Referer|!REQUEST_HEADERS:Cookie|!REQUEST_HEADERS:Sec-Fetch-User|!REQUEST_HEADERS:Sec-CH-UA-Mobile \
   "@validateByteRange 32,34,38,42-59,61,65-90,95,97-122" "id:920274,phase:1,log,t:none,t:urlDecodeUni"
