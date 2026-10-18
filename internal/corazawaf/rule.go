@@ -789,7 +789,7 @@ func (r *Rule) compileKeyRegex(rx string, caseless bool) (*regexp.Regexp, error)
 	}
 	re, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) })
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("compiling variable key regex: %w", err)
 	}
 	return re.(*regexp.Regexp), nil
 }
