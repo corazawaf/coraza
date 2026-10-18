@@ -44,7 +44,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 	multipartFilenameLanguageCol := v.MultipartFilenameLanguage()
 	multipartNameCol := v.MultipartName()
 	for {
-		p, err := mr.NextPart()
+		p, err := mr.NextRawPart()
 		if err == io.EOF {
 			break
 		}
