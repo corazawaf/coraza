@@ -488,7 +488,7 @@ func TestParseCtl(t *testing.T) {
 		{"ruleRemoveByTag=MY_TAG", ctlRuleRemoveByTag, "MY_TAG", variables.Unknown, "", ""},
 		{"ruleRemoveTargetByMsg=MY_MSG;ARGS:user", ctlRuleRemoveTargetByMsg, "MY_MSG", variables.Args, "user", ""},
 		{"ruleRemoveTargetById=2;REQUEST_FILENAME:", ctlRuleRemoveTargetByID, "2", variables.RequestFilename, "", ""},
-		{"ruleRemoveTargetById=2;ARGS:/^json\\.\\d+\\.description$/", ctlRuleRemoveTargetByID, "2", variables.Args, "", `^json\.\d+\.description$`},
+		{"ruleRemoveTargetById=2;ARGS:/^json\\.\\d+\\.description$/", ctlRuleRemoveTargetByID, "2", variables.Args, "", `(?i)^json\.\d+\.description$`},
 	}
 	for _, tCase := range tCases {
 		testName, _, _ := strings.Cut(tCase.input, "=")

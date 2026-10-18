@@ -278,6 +278,38 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ruleRemoveTargetById regex key is case-insensitive",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method:  "GET",
+							URI:     "/api/case-test?Foo=attack",
+							Headers: map[string]string{"X-Foo": "attack"},
+						},
+						Output: profile.ExpectedOutput{
+							// Upper-case patterns must still exclude the keys.
+							TriggeredRules:    []int{380},
+							NonTriggeredRules: []int{381, 382},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method:  "GET",
+							URI:     "/api/case-test?Bar=attack",
+							Headers: map[string]string{"X-Bar": "attack"},
+						},
+						Output: profile.ExpectedOutput{
+							// Negative: other keys are still inspected.
+							TriggeredRules: []int{380, 381, 382},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -367,5 +399,10 @@ SecRule REQUEST_METHOD "@rx ^GET$" "id:351,phase:1,log,tag:OWASP_CRS,chain"
 SecRule REQUEST_URI "@beginsWith /api/chain-msg" "id:360,phase:1,pass,log,ctl:ruleRemoveTargetByMsg=argument too long;ARGS_GET:json.content"
 SecRule REQUEST_METHOD "@rx ^GET$" "id:361,phase:1,log,msg:'argument too long',chain"
     SecRule ARGS_GET "@rx attack" ""
+
+# Case-insensitive ctl regex key test:
+SecRule REQUEST_URI "@beginsWith /api/case-test" "id:380,phase:1,pass,log,ctl:ruleRemoveTargetById=381;ARGS:/^Foo$/,ctl:ruleRemoveTargetById=382;REQUEST_HEADERS:/^X-Foo$/"
+SecRule ARGS "@rx attack" "id:381,phase:1,log"
+SecRule REQUEST_HEADERS "@rx attack" "id:382,phase:1,log"
 `,
 })

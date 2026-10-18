@@ -80,10 +80,10 @@ func TestRuleNegativeVariablesMulti(t *testing.T) {
 	// [1] ArgsPost name (1 exception)
 	// [2] ArgsGet regex
 	// [3] ArgsPost regex
-	if rule.variables[2].KeyRx == nil || rule.variables[2].KeyRx.String() != "test.*" {
+	if rule.variables[2].KeyRx == nil || !rule.variables[2].KeyRx.MatchString("test1") {
 		t.Error("variable regex cannot be nil")
 	}
-	if rule.variables[3].KeyRx == nil || rule.variables[3].KeyRx.String() != "test.*" {
+	if rule.variables[3].KeyRx == nil || !rule.variables[3].KeyRx.MatchString("test1") {
 		t.Error("variable regex cannot be nil")
 	}
 

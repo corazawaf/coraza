@@ -79,7 +79,7 @@ const (
 //     - **Regular expression** (delimited by `/`): `ARGS:/^json\.\d+\.field$/` — removes all variables whose
 //     names match the pattern. The closing `/` must not be preceded by an odd number of backslashes
 //     (e.g. `/foo\/` is treated as the literal string `/foo\/`, not a regex). An empty pattern (`//`) is rejected.
-//     Pattern matching is always case-insensitive because variable names are lowercased before comparison.
+//     Pattern matching is always case-insensitive: the pattern is compiled with the `(?i)` flag.
 //     Users do not need to use the `!` character before the target list.
 //
 //  2. Options `ruleRemoveById`, `ruleRemoveByMsg`, and `ruleRemoveByTag` are per-transaction run-time removals
@@ -413,6 +413,9 @@ func parseCtl(data string, memoizer plugintypes.Memoizer) (ctlFunctionType, stri
 		if len(rxPattern) == 0 {
 			return ctlUnknown, "", 0, "", nil, errors.New("empty regex pattern in ctl collection key")
 		}
+		// Compile caseless (the key it is matched against is lower-cased anyway).
+		// Do not lower-case the pattern: that would corrupt escapes like \D or \W.
+		rxPattern = "(?i)" + rxPattern
 		var err error
 		if memoizer != nil {
 			re, compileErr := memoizer.Do(rxPattern, func() (any, error) { return regexp.Compile(rxPattern) })

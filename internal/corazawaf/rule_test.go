@@ -392,7 +392,7 @@ func TestRuleNegativeVariables(t *testing.T) {
 		t.Error(err)
 	}
 
-	if rule.variables[1].KeyRx == nil || rule.variables[1].KeyRx.String() != "test.*" {
+	if rule.variables[1].KeyRx == nil || rule.variables[1].KeyRx.String() != "(?i)test.*" {
 		t.Error("variable regex cannot be nil")
 	}
 }
@@ -409,8 +409,9 @@ func TestVariablesRxAreCaseSensitive(t *testing.T) {
 	if err := rule.AddVariable(variables.ArgsGet, "/Som3ThinG/", false); err != nil {
 		t.Error(err)
 	}
-	if rule.variables[0].KeyRx.String() != "Som3ThinG" {
-		t.Error("variable key is not case insensitive")
+	// ARGS keys are only case-sensitive under coraza.rule.case_sensitive_args_keys.
+	if got := rule.variables[0].KeyRx.MatchString("som3thing"); got == shouldUseCaseSensitiveNamedCollection {
+		t.Errorf("ARGS key regex matched lower-cased key: %v", got)
 	}
 }
 
@@ -422,8 +423,8 @@ func TestVariablesRxAreLowercasedForCaseInsensitiveCollections(t *testing.T) {
 	if rule.variables[0].KeyRx == nil {
 		t.Fatal("expected regex to be set")
 	}
-	if rule.variables[0].KeyRx.String() != "multipart_headers_content_types_.*" {
-		t.Errorf("expected lowercased regex for case-insensitive variable TX, got %q", rule.variables[0].KeyRx.String())
+	if !rule.variables[0].KeyRx.MatchString("multipart_headers_content_types_x") {
+		t.Errorf("expected caseless regex for case-insensitive variable TX, got %q", rule.variables[0].KeyRx.String())
 	}
 }
 
@@ -442,8 +443,8 @@ func TestVariableNegationRxLowercasedForCaseInsensitiveCollections(t *testing.T)
 	if ex.KeyRx == nil {
 		t.Fatal("expected regex exception to be set")
 	}
-	if ex.KeyRx.String() != "some_pattern.*" {
-		t.Errorf("expected lowercased regex for case-insensitive variable TX exception, got %q", ex.KeyRx.String())
+	if !ex.KeyRx.MatchString("some_pattern_x") {
+		t.Errorf("expected caseless regex for case-insensitive variable TX exception, got %q", ex.KeyRx.String())
 	}
 }
 
