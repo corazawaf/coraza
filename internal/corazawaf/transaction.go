@@ -306,6 +306,8 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.multipartDuplicatePartHeader
 	case variables.MultipartInvalidQuoting:
 		return tx.variables.multipartInvalidQuoting
+	case variables.MultipartInvalidPart:
+		return tx.variables.multipartInvalidPart
 	case variables.Time:
 		return tx.variables.time
 	case variables.TimeDay:
@@ -1852,6 +1854,7 @@ type TransactionVariables struct {
 	multipartStrictError         *collections.Single
 	multipartDuplicatePartHeader *collections.Single
 	multipartInvalidQuoting      *collections.Single
+	multipartInvalidPart         *collections.Single
 	outboundDataError            *collections.Single
 	queryString                  *collections.Single
 	remoteAddr                   *collections.Single
@@ -1988,6 +1991,7 @@ func NewTransactionVariables() *TransactionVariables {
 	v.multipartStrictError = collections.NewSingle(variables.MultipartStrictError)
 	v.multipartDuplicatePartHeader = collections.NewSingle(variables.MultipartDuplicatePartHeader)
 	v.multipartInvalidQuoting = collections.NewSingle(variables.MultipartInvalidQuoting)
+	v.multipartInvalidPart = collections.NewSingle(variables.MultipartInvalidPart)
 	v.time = collections.NewSingle(variables.Time)
 	v.timeDay = collections.NewSingle(variables.TimeDay)
 	v.timeEpoch = collections.NewSingle(variables.TimeEpoch)
@@ -2358,6 +2362,10 @@ func (v *TransactionVariables) MultipartInvalidQuoting() collection.Single {
 	return v.multipartInvalidQuoting
 }
 
+func (v *TransactionVariables) MultipartInvalidPart() collection.Single {
+	return v.multipartInvalidPart
+}
+
 // All iterates over the variables. We return both variable and its collection, i.e. key/value, to follow
 // general range iteration in Go which always has a key and value (key is int index for slices). Notably,
 // this is consistent with discussions for custom iterable types in a future language version
@@ -2457,6 +2465,9 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.MultipartInvalidQuoting, v.multipartInvalidQuoting) {
+		return
+	}
+	if !f(variables.MultipartInvalidPart, v.multipartInvalidPart) {
 		return
 	}
 	if !f(variables.MultipartStrictError, v.multipartStrictError) {
