@@ -790,7 +790,13 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 // Arguments are processed in the order they appear in the URI to ensure deterministic
 // behavior when the argument limit is reached.
 func (tx *Transaction) ExtractGetArguments(uri string) {
-	pairs, truncated := urlutil.ParseQueryOrdered(uri, '&', tx.WAF.ArgumentLimit)
+	pairs, truncated, err := urlutil.ParseQueryOrdered(uri, '&', tx.WAF.ArgumentLimit)
+	if err != nil {
+		tx.variables.urlencodedError.Set("1")
+	}
+	// The arguments are added even when the encoding was malformed: parsing is
+	// non-strict, so pairs is still populated, and dropping them would hide the
+	// request from the rules that are meant to inspect it.
 	for _, kv := range pairs {
 		tx.AddGetRequestArgument(kv.Key, kv.Value)
 	}
