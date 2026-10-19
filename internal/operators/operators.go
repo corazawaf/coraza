@@ -22,7 +22,11 @@
 package operators
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"io"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -34,6 +38,32 @@ func memoizeDo(m plugintypes.Memoizer, key string, fn func() (any, error)) (any,
 		return m.Do(key, fn)
 	}
 	return fn()
+}
+
+// memoizeKey builds the cache key for an operator's compiled artifact from the
+// operator name and the content the artifact is built from. The memoizer's
+// cache is shared by every WAF in the process, so a key that names where the
+// content came from (a dataset name, a file path) instead of the content
+// itself hands one WAF another WAF's matcher (GHSA-wc2q-x24m-8c5f), and a key
+// without the operator name lets two operators with the same argument collide
+// on an entry of the wrong type. SHA-256 keeps the key bounded and is
+// FIPS-approved.
+//
+// Every caller of the memoizer, including the plain regexp ones outside this
+// package, prefixes its key with its own name, so no caller can produce
+// another caller's key through its argument.
+//
+// Each element is length-prefixed: with a separator byte instead, an element
+// containing that byte reads as two elements, and a list crafted to hash like
+// another list would take over its matcher.
+func memoizeKey(op string, content ...string) string {
+	h := sha256.New()
+	var n [binary.MaxVarintLen64]byte
+	for _, c := range content {
+		h.Write(n[:binary.PutUvarint(n[:], uint64(len(c)))])
+		_, _ = io.WriteString(h, c)
+	}
+	return op + ":" + hex.EncodeToString(h.Sum(nil))
 }
 
 // Get returns an operator by name
