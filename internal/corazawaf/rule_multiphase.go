@@ -1,6 +1,31 @@
 // Copyright 2023 Juan Pablo Tosso and the OWASP Coraza contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// Multiphase evaluation (coraza.rule.multiphase_evaluation build tag) allows
+// rule variables to be evaluated in the earliest phase they become available,
+// rather than waiting for the phase the rule is defined in.
+//
+// Known limitations with flow actions:
+//
+//   - skip and skipAfter: these actions alter rule iteration within a phase.
+//     When a rule is anticipated to an earlier phase, its skip/skipAfter actions
+//     fire in that earlier phase instead of the defined one, potentially skipping
+//     unrelated rules or missing the intended target SecMarker.
+//
+//   - allow: a rule with an allow action evaluated in an earlier phase can
+//     suppress rules that should have run in that phase. Conversely, a variable
+//     anticipated into a phase where an allow action is already active may be
+//     skipped in the inferred phase and then skipped again in its original phase
+//     (since it is no longer its minimum phase), resulting in no evaluation at all.
+//
+// The skip counter is reset between phases (see rulegroup.go), so under normal
+// (single-phase) evaluation skip stays within the current processing phase.
+// Under multiphase evaluation the interaction is less predictable because rules
+// from different defined phases share the same evaluation loop.
+//
+// See https://github.com/corazawaf/coraza/issues/804 and
+// https://gist.github.com/M4tteoP/57001a5066f2f76c9f99c6dc3e9bf4af for context.
+
 package corazawaf
 
 import (
