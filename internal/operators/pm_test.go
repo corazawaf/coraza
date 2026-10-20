@@ -138,3 +138,224 @@ func BenchmarkPmShortInput(b *testing.B) {
 		}
 	})
 }
+
+func TestPMSnortSyntax(t *testing.T) {
+	tests := []struct {
+		name      string
+		arguments string
+		input     string
+		wantMatch bool
+	}{
+		{
+			name:      "snort hex mixed with literals",
+			arguments: "A|42|C|44|F",
+			input:     "xxabcdfxx",
+			wantMatch: true,
+		},
+		{
+			name:      "snort hex mixed with literals uppercase input",
+			arguments: "A|42|C|44|F",
+			input:     "xxABCDFxx",
+			wantMatch: true,
+		},
+		{
+			name:      "snort hex mixed no match",
+			arguments: "A|42|C|44|F",
+			input:     "xxabcexx",
+			wantMatch: false,
+		},
+		{
+			name:      "single phrase with space inside hex block",
+			arguments: "|41 42|",
+			input:     "ab",
+			wantMatch: true,
+		},
+		{
+			name:      "two phrases with space outside hex block",
+			arguments: "|41| |42|",
+			input:     "b",
+			wantMatch: true,
+		},
+		{
+			name:      "encoded space in phrase",
+			arguments: "a|20|b",
+			input:     "a b",
+			wantMatch: true,
+		},
+		{
+			name:      "encoded space in phrase no match without space",
+			arguments: "a|20|b",
+			input:     "ab",
+			wantMatch: false,
+		},
+		{
+			name:      "null byte pattern",
+			arguments: "|00|",
+			input:     "foo\x00bar",
+			wantMatch: true,
+		},
+		{
+			name:      "raw non-ascii bytes",
+			arguments: "|ff fe|",
+			input:     "foo\xff\xfebar",
+			wantMatch: true,
+		},
+		{
+			name:      "single hex byte matching char",
+			arguments: "|41|",
+			input:     "a",
+			wantMatch: true,
+		},
+		{
+			name:      "encoded pipe literal",
+			arguments: "foo|7C|bar",
+			input:     "foo|bar",
+			wantMatch: true,
+		},
+		{
+			name:      "standard phrases without pipes",
+			arguments: "hello world",
+			input:     "say hello",
+			wantMatch: true,
+		},
+		{
+			name:      "multiple spaces between phrases",
+			arguments: "a  b",
+			input:     "xyz",
+			wantMatch: false,
+		},
+		{
+			name:      "multiple spaces between phrases matching first",
+			arguments: "a  b",
+			input:     "a",
+			wantMatch: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			op, err := newPM(plugintypes.OperatorOptions{
+				Arguments: tc.arguments,
+			})
+			if err != nil {
+				t.Fatalf("unexpected constructor error: %s", err)
+			}
+
+			tx := newTestTx()
+			defer tx.Close()
+
+			got := op.Evaluate(tx, tc.input)
+			if got != tc.wantMatch {
+				t.Errorf("Evaluate(%q) = %v, want %v", tc.input, got, tc.wantMatch)
+			}
+		})
+	}
+
+	t.Run("capturing original bytes and casing", func(t *testing.T) {
+		op, err := newPM(plugintypes.OperatorOptions{
+			Arguments: "A|42|C|44|F",
+		})
+		if err != nil {
+			t.Fatalf("unexpected constructor error: %s", err)
+		}
+
+		tx := newTestTx()
+		defer tx.Close()
+		tx.Capture = true
+
+		input := "xxABCDFxx"
+		if !op.Evaluate(tx, input) {
+			t.Fatalf("expected match on %q", input)
+		}
+
+		captures := tx.Variables().TX().Get("0")
+		if len(captures) == 0 {
+			t.Fatal("expected TX:0 capture, got none")
+		}
+		if captures[0] != "ABCDF" {
+			t.Errorf("expected capture %q, got %q", "ABCDF", captures[0])
+		}
+	})
+
+	t.Run("decoded minLen assertion", func(t *testing.T) {
+		op, err := newPM(plugintypes.OperatorOptions{
+			Arguments: "A|42|C",
+		})
+		if err != nil {
+			t.Fatalf("unexpected constructor error: %s", err)
+		}
+		p := op.(*pm)
+		// "A|42|C" decodes to 3 bytes: 'a', 0x42, 'c'
+		if p.minLen != 3 {
+			t.Errorf("expected minLen=3, got %d", p.minLen)
+		}
+	})
+}
+
+func TestPMInvalidSyntax(t *testing.T) {
+	tests := []struct {
+		name      string
+		arguments string
+		wantErr   string
+	}{
+		{
+			name:      "unclosed block at end",
+			arguments: "a|4",
+			wantErr:   "@pm: unclosed hex block at offset 1 (use |7C| for literal pipe)",
+		},
+		{
+			name:      "odd number of hex digits",
+			arguments: "a|4|",
+			wantErr:   "@pm: odd number of hex digits in block at offset 1",
+		},
+		{
+			name:      "invalid hex character",
+			arguments: "a|4g|",
+			wantErr:   `@pm: invalid hex character 'g' at offset 3`,
+		},
+		{
+			name:      "empty hex block",
+			arguments: "a||b",
+			wantErr:   "@pm: empty hex block at offset 1 (use |7C| for literal pipe)",
+		},
+		{
+			name:      "tab inside hex block",
+			arguments: "|41\t42|",
+			wantErr:   `@pm: invalid hex character '\t' at offset 3`,
+		},
+		{
+			name:      "empty argument",
+			arguments: "",
+			wantErr:   "@pm: empty operator pattern",
+		},
+		{
+			name:      "spaces only argument",
+			arguments: "   ",
+			wantErr:   "@pm: empty operator pattern",
+		},
+		{
+			name:      "unclosed hex block after valid hex",
+			arguments: "foo|41",
+			wantErr:   "@pm: unclosed hex block at offset 3 (use |7C| for literal pipe)",
+		},
+		{
+			name:      "unclosed pipe followed by non-hex",
+			arguments: "foo|bar",
+			wantErr:   `@pm: invalid hex character 'r' at offset 6`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := newPM(plugintypes.OperatorOptions{
+				Arguments: tc.arguments,
+			})
+			if err == nil {
+				t.Fatalf("expected error for %q, got nil", tc.arguments)
+			}
+			if err.Error() != tc.wantErr {
+				t.Errorf("expected error %q, got %q", tc.wantErr, err.Error())
+			}
+		})
+	}
+}
