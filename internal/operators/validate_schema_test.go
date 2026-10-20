@@ -597,23 +597,27 @@ func TestValidateSchemaPhasePreference(t *testing.T) {
 	}
 }
 
-func TestSchemaCacheKey(t *testing.T) {
-	schemaA := []byte(`{"type":"object"}`)
-	schemaB := []byte(`{"type":"array"}`)
-
-	// Same content must produce the same key (so the memoizer dedupes it).
-	if got, want := schemaCacheKey(schemaA), schemaCacheKey(schemaA); got != want {
-		t.Errorf("identical schemas must yield identical keys: %q != %q", got, want)
+func TestMemoizeKey(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b string
+		same bool
+	}{
+		{"same operator and content", memoizeKey("validateSchema", "x"), memoizeKey("validateSchema", "x"), true},
+		{"different content", memoizeKey("validateSchema", "x"), memoizeKey("validateSchema", "y"), false},
+		{"different operator", memoizeKey("validateSchema", "x"), memoizeKey("pm", "x"), false},
+		{"content split differently", memoizeKey("validateSchema", "ab"), memoizeKey("validateSchema", "a", "b"), false},
+		{"NUL inside an element", memoizeKey("validateSchema", "a\x00b"), memoizeKey("validateSchema", "a", "b"), false},
+		{"empty element is not nothing", memoizeKey("validateSchema", "a", ""), memoizeKey("validateSchema", "a"), false},
 	}
-
-	// Different content must produce different keys (no false cache hit).
-	if schemaCacheKey(schemaA) == schemaCacheKey(schemaB) {
-		t.Errorf("different schemas must yield different keys, both %q", schemaCacheKey(schemaA))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if (tc.a == tc.b) != tc.same {
+				t.Errorf("keys equal = %v, want %v (%q vs %q)", tc.a == tc.b, tc.same, tc.a, tc.b)
+			}
+		})
 	}
-
-	// The key must be namespaced to avoid collisions with other key types
-	// (e.g. raw regex patterns) in the shared global memoizer.
-	if key := schemaCacheKey(schemaA); !strings.HasPrefix(key, "schema:") {
-		t.Errorf("key must be prefixed with %q, got %q", "schema:", key)
+	if key := memoizeKey("validateSchema", "x"); !strings.HasPrefix(key, "validateSchema:") {
+		t.Errorf("key must be namespaced by operator, got %q", key)
 	}
 }

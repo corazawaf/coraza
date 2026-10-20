@@ -417,7 +417,7 @@ func TestMultipartDoesNotAccumulateOpenFileDescriptors(t *testing.T) {
 	const parts = 200
 	boundary := "fdleakboundary"
 	var payload strings.Builder
-	for i := 0; i < parts; i++ {
+	for i := range parts {
 		fmt.Fprintf(&payload, "--%s\r\nContent-Disposition: form-data; name=\"f%d\"; filename=\"f%d.txt\"\r\n\r\nX\r\n", boundary, i, i)
 	}
 	fmt.Fprintf(&payload, "--%s--\r\n", boundary)
@@ -434,9 +434,7 @@ func TestMultipartDoesNotAccumulateOpenFileDescriptors(t *testing.T) {
 	var peak int64
 	done := make(chan struct{})
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for {
 			select {
 			case <-done:
@@ -451,7 +449,7 @@ func TestMultipartDoesNotAccumulateOpenFileDescriptors(t *testing.T) {
 				}
 			}
 		}
-	}()
+	})
 
 	mp := multipartProcessor(t)
 	v := corazawaf.NewTransactionVariables()

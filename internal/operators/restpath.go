@@ -47,7 +47,7 @@ func newRESTPath(options plugintypes.OperatorOptions) (plugintypes.Operator, err
 		data = strings.Replace(data, token[0], fmt.Sprintf("(?P<%s>[^?/]+)", token[1]), 1)
 	}
 
-	re, err := memoizeDo(options.Memoizer, data, func() (any, error) { return regexp.Compile(data) })
+	re, err := memoizeDo(options.Memoizer, "regexp:"+data, func() (any, error) { return regexp.Compile(data) })
 	if err != nil {
 		return nil, err
 	}

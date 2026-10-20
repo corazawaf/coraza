@@ -319,6 +319,9 @@ func (rp *RuleParser) applyParsedActions(act []ruleAction) error {
 		if err := action.F.Init(rp.rule, action.Value); err != nil {
 			return err
 		}
+		if actionsmod.IsTransformationAction(action.F) {
+			continue
+		}
 		if err := rp.rule.AddAction(action.Key, action.F); err != nil {
 			return err
 		}
