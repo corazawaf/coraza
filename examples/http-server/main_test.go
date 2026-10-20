@@ -137,7 +137,7 @@ func TestHttpServerConcurrent(t *testing.T) {
 	t.Run("concurrent test", func(t *testing.T) {
 		for _, tc := range tests {
 			tt := tc
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				// Each test case is added 10 times and then run concurrently
 				t.Run(tt.name, func(t *testing.T) {
 					t.Parallel()

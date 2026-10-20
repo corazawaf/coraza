@@ -281,7 +281,7 @@ func BenchmarkCompileWithoutMemoize(b *testing.B) {
 	for _, numWAFs := range []int{1, 10, 100} {
 		b.Run(fmt.Sprintf("WAFs=%d", numWAFs), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				for w := 0; w < numWAFs; w++ {
+				for range numWAFs {
 					for _, p := range patterns {
 						if _, err := regexp.Compile(p); err != nil {
 							b.Fatal(err)
@@ -299,7 +299,7 @@ func BenchmarkCompileWithMemoize(b *testing.B) {
 		b.Run(fmt.Sprintf("WAFs=%d", numWAFs), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				Reset()
-				for w := 0; w < numWAFs; w++ {
+				for w := range numWAFs {
 					m := NewMemoizer(uint64(w + 1))
 					for _, p := range patterns {
 						if _, err := m.Do(p, func() (any, error) {
@@ -321,7 +321,7 @@ func BenchmarkRelease(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
 				Reset()
-				for o := 0; o < numOwners; o++ {
+				for o := range numOwners {
 					m := NewMemoizer(uint64(o + 1))
 					for _, p := range patterns {
 						_, _ = m.Do(p, func() (any, error) {
@@ -330,7 +330,7 @@ func BenchmarkRelease(b *testing.B) {
 					}
 				}
 				b.StartTimer()
-				for o := 0; o < numOwners; o++ {
+				for o := range numOwners {
 					Release(uint64(o + 1))
 				}
 			}

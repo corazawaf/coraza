@@ -9,11 +9,13 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/tidwall/gjson"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/memoize"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 )
 
@@ -23,6 +25,66 @@ type Test struct {
 	Name  string
 	Ret   int
 	Type  string
+}
+
+// TestMemoizeKeysAreContentBound builds two operators through one memoizer
+// with the same argument but different content and checks that each matches
+// only its own list. The memoizer's cache is process-global, so a key naming
+// the content's source instead of the content hands the second WAF the first
+// WAF's matcher (GHSA-wc2q-x24m-8c5f). Not a profile: it needs two WAFs.
+func TestMemoizeKeysAreContentBound(t *testing.T) {
+	const owner = 1 << 62
+	m := memoize.NewMemoizer(owner)
+	t.Cleanup(func() { memoize.Release(owner) })
+
+	tests := []struct {
+		name  string
+		build func(word string) (plugintypes.Operator, error)
+	}{
+		{
+			name: "pmFromDataset with the same dataset name",
+			build: func(word string) (plugintypes.Operator, error) {
+				return newPMFromDataset(plugintypes.OperatorOptions{
+					Arguments: "list",
+					Datasets:  map[string][]string{"list": {word}},
+					Memoizer:  m,
+				})
+			},
+		},
+		{
+			name: "pmFromFile with the same path on another root",
+			build: func(word string) (plugintypes.Operator, error) {
+				return newPMFromFile(plugintypes.OperatorOptions{
+					Arguments: "list.txt",
+					Path:      []string{"."},
+					Root:      fstest.MapFS{"list.txt": {Data: []byte(word + "\n")}},
+					Memoizer:  m,
+				})
+			},
+		},
+	}
+	tx := corazawaf.NewWAF().NewTransaction()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			first, err := tc.build("evil-a")
+			if err != nil {
+				t.Fatal(err)
+			}
+			second, err := tc.build("evil-b")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !first.Evaluate(tx, "evil-a") || first.Evaluate(tx, "evil-b") {
+				t.Error("first operator does not enforce its own list")
+			}
+			if !second.Evaluate(tx, "evil-b") {
+				t.Error("second operator does not match its own entry")
+			}
+			if second.Evaluate(tx, "evil-a") {
+				t.Error("second operator enforces the first operator's list")
+			}
+		})
+	}
 }
 
 // https://github.com/SpiderLabs/secrules-language-tests/

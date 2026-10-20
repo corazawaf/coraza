@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"unsafe"
@@ -243,9 +244,11 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 				continue
 			}
 			var values []types.MatchData
+			// v is a copy, but its Exceptions still share the rule's backing
+			// array; clip it so the append below cannot write into that array.
+			v.Exceptions = slices.Clip(v.Exceptions)
 			for _, c := range ecol {
 				if c.Variable == v.Variable {
-					// TODO shall we check the pointer?
 					v.Exceptions = append(v.Exceptions, ruleVariableException{c.KeyStr, c.KeyRx})
 				}
 			}
@@ -606,7 +609,7 @@ func (r *Rule) AddVariable(v variables.RuleVariable, key string, iscount bool) e
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := r.memoizeDo("regexp:"+rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)
@@ -653,7 +656,7 @@ func (r *Rule) AddVariableNegation(v variables.RuleVariable, key string) error {
 		if !caseSensitiveVariable(v) {
 			rx = strings.ToLower(rx)
 		}
-		if vare, err := r.memoizeDo(rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
+		if vare, err := r.memoizeDo("regexp:"+rx, func() (any, error) { return regexp.Compile(rx) }); err != nil {
 			return err
 		} else {
 			re = vare.(*regexp.Regexp)

@@ -57,7 +57,7 @@ func TestURLEncodeArgumentLimit(t *testing.T) {
 	v := corazawaf.NewTransactionVariables()
 
 	var body strings.Builder
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		if i > 0 {
 			body.WriteByte('&')
 		}
@@ -73,7 +73,7 @@ func TestURLEncodeArgumentLimit(t *testing.T) {
 	}
 
 	total := 0
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		if got := v.ArgsPost().Get("a" + strconv.Itoa(i)); len(got) > 0 {
 			total++
 		}
@@ -135,7 +135,7 @@ func TestURLEncodeNoArgumentLimit(t *testing.T) {
 
 func BenchmarkURLEncodeArgumentLimit(b *testing.B) {
 	var body strings.Builder
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		if i > 0 {
 			body.WriteByte('&')
 		}
