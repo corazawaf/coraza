@@ -116,6 +116,8 @@ func TestOperators(t *testing.T) {
 		"verifysvnr",
 	}
 
+	emptyArgumentRejected := []string{"beginsWith", "contains", "endsWith", "streq", "within"}
+
 	captureMatrix := map[string]bool{
 		"with capture":    true,
 		"without capture": false,
@@ -125,7 +127,12 @@ func TestOperators(t *testing.T) {
 	for _, f := range files {
 		cases := unmarshalTests(t, f)
 		for _, data := range cases {
-			if utils.InSlice("containsWord", notImplemented) {
+			if utils.InSlice(data.Name, notImplemented) {
+				continue
+			}
+			// ModSecurity matches every input against an empty argument; Coraza
+			// rejects it when the rule is compiled (macro.NewMacro: "empty data").
+			if data.Param == "" && utils.InSlice(data.Name, emptyArgumentRejected) {
 				continue
 			}
 			for capName, capVal := range captureMatrix {
