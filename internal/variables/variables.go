@@ -753,5 +753,8 @@ const (
 	URIParseError
 	// ArgumentsLimitReached is set to 1 when the number of arguments
 	// exceeds the configured SecArgumentsLimit and arguments were dropped.
+	// With arguments added in the normal order, it is visible from the phase
+	// that owns the dropped source: 1 for ARGS_GET and ARGS_PATH, 2 for
+	// ARGS_POST, 4 for RESPONSE_ARGS.
 	ArgumentsLimitReached
 )
