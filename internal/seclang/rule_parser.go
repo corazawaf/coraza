@@ -441,6 +441,12 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 		// TODO we must remove defaultactions from chains
 		rule.Phase_ = 0
 		lastChain.Chain = rule
+		// TODO: parent points into the RuleGroup's rule slice (see getLastRuleExpectingChain),
+		// so this updates the stored rule; if that ever returned a copy, chainMinPhase would be
+		// lost silently. Move chain attachment and this recompute into RuleGroup, next to
+		// DiscardPendingChain, so the recompute cannot be skipped and seclang stops relying
+		// on the slice layout.
+		parent.ComputeChainMinPhase()
 		// This way we store the raw rule in the parent
 		parent.Raw_ += " \n" + options.Raw
 		return nil, nil
