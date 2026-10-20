@@ -52,7 +52,7 @@ func doJsDecode(input string, pos int) (string, bool) {
 				j := extLen
 
 				var code rune
-				for k := 0; k < j; k++ {
+				for k := range j {
 					code = code<<4 | rune(xsingle2c(input[i+3+k]))
 				}
 

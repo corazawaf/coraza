@@ -2,7 +2,7 @@
 
 - **Status:** proposed
 - **Date:** 2026-10-15
-- **Version:** unreleased
+- **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1770](https://github.com/corazawaf/coraza/pull/1770)
 - **Issue(s):** [#896](https://github.com/corazawaf/coraza/issues/896), [#1628](https://github.com/corazawaf/coraza/issues/1628)
 - **Deciders:** Coraza maintainers

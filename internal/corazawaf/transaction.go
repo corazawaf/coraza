@@ -888,9 +888,9 @@ func (tx *Transaction) ProcessURI(uri string, method string, httpVersion string)
 		// has the untouched URI regardless of this fallback.
 		tx.variables.uriParseError.Set("1")
 		tx.variables.requestURI.Set(uri)
-		if posRawQuery := strings.Index(uri, "?"); posRawQuery != -1 {
-			path = uri[:posRawQuery]
-			query = uri[posRawQuery+1:]
+		if before, after, ok := strings.Cut(uri, "?"); ok {
+			path = before
+			query = after
 			tx.ExtractGetArguments(query)
 		} else {
 			path = uri

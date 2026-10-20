@@ -6,6 +6,7 @@ package corazawaf
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -158,6 +159,38 @@ func TestNoMatchEvaluateBecauseOfWholeCollectionException(t *testing.T) {
 				t.Errorf("Expected no interruption because whole collection is excluded")
 			}
 		})
+	}
+}
+
+// Not a profile: the write into the rule is only observable from a concurrent
+// transaction.
+func TestRemoveRuleTargetDoesNotWriteIntoRule(t *testing.T) {
+	r := NewRule()
+	r.ID_ = 1
+	if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
+		t.Fatal(err)
+	}
+	// Three exceptions leave spare capacity in the rule's slice, as
+	// REQUEST-999-COMMON-EXCEPTIONS-AFTER.conf does for CRS 942420 and 942421.
+	for _, key := range []string{"x1", "x2", "x3"} {
+		if err := r.AddVariableNegation(variables.ArgsGet, key); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r.SetOperator(&dummyEqOperator{}, "@eq", "0")
+	exceptions := r.variables[0].Exceptions
+	exceptions = exceptions[:cap(exceptions)]
+	before := slices.Clone(exceptions)
+
+	tx := NewWAF().NewTransaction()
+	tx.AddGetRequestArgument("test", "0")
+	tx.RemoveRuleTargetByID(1, variables.ArgsGet, "test", nil)
+	var matchedValues []types.MatchData
+	if got := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache); len(got) != 0 {
+		t.Fatalf("removed target still matched: %v", got)
+	}
+	if !slices.Equal(before, exceptions) {
+		t.Error("exclusion from ctl:ruleRemoveTarget was written into the rule shared by all transactions")
 	}
 }
 
@@ -827,7 +860,7 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 			waf := NewWAF()
 			waf.RuleEngine = types.RuleEngineOn
 
-			for i := 0; i < nRules; i++ {
+			for i := range nRules {
 				r := NewRule()
 				r.ID_ = 1000 + i
 				r.LogID_ = strconv.Itoa(1000 + i)
@@ -849,7 +882,7 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 			}
 
 			tx := waf.NewTransaction()
-			for i := 0; i < nArgs; i++ {
+			for i := range nArgs {
 				tx.AddGetRequestArgument(fmt.Sprintf("arg%d", i), fmt.Sprintf("value-%d", i))
 			}
 			tx.variables.tx.Set("probe", []string{"value"})
@@ -893,7 +926,7 @@ func TestTransformationCacheRepeatedKeys(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		tx := waf.NewTransaction()
 		tx.AddGetRequestArgument("q", "benign")
 		tx.AddGetRequestArgument("q", "0")

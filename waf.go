@@ -32,6 +32,12 @@ func NewWAF(config WAFConfig) (WAF, error) {
 	c := config.(*wafConfig)
 
 	waf := corazawaf.NewWAF()
+	initialized := false
+	defer func() {
+		if !initialized {
+			_ = waf.Close()
+		}
+	}()
 
 	if environment.HasAccessToFS {
 		if err := environment.IsDirWritable(waf.TmpDir); err != nil {
@@ -120,6 +126,7 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		return nil, err
 	}
 
+	initialized = true
 	return wafWrapper{waf: waf}, nil
 }
 

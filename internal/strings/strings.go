@@ -5,6 +5,7 @@ package strings
 
 import (
 	"math/rand/v2"
+	"slices"
 	"strings"
 	"unsafe"
 )
@@ -105,12 +106,7 @@ func UnescapeQuotedString(s string) string {
 
 // InSlice returns true if the string is in the slice
 func InSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, a)
 }
 
 // WrapUnsafe wraps the provided buffer as a string. The buffer

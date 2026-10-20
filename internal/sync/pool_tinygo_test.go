@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewPool(t *testing.T) {
-	p := NewPool(func() interface{} {
+	p := NewPool(func() any {
 		n := int(1)
 		return &n
 	})

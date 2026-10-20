@@ -48,6 +48,15 @@ func t() plugintypes.Action {
 	return &tFn{}
 }
 
+// IsTransformationAction returns true if the action is the built-in "t" action.
+// The built-in "t" action is configuration-only: its Init method configures transformations
+// on the rule, but it performs no operation at transaction evaluation time and does not
+// need to be stored in the rule's runtime actions.
+func IsTransformationAction(a plugintypes.Action) bool {
+	_, ok := a.(*tFn)
+	return ok
+}
+
 var (
 	_ plugintypes.Action = &tFn{}
 	_ ruleActionWrapper  = t

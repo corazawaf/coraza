@@ -70,7 +70,7 @@ func TestMap(t *testing.T) {
 // must count every value instead.
 func TestMapTotalValuesVsLen(t *testing.T) {
 	c := NewMap(variables.ArgsGet)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		c.Add("repeated", "v")
 	}
 	if c.Len() != 1 {
@@ -153,7 +153,7 @@ func TestMapTotalValuesTracksAllMutations(t *testing.T) {
 
 func BenchmarkMapTotalValues(b *testing.B) {
 	c := NewMap(variables.ArgsGet)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		c.Add("repeated", "v")
 	}
 	b.ResetTimer()
@@ -283,7 +283,7 @@ func TestFindAllEmptyMap(t *testing.T) {
 func BenchmarkFindAll(b *testing.B) {
 	b.ReportAllocs()
 	m := NewMap(variables.RequestHeaders)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
 	}
 	b.ResetTimer()
@@ -295,7 +295,7 @@ func BenchmarkFindAll(b *testing.B) {
 func BenchmarkFindRegex(b *testing.B) {
 	b.ReportAllocs()
 	m := NewMap(variables.RequestHeaders)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		m.Add(fmt.Sprintf("x-header-%d", i), fmt.Sprintf("value-%d", i))
 	}
 	// Matches keys ending in 0-9 (x-header-0 .. x-header-9), roughly half.
@@ -310,7 +310,7 @@ func BenchmarkFindString(b *testing.B) {
 	b.ReportAllocs()
 	m := NewMap(variables.RequestHeaders)
 	// Single key with multiple values
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		m.Add("x-forwarded-for", fmt.Sprintf("10.0.0.%d", i))
 	}
 	b.ResetTimer()
