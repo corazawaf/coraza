@@ -203,10 +203,6 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 func (r *Rule) evaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue, contexts *[]chainContext, budget *int) []types.MatchData {
 	tx.Capture = r.Capture
 
-	if multiphaseEvaluation {
-		computeRuleChainMinPhase(r)
-	}
-
 	var matchedValues []types.MatchData
 	var depthContexts []chainContext
 	depthFirst := r.EvalDepth && r.Chain != nil && r.ParentID_ == noID
