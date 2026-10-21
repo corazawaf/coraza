@@ -177,7 +177,6 @@ RulesLoop:
 			// Execute the rule in inferred phases too if multiphase evaluation is enabled
 			// For chained rules, inferredPhases is not relevant, we rather have to run from minimal potentially
 			// matchable phase up to the rule's defined phase (chainMinPhase <= phase <= Phase_)
-			// At the first run chainMinPhase is not set, so we look at the parent chain rule's minimal phase.
 			// If it is not reached, we skip the whole chain, there is no chance to match it.
 			if !multiphaseEvaluation ||
 				(!r.HasChain && !r.has(phase)) ||
