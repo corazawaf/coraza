@@ -16,8 +16,10 @@
 //     suppress rules that should have run in that phase. Conversely, a variable
 //     anticipated into a phase where an allow action is already active may be
 //     skipped in the inferred phase and then skipped again in its declared phase
-//     (since the active AllowType still applies when the rule is re-encountered
-//     in the main loop), resulting in no evaluation at all.
+//     (because AllowTypeRequest and AllowTypeAll persist across phases, and for
+//     AllowTypePhase the multiphase variable-skip logic prevents re-evaluation
+//     since the variable's minimum phase has already passed), resulting in no
+//     evaluation at all.
 //
 // The skip counter is reset between phases (see rulegroup.go), so under normal
 // (single-phase) evaluation skip stays within the current processing phase.
