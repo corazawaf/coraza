@@ -31,6 +31,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	ss := s.String()
 	// Process with recursion limit
 	col := v.ArgsPost()
+	colRaw := v.ArgsPostRaw()
 	data, truncated, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload.
 	//
@@ -45,6 +46,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	for key, values := range data {
 		for _, value := range values {
 			col.Add(key, value)
+			colRaw.Add(key, value)
 		}
 	}
 	if truncated {

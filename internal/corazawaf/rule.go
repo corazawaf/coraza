@@ -574,7 +574,10 @@ func caseSensitiveVariable(v variables.RuleVariable) bool {
 	switch v {
 	case variables.Args, variables.ArgsNames,
 		variables.ArgsGet, variables.ArgsPost,
-		variables.ArgsGetNames, variables.ArgsPostNames:
+		variables.ArgsGetNames, variables.ArgsPostNames,
+		variables.ArgsRaw, variables.ArgsNamesRaw,
+		variables.ArgsGetRaw, variables.ArgsPostRaw,
+		variables.ArgsGetNamesRaw, variables.ArgsPostNamesRaw:
 		res = true
 	}
 	return res
