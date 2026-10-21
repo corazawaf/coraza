@@ -1,0 +1,69 @@
+# Checks that SecRxPreFilter On and Off agree on a ruleset, for the fork build that was just tagged.
+# See docs/rx-prefilter-gate.md. A red run means: do not enable SecRxPreFilter On with this tag.
+#
+# The ruleset is not in this repository. Set the repository variable RX_PREFILTER_RULESET_URL to
+# an https URL of a zip with the ruleset's *.conf files (optionally RX_PREFILTER_RULESET_SHA256 to
+# pin it), or pass ruleset_url when starting the workflow by hand. Without either the run fails:
+# a gate that quietly checks nothing would be worse than no gate.
+name: Rx prefilter gate
+
+on:
+  push:
+    tags:
+      - "v*-cl*"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "pattern (seconds) or full (about 10 minutes, adds the end-to-end replay)"
+        type: choice
+        options:
+          - full
+          - pattern
+        default: full
+      ruleset_url:
+        description: "https URL of a zip with the ruleset's *.conf (default: variable RX_PREFILTER_RULESET_URL)"
+        type: string
+        required: false
+
+permissions: {}
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: 1.25.x
+          cache: true
+      - name: Fetch the ruleset
+        env:
+          RULESET_URL: ${{ github.event.inputs.ruleset_url || vars.RX_PREFILTER_RULESET_URL }}
+          RULESET_SHA256: ${{ vars.RX_PREFILTER_RULESET_SHA256 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$RULESET_URL" ]; then
+            echo "::error::set the repository variable RX_PREFILTER_RULESET_URL (https URL of a zip with the ruleset's *.conf) or pass ruleset_url"
+            exit 1
+          fi
+          case "$RULESET_URL" in https://*) ;; *) echo "::error::the ruleset URL has to be https"; exit 1 ;; esac
+          mkdir -p build/ruleset
+          curl -fsSL --proto '=https' "$RULESET_URL" -o build/ruleset.zip
+          if [ -n "$RULESET_SHA256" ]; then echo "$RULESET_SHA256  build/ruleset.zip" | sha256sum -c -; fi
+          unzip -q -j build/ruleset.zip -d build/ruleset
+      - name: Prefilter gate
+        env:
+          MODE: ${{ github.event.inputs.mode || 'full' }}
+          CORAZA_RX_PARITY_REMOVE_IDS: ${{ vars.RX_PREFILTER_REMOVE_IDS }}
+        run: bash scripts/rx-prefilter-gate.sh --rules build/ruleset --mode "$MODE"
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f build/rx-prefilter-gate/summary.txt ]; then
+            { echo '```'; cat build/rx-prefilter-gate/summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -9,6 +9,7 @@ require (
 	github.com/coreruleset/albedo v0.3.0
 	github.com/coreruleset/go-ftw/v2 v2.5.0
 	github.com/rs/zerolog v1.35.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -59,7 +60,6 @@ require (
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 )
 
