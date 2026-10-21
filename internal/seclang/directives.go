@@ -1364,14 +1364,19 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // Coraza default: unset (no separate non-file limit until configured).
 // Syntax: SecRequestBodyNoFilesLimit 131072
 // ---
-// Set this below SecRequestBodyLimit when accepting large uploads. Multipart
-// part headers and ordinary form fields count; boundary framing and uploaded
-// file content do not. Values above the limit use SecRequestBodyLimitAction
-// (Reject returns 413; ProcessPartial evaluates the bounded non-multipart
-// prefix or completed multipart parts before the over-limit part). Both
-// actions set INBOUND_DATA_ERROR and REQBODY_ERROR, so under ProcessPartial a
-// phase-2 rule on REQBODY_ERROR (rule 200002 in coraza.conf-recommended)
-// still denies the request.
+// Set this below SecRequestBodyLimit when accepting large uploads. With the
+// built-in multipart processor, part headers and ordinary form fields count;
+// boundary framing and uploaded file content do not. Custom multipart
+// processors are treated like other request bodies, so every buffered byte
+// counts toward this limit.
+// When SecRequestBodyNoFilesLimit is at or above SecRequestBodyLimit, the
+// separate non-file limit is disabled. When the active non-file limit is
+// exceeded, SecRequestBodyLimitAction applies (Reject returns 413;
+// ProcessPartial evaluates the bounded non-multipart prefix or completed
+// multipart parts before the over-limit part). Both actions set
+// INBOUND_DATA_ERROR and REQBODY_ERROR, so under ProcessPartial a phase-2 rule
+// on REQBODY_ERROR (rule 200002 in coraza.conf-recommended) still denies the
+// request.
 //
 // Example:
 // ```seclang
