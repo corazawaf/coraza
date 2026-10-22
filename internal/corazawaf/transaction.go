@@ -97,6 +97,8 @@ type Transaction struct {
 	// requestBodyInspectLength limits ProcessPartial to the inspected prefix while
 	// retaining any probe byte read from an io.Reader for connector replay.
 	requestBodyInspectLength        int64
+	requestBodyNoFilesLimit         int64
+	requestBodyNoFilesMultipart     bool
 	requestBodyNoFilesLimitExceeded bool
 
 	// Handles response body buffers
@@ -946,6 +948,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	}
 
 	tx.WAF.Rules.Eval(types.PhaseRequestHeaders, tx)
+	tx.configureRequestBodyNoFilesLimit()
 	return tx.interruption
 }
 
@@ -958,21 +961,32 @@ func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Inte
 	return tx.interruption, 0, nil
 }
 
-func (tx *Transaction) nonMultipartBodyLimit() int64 {
+func (tx *Transaction) configureRequestBodyNoFilesLimit() {
 	limit := tx.WAF.RequestBodyNoFilesLimit
 	if limit <= 0 || limit >= tx.RequestBodyLimit {
+		return
+	}
+	tx.requestBodyNoFilesLimit = limit
+
+	processor, err := bodyprocessors.GetBodyProcessor("multipart")
+	if !strings.EqualFold(tx.variables.reqbodyProcessor.Get(), "MULTIPART") || err != nil || !bodyprocessors.IsBuiltInMultipart(processor) {
+		return
+	}
+	values := tx.variables.requestHeaders.Get("content-type")
+	if len(values) == 0 {
+		return
+	}
+	mediaType, _, err := mime.ParseMediaType(values[0])
+	if err == nil && strings.HasPrefix(mediaType, "multipart/") {
+		tx.requestBodyNoFilesMultipart = true
+	}
+}
+
+func (tx *Transaction) nonMultipartBodyLimit() int64 {
+	if tx.requestBodyNoFilesMultipart {
 		return 0
 	}
-	processor, err := bodyprocessors.GetBodyProcessor("multipart")
-	if strings.EqualFold(tx.variables.reqbodyProcessor.Get(), "MULTIPART") && err == nil && bodyprocessors.IsBuiltInMultipart(processor) {
-		if values := tx.variables.requestHeaders.Get("content-type"); len(values) > 0 {
-			mediaType, _, err := mime.ParseMediaType(values[0])
-			if err == nil && strings.HasPrefix(mediaType, "multipart/") {
-				return 0
-			}
-		}
-	}
-	return limit
+	return tx.requestBodyNoFilesLimit
 }
 
 func (tx *Transaction) exceedNoFilesLimit() (*types.Interruption, int, error) {
@@ -983,7 +997,7 @@ func (tx *Transaction) exceedNoFilesLimit() (*types.Interruption, int, error) {
 	if tx.WAF.RequestBodyLimitAction == types.BodyLimitActionReject {
 		return setAndReturnBodyLimitInterruption(tx, 413)
 	}
-	tx.requestBodyInspectLength = tx.WAF.RequestBodyNoFilesLimit
+	tx.requestBodyInspectLength = tx.requestBodyNoFilesLimit
 	_, err := tx.ProcessRequestBody()
 	return tx.interruption, 0, err
 }
@@ -1248,8 +1262,12 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 		ArgumentLimit:             tx.WAF.ArgumentLimit,
 	}
 	var processErr error
-	if rbp == "multipart" && tx.WAF.RequestBodyNoFilesLimit > 0 && bodyprocessors.IsBuiltInMultipart(bodyprocessor) {
-		processErr = bodyprocessors.ProcessMultipartWithNoFilesLimit(bodyprocessor, reader, tx.Variables(), options, tx.WAF.RequestBodyNoFilesLimit)
+	if rbp == "multipart" && tx.requestBodyNoFilesMultipart {
+		var handled bool
+		handled, processErr = bodyprocessors.ProcessMultipartWithNoFilesLimit(bodyprocessor, reader, tx.Variables(), options, tx.requestBodyNoFilesLimit)
+		if !handled {
+			processErr = bodyprocessor.ProcessRequest(reader, tx.Variables(), options)
+		}
 	} else {
 		processErr = bodyprocessor.ProcessRequest(reader, tx.Variables(), options)
 	}

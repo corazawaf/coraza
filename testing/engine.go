@@ -137,9 +137,6 @@ func (t *Test) SetRequestBody(body any) error {
 	if t.magic {
 		t.RequestHeaders["content-length"] = strconv.Itoa(lbody)
 	}
-	if _, _, err := t.transaction.WriteRequestBody([]byte(data)); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -168,6 +165,11 @@ func (t *Test) RunPhases() error {
 		t.transaction.AddRequestHeader(k, v)
 	}
 	t.transaction.ProcessRequestHeaders()
+	if t.body != "" {
+		if _, _, err := t.transaction.WriteRequestBody([]byte(t.body)); err != nil {
+			return err
+		}
+	}
 
 	if _, err := t.transaction.ProcessRequestBody(); err != nil {
 		return err

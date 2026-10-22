@@ -224,6 +224,8 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.HashEnforcement = false
 	tx.lastPhase = 0
 	tx.requestBodyInspectLength = 0
+	tx.requestBodyNoFilesLimit = 0
+	tx.requestBodyNoFilesMultipart = false
 	tx.requestBodyNoFilesLimitExceeded = false
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveByIDRanges = nil

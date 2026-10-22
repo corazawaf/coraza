@@ -1362,6 +1362,7 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // not bound the data a body processor might materialize. This directive
 // bounds non-file data independently of the overall upload limit.
 // Coraza default: unset (no separate non-file limit until configured).
+// A value of 0 leaves the separate limit unset; negative values are invalid.
 // Syntax: SecRequestBodyNoFilesLimit 131072
 // ---
 // Set this below SecRequestBodyLimit when accepting large uploads. With the
@@ -1387,9 +1388,15 @@ func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	var err error
-	options.WAF.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
-	return err
+	limit, err := strconv.ParseInt(options.Opts, 10, 64)
+	if err != nil {
+		return err
+	}
+	if limit < 0 {
+		return errors.New("request body no-files limit must not be negative")
+	}
+	options.WAF.RequestBodyNoFilesLimit = limit
+	return nil
 }
 
 // Description: Path to the Coraza debug log file.
