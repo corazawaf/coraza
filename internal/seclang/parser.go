@@ -64,11 +64,11 @@ func (p *Parser) FromFile(profilePath string) error {
 		// slashes io/fs mandates into OS separators, which no fs.FS can
 		// resolve.
 		if !isGlob && !strings.HasPrefix(profilePath, "/") {
-			profilePath = filepath.Join(p.currentDir, profilePath)
+			profilePath = p.fsPath(filepath.Join(p.currentDir, profilePath))
 		}
 		p.currentFile = profilePath
 		lastDir := p.currentDir
-		p.currentDir = filepath.Dir(profilePath)
+		p.currentDir = p.fsPath(filepath.Dir(profilePath))
 		file, err := fs.ReadFile(p.root, profilePath)
 		if err != nil {
 			// we don't use defer for this as tinygo does not seem to like it
@@ -92,6 +92,17 @@ func (p *Parser) FromFile(profilePath string) error {
 	p.currentFile = ""
 
 	return nil
+}
+
+// fsPath returns name in the slash-separated form io/fs requires, so that
+// fs.Sub, embed and other fs.FS roots work on Windows too. Names for io.OSFS
+// are OS paths and are returned unchanged, as are UNC and device paths, which
+// only an OS-backed root can open and whose leading "//" path.Join would drop.
+func (p *Parser) fsPath(name string) string {
+	if _, ok := p.root.(io.OSFS); ok || len(filepath.VolumeName(name)) > 2 {
+		return name
+	}
+	return filepath.ToSlash(name)
 }
 
 // FromString imports directives from a string
