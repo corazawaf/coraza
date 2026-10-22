@@ -60,7 +60,7 @@ func newValidateNID(options plugintypes.OperatorOptions) (plugintypes.Operator, 
 		return nil, fmt.Errorf("invalid @validateNid argument")
 	}
 
-	re, err := memoizeDo(options.Memoizer, expr, func() (any, error) { return regexp.Compile(expr) })
+	re, err := memoizeDo(options.Memoizer, "regexp:"+expr, func() (any, error) { return regexp.Compile(expr) })
 	if err != nil {
 		return nil, err
 	}
