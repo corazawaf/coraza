@@ -1193,7 +1193,7 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 // Transaction: when it does, make sure the field is reset on pool reuse, then
 // update wantFields.
 func TestTransactionFieldCount(t *testing.T) {
-	const wantFields = 35
+	const wantFields = 38
 	if got := reflect.TypeFor[Transaction]().NumField(); got != wantFields {
 		t.Fatalf("Transaction has %d fields, want %d. If you added a field, make sure it "+
 			"is reset on pool reuse in newTransaction() (or Close()), then update wantFields.", got, wantFields)
@@ -2290,6 +2290,154 @@ func TestExtractGetArgumentsRepeatedKeyOverlimit(t *testing.T) {
 
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())
+	}
+}
+
+// Not a profile: profiles cannot exercise the connector-facing Add*RequestArgument
+// APIs or their ordering relative to the phases, which is a public API contract.
+func TestArgumentLimitActionRejectsInOwningPhase(t *testing.T) {
+	tests := []struct {
+		name            string
+		add             func(tx *Transaction, key, value string)
+		body            string // urlencoded, empty for none
+		addLate         bool   // add the arguments between phases 1 and 2
+		skipResponse    bool
+		wantFlagEarly   bool            // ARGUMENTS_LIMIT_REACHED right after adding
+		wantRejectPhase types.RulePhase // 0 for none
+	}{
+		{
+			name:            "get arguments are rejected after phase 1",
+			add:             (*Transaction).AddGetRequestArgument,
+			wantFlagEarly:   true,
+			wantRejectPhase: types.PhaseRequestHeaders,
+		},
+		{
+			name:            "path arguments are rejected after phase 1",
+			add:             (*Transaction).AddPathRequestArgument,
+			wantFlagEarly:   true,
+			wantRejectPhase: types.PhaseRequestHeaders,
+		},
+		{
+			name:            "get arguments added after phase 1 are rejected after phase 2",
+			add:             (*Transaction).AddGetRequestArgument,
+			addLate:         true,
+			wantFlagEarly:   true,
+			wantRejectPhase: types.PhaseRequestBody,
+		},
+		{
+			name:            "post arguments added before phase 1 wait for phase 2",
+			add:             (*Transaction).AddPostRequestArgument,
+			wantRejectPhase: types.PhaseRequestBody,
+		},
+		{
+			name: "response arguments are published in phase 4 and do not trigger the fallback",
+			add:  (*Transaction).AddResponseArgument,
+		},
+		{
+			name:         "response arguments are published in phase 5 when phase 4 does not run",
+			add:          (*Transaction).AddResponseArgument,
+			skipResponse: true,
+		},
+		{
+			name:            "response arguments added first do not hide a request body overflow",
+			add:             (*Transaction).AddResponseArgument,
+			body:            "a=1&b=2&c=3",
+			wantRejectPhase: types.PhaseRequestBody,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			waf.ArgumentLimit = 2
+			waf.RequestBodyAccess = true
+			tx := waf.NewTransaction()
+			defer tx.Close()
+			tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+
+			addArguments := func() {
+				for _, k := range []string{"x", "y", "z"} {
+					tt.add(tx, k, "1")
+				}
+				if got := tx.variables.argumentsLimitReached.Get() == "1"; got != tt.wantFlagEarly {
+					t.Fatalf("ARGUMENTS_LIMIT_REACHED right after adding: got %v, want %v", got, tt.wantFlagEarly)
+				}
+			}
+			if !tt.addLate {
+				addArguments()
+			}
+
+			var gotRejectPhase types.RulePhase
+			if it := tx.ProcessRequestHeaders(); it != nil {
+				gotRejectPhase = types.PhaseRequestHeaders
+			} else {
+				if tt.addLate {
+					addArguments()
+				}
+				if _, _, err := tx.WriteRequestBody([]byte(tt.body)); err != nil {
+					t.Fatal(err)
+				}
+				if it, _ := tx.ProcessRequestBody(); it != nil {
+					gotRejectPhase = types.PhaseRequestBody
+				}
+			}
+			if gotRejectPhase != tt.wantRejectPhase {
+				t.Fatalf("rejecting phase: got %d, want %d", gotRejectPhase, tt.wantRejectPhase)
+			}
+			if it := tx.Interruption(); it != nil && it.Status != 400 {
+				t.Fatalf("expected status 400, got %d", it.Status)
+			}
+
+			if !tx.IsInterrupted() && !tt.skipResponse {
+				tx.ProcessResponseHeaders(200, "HTTP/1.1")
+				if _, err := tx.ProcessResponseBody(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			// Only a response overflow whose phase 4 was skipped remains unpublished here.
+			if got := tx.variables.argumentsLimitReached.Get() == "1"; got == tt.skipResponse {
+				t.Fatalf("ARGUMENTS_LIMIT_REACHED before phase 5: got %v, want %v", got, !tt.skipResponse)
+			}
+			tx.ProcessLogging()
+			if tx.variables.argumentsLimitReached.Get() != "1" {
+				t.Fatal("expected ARGUMENTS_LIMIT_REACHED after phase 5")
+			}
+		})
+	}
+}
+
+// Not a profile: only a body processor plugin reading TransactionVariables.All can
+// reach this wrapper path; the built-in processors use the accessor.
+func TestArgumentLimitScopedVariables(t *testing.T) {
+	tx := NewWAF().NewTransaction()
+	defer tx.Close()
+	tx.variables.argumentsLimitReached.Set("1")
+	scoped := &argumentLimitScopedVariables{
+		TransactionVariables:  tx.Variables(),
+		argumentsLimitReached: collections.NewSingle(variables.ArgumentsLimitReached),
+	}
+
+	reads := map[string]func() collection.Single{
+		"accessor": scoped.ArgumentsLimitReached,
+		"all": func() collection.Single {
+			var got collection.Single
+			scoped.All(func(v variables.RuleVariable, col collection.Collection) bool {
+				if v == variables.ArgumentsLimitReached {
+					got = col.(collection.Single)
+					return false
+				}
+				return true
+			})
+			return got
+		},
+	}
+	for name, read := range reads {
+		t.Run(name, func(t *testing.T) {
+			// The scoped flag is unset; the transaction's is 1.
+			if got := read().Get(); got == "1" {
+				t.Fatal("read the transaction's flag instead of the scoped one")
+			}
+		})
 	}
 }
 

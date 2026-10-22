@@ -205,27 +205,44 @@ func (t *Test) OutputInterruptionErrors() []string {
 
 	// If we expect an interruption and got one, validate the details
 	if t.ExpectedOutput.Interruption != nil && t.transaction.IsInterrupted() {
-		if t.ExpectedOutput.Interruption.Action != t.transaction.Interruption().Action {
-			errors = append(errors, fmt.Sprintf("Interruption.Action: expected: '%s', got: '%s'",
-				t.ExpectedOutput.Interruption.Action, t.transaction.Interruption().Action))
-		}
+		errors = append(errors, compareInterruption("Interruption", t.ExpectedOutput.Interruption, t.transaction.Interruption())...)
+	}
 
-		if t.ExpectedOutput.Interruption.Status != t.transaction.Interruption().Status {
-			errors = append(errors, fmt.Sprintf("Interruption.Status: expected: '%d', got: '%d'",
-				t.ExpectedOutput.Interruption.Status, t.transaction.Interruption().Status))
-		}
-
-		if t.ExpectedOutput.Interruption.Data != t.transaction.Interruption().Data {
-			errors = append(errors, fmt.Sprintf("Interruption.Data: expected: '%s', got: '%s'",
-				t.ExpectedOutput.Interruption.Data, t.transaction.Interruption().Data))
-		}
-
-		if t.ExpectedOutput.Interruption.RuleID != t.transaction.Interruption().RuleID {
-			errors = append(errors, fmt.Sprintf("Interruption.RuleID: expected: '%d', got: '%d'",
-				t.ExpectedOutput.Interruption.RuleID, t.transaction.Interruption().RuleID))
+	// Only checked when set, so existing DetectionOnly profiles are unaffected. The
+	// method is not on the public Transaction interface, hence the assertion.
+	if want := t.ExpectedOutput.DetectionOnlyInterruption; want != nil {
+		tx, ok := t.transaction.(interface{ DetectionOnlyInterruption() *types.Interruption })
+		switch {
+		case !ok:
+			errors = append(errors, "Expected a DetectionOnly interruption, but the transaction does not record one")
+		case tx.DetectionOnlyInterruption() == nil:
+			errors = append(errors, "Expected a DetectionOnly interruption, but none was recorded")
+		default:
+			errors = append(errors, compareInterruption("DetectionOnlyInterruption", want, tx.DetectionOnlyInterruption())...)
 		}
 	}
 
+	return errors
+}
+
+// compareInterruption returns one error per field of got that differs from want.
+func compareInterruption(name string, want *profile.ExpectedInterruption, got *types.Interruption) []string {
+	var errors []string
+	if want.Action != got.Action {
+		errors = append(errors, fmt.Sprintf("%s.Action: expected: '%s', got: '%s'", name, want.Action, got.Action))
+	}
+
+	if want.Status != got.Status {
+		errors = append(errors, fmt.Sprintf("%s.Status: expected: '%d', got: '%d'", name, want.Status, got.Status))
+	}
+
+	if want.Data != got.Data {
+		errors = append(errors, fmt.Sprintf("%s.Data: expected: '%s', got: '%s'", name, want.Data, got.Data))
+	}
+
+	if want.RuleID != got.RuleID {
+		errors = append(errors, fmt.Sprintf("%s.RuleID: expected: '%d', got: '%d'", name, want.RuleID, got.RuleID))
+	}
 	return errors
 }
 

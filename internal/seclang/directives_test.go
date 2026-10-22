@@ -453,6 +453,14 @@ func TestDirectives(t *testing.T) {
 			// according to modsec docs SecArgumentsLimit 1000
 			{"1000", func(waf *corazawaf.WAF) bool { return waf.ArgumentLimit == 1000 }},
 		},
+		"SecArgumentsLimitAction": {
+			{"", expectErrorOnDirective},
+			{"What?", expectErrorOnDirective},
+			{"Reject", func(w *corazawaf.WAF) bool { return w.ArgumentLimitAction == corazawaf.ArgumentLimitActionReject }},
+			{"ProcessPartial", func(w *corazawaf.WAF) bool {
+				return w.ArgumentLimitAction == corazawaf.ArgumentLimitActionProcessPartial
+			}},
+		},
 	}
 	if environment.HasAccessToFS {
 		directiveCases["SecUploadDir"] = []directiveCase{
