@@ -10,16 +10,14 @@
 //   - skip and skipAfter: these actions alter rule iteration within a phase.
 //     When a rule is anticipated to an earlier phase, its skip/skipAfter actions
 //     fire in that earlier phase instead of the defined one, potentially skipping
-//     unrelated rules or missing the intended target SecMarker.
+//     unrelated rules.
 //
-//   - allow: a rule with an allow action evaluated in an earlier phase can
-//     suppress rules that should have run in that phase. Conversely, a variable
-//     anticipated into a phase where an allow action is already active may be
-//     skipped in the inferred phase and then skipped again in its declared phase
-//     (because AllowTypeRequest and AllowTypeAll persist across phases, and for
-//     AllowTypePhase the multiphase variable-skip logic prevents re-evaluation
-//     since the variable's minimum phase has already passed), resulting in no
-//     evaluation at all.
+//   - allow (phase-mode only): with allow:request or allow:all, the rule is
+//     skipped in its declared phase by the AllowType check regardless of the
+//     build tag. With allow:phase, the allow state resets between phases, so
+//     the rule enters evaluation in the earlier phase and is then skipped by
+//     the multiphase variable-skip logic (the variable's minimum phase has
+//     already passed), resulting in no evaluation at all.
 //
 // The skip counter is reset between phases (see rulegroup.go), so under normal
 // (single-phase) evaluation skip stays within the current processing phase.
