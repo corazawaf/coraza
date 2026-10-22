@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
@@ -30,6 +31,67 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+// The declarative engine profiles cannot assert how much of the caller's
+// reader is consumed or whether the look-ahead byte remains replayable.
+func TestRequestBodyNoFilesLimitStreaming(t *testing.T) {
+	const limit = int64(16)
+	body := "payload=" + strings.Repeat("x", 32)
+
+	for _, tc := range []struct {
+		name   string
+		action types.BodyLimitAction
+		status int
+	}{
+		{name: "reject", action: types.BodyLimitActionReject, status: 413},
+		{name: "process partial", action: types.BodyLimitActionProcessPartial},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := NewWAF()
+			waf.RequestBodyAccess = true
+			waf.RequestBodyLimit = 1 << 20
+			waf.RequestBodyNoFilesLimit = limit
+			waf.RequestBodyLimitAction = tc.action
+
+			tx := waf.NewTransaction()
+			defer tx.Close()
+			tx.ForceRequestBodyVariable = true
+			tx.ProcessURI("/", "POST", "HTTP/1.1")
+			tx.ProcessRequestHeaders()
+
+			input := iotest.OneByteReader(strings.NewReader(body))
+			interruption, n, err := tx.ReadRequestBodyFrom(input)
+			if err != nil || n != int(limit+1) {
+				t.Fatalf("interruption=%v read=%d err=%v", interruption, n, err)
+			}
+			if tc.status == 0 {
+				if interruption != nil {
+					t.Fatalf("unexpected interruption: %v", interruption)
+				}
+			} else if interruption == nil || interruption.Status != tc.status {
+				t.Fatalf("interruption=%v, want status %d", interruption, tc.status)
+			}
+
+			buffered, err := tx.RequestBodyReader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			replayed, err := io.ReadAll(io.MultiReader(buffered, input))
+			if err != nil || string(replayed) != body {
+				t.Fatalf("replay=%q err=%v", replayed, err)
+			}
+
+			if tc.action == types.BodyLimitActionProcessPartial {
+				if got := tx.variables.argsPost.Get("payload"); len(got) != 1 || got[0] != strings.Repeat("x", 8) {
+					t.Fatalf("partial ARGS_POST=%v", got)
+				}
+				if got := tx.variables.requestBodyLength.Get(); got != "16" {
+					t.Fatalf("REQUEST_BODY_LENGTH=%q", got)
+				}
+			}
+		})
+	}
+}
 
 func TestTxSettersMultipart(t *testing.T) {
 	tx := makeTransactionMultipart(t)
@@ -1193,7 +1255,7 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 // Transaction: when it does, make sure the field is reset on pool reuse, then
 // update wantFields.
 func TestTransactionFieldCount(t *testing.T) {
-	const wantFields = 35
+	const wantFields = 39
 	if got := reflect.TypeFor[Transaction]().NumField(); got != wantFields {
 		t.Fatalf("Transaction has %d fields, want %d. If you added a field, make sure it "+
 			"is reset on pool reuse in newTransaction() (or Close()), then update wantFields.", got, wantFields)
