@@ -415,7 +415,7 @@ func parseCtl(data string, memoizer plugintypes.Memoizer) (ctlFunctionType, stri
 		}
 		var err error
 		if memoizer != nil {
-			re, compileErr := memoizer.Do(rxPattern, func() (any, error) { return regexp.Compile(rxPattern) })
+			re, compileErr := memoizer.Do("regexp:"+rxPattern, func() (any, error) { return regexp.Compile(rxPattern) })
 			if compileErr != nil {
 				return ctlUnknown, "", 0, "", nil, fmt.Errorf("invalid regex in ctl collection key: %w", compileErr)
 			}
