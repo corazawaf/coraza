@@ -41,41 +41,46 @@ Chosen: **incremental transaction and multipart accounting.** The transaction
 enforces the non-multipart budget during writes and reader copies.
 `ReadRequestBodyFrom` retains a one-byte probe in its buffer so the connector can
 replay it; `ProcessPartial` supplies only the inspected prefix to the processor.
-The built-in multipart processor counts raw part-header bytes and raw ordinary
-field payload incrementally. A wire-state reader records header sizes before
-the MIME parser normalizes whitespace or unfolds continuation lines. Boundary
-framing, epilogue bytes and completed file payload are excluded. A file part
-truncated by malformed input does not receive the exemption. Field reads stop
-at the budget, and collection changes for the current part are published only
-after that part passes accounting.
+The built-in multipart processor counts normalized part-header fields and raw
+ordinary field payload incrementally. Header accounting uses the parsed
+`mime/multipart.Part.Header` values so boundary and header recognition stay in
+one parser. Boundary framing, epilogue bytes and completed file payload are
+excluded. A file part truncated by malformed input does not receive the
+exemption. Field reads stop at the budget, and collection changes for the
+current part are published only after that part passes accounting.
 
 Earlier completed parts remain visible to `ProcessPartial` and to rules handling
 a later parser error. Temporary file names are recorded immediately for cleanup.
-The budget reader permits a fixed 8 KiB standard-library read-ahead margin while
-the parser classifies a part. A replacement multipart plugin is treated as a
-non-file-aware processor.
+A replacement multipart plugin is treated as a non-file-aware processor.
 
 An unset directive retains Coraza's existing zero-value behavior, rather than
 enabling ModSecurity's implicit default limit. The no-files threshold uses `>`;
 Coraza's existing `SecRequestBodyLimit` threshold remains unchanged.
 
-ModSecurity v3 increments its multipart no-files counter for raw part headers
-and ordinary form-data payload, but not for boundary lines. Coraza follows that
-classification. Malformed input remains bounded by the parser read-ahead guard
-and the overall request-body limit.
+ModSecurity v3 increments its multipart no-files counter for part headers and
+ordinary form-data payload, but not for boundary lines. Coraza follows that
+classification. The standard-library parser normalizes header names, whitespace
+and continuation lines before Coraza measures them; the overall request-body
+limit still bounds the raw input.
 
 ModSecurity also sets `REQBODY_ERROR` and `INBOUND_DATA_ERROR` when the
-no-files limit is exceeded, independently of `SecRequestBodyLimitAction`.
-Coraza follows that behavior. Consequently, `ProcessPartial` does not create
-an interruption by itself, but a configured phase-two rule that blocks on
-`REQBODY_ERROR` can still deny the transaction. This differs from Coraza's
-existing overall `SecRequestBodyLimit` partial-path state and is intentional.
+no-files limit is exceeded. With `ProcessPartial`, ModSecurity v2 returns 413 at
+the end of the body, while v3 records the error after parsing the buffered body
+without interrupting. Coraza instead stops before materializing the over-limit
+field, evaluates phase two using only the bounded non-multipart prefix or the
+completed multipart parts, and does not create an interruption itself. A
+configured phase-two rule that blocks on `REQBODY_ERROR` can still deny the
+transaction. This is an intentional deviation from both ModSecurity versions.
 
 ## Technical Discussion
 
-No substantive technical discussion recorded on the PR #1770 thread. Issues
-#896 and #1628 contain the feature request and triage, but do not discuss how
-multipart data should be counted.
+> "`scanWire` walks every byte, file payload included, on top of the boundary
+> scan the multipart reader already does."
+> — @fzipi ([review comment](https://github.com/corazawaf/coraza/pull/1770#discussion_r4343853822))
+
+A [follow-up maintainer review](https://github.com/corazawaf/coraza/pull/1770#pullrequestreview-5612705859)
+required the no-files limit to be skipped when no request-body processor is
+selected and proposed counting part headers from `mime/multipart.Part.Header`.
 
 ## Participants
 
@@ -87,9 +92,9 @@ multipart data should be counted.
   phase-two transformations; multipart file payload remains exempt.
 - **Negative / follow-up:** The existing body buffer still holds multipart input
   until processing. A configured `SecRequestBodyInMemoryLimit` remains important
-  for large uploads. The built-in parser can read up to 8 KiB past the no-files
-  budget while classifying a part, but it does not publish the over-limit field
-  into `ARGS_POST`.
+  for large uploads. Parsed header accounting does not include wire-only
+  whitespace or folding bytes, but the overall request-body limit still bounds
+  them. The over-limit field is not published into `ARGS_POST`.
 
 ## References
 

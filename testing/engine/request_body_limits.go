@@ -8,7 +8,7 @@ import "github.com/corazawaf/coraza/v3/testing/profile"
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "adilalperenciftci",
-		Description: "SecRequestBodyNoFilesLimit rejects non-file bodies only above the configured limit",
+		Description: "SecRequestBodyNoFilesLimit applies only when a body processor is selected",
 		Enabled:     true,
 		Name:        "request_body_no_files_limit_reject.yaml",
 	},
@@ -19,7 +19,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 				Input: profile.StageInput{
 					URI:     "/",
 					Method:  "POST",
-					Headers: map[string]string{"Content-Type": "application/octet-stream"},
+					Headers: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 					Data:    "payload=1234567",
 				},
 				Output: profile.ExpectedOutput{
@@ -34,7 +34,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 				Input: profile.StageInput{
 					URI:     "/",
 					Method:  "POST",
-					Headers: map[string]string{"Content-Type": "application/octet-stream"},
+					Headers: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 					Data:    "payload=12345678",
 				},
 				Output: profile.ExpectedOutput{
@@ -49,12 +49,27 @@ var _ = profile.RegisterProfile(profile.Profile{
 				Input: profile.StageInput{
 					URI:     "/",
 					Method:  "POST",
-					Headers: map[string]string{"Content-Type": "application/octet-stream"},
+					Headers: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 					Data:    "payload=123456789",
 				},
 				Output: profile.ExpectedOutput{
 					NonTriggeredRules: []int{10, 11},
 					Interruption:      &profile.ExpectedInterruption{Status: 413, Action: "deny"},
+				},
+			}}},
+		},
+		{
+			Title: "raw body without a processor is not limited",
+			Stages: []profile.Stage{{Stage: profile.SubStage{
+				Input: profile.StageInput{
+					URI:     "/",
+					Method:  "PUT",
+					Headers: map[string]string{"Content-Type": "application/octet-stream"},
+					Data:    "payload=123456789",
+				},
+				Output: profile.ExpectedOutput{
+					TriggeredRules:    []int{12},
+					NonTriggeredRules: []int{10, 11},
 				},
 			}}},
 		},
@@ -65,9 +80,9 @@ SecRequestBodyAccess On
 SecRequestBodyLimit 64
 SecRequestBodyNoFilesLimit 16
 SecRequestBodyLimitAction Reject
-SecAction "id:1,phase:1,pass,nolog,ctl:forceRequestBodyVariable=On"
 SecRule ARGS_POST:payload "@streq 1234567" "id:10,phase:2,pass,log"
 SecRule ARGS_POST:payload "@streq 12345678" "id:11,phase:2,pass,log"
+SecRule REQBODY_ERROR "@eq 0" "id:12,phase:2,pass,log"
 `,
 })
 

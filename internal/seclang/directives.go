@@ -1353,8 +1353,8 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 	return nil
 }
 
-// Description: Configures the maximum non-file request body data Coraza will
-// accept for processing.
+// Description: Configures the maximum non-file request body data a selected or
+// forced body processor will accept for processing.
 // This directive is useful to reduce susceptibility to DoS attacks when someone is
 // sending request bodies of very large sizes. Web applications that require file uploads
 // must configure `SecRequestBodyLimit` to a high value. A separate
@@ -1370,6 +1370,8 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 // boundary framing and uploaded file content do not. Custom multipart
 // processors are treated like other request bodies, so every buffered byte
 // counts toward this limit.
+// A body with no selected processor is not subject to this limit unless
+// `ctl:forceRequestBodyVariable=On` forces processing.
 // When SecRequestBodyNoFilesLimit is at or above SecRequestBodyLimit, the
 // separate non-file limit is disabled. When the active non-file limit is
 // exceeded, SecRequestBodyLimitAction applies (Reject returns 413;

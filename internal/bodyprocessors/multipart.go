@@ -4,7 +4,6 @@
 package bodyprocessors
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"mime/quotedprintable"
+	"net/textproto"
 	"os"
 	"strings"
 
@@ -47,241 +47,6 @@ func IsBuiltInMultipart(processor plugintypes.BodyProcessor) bool {
 // ErrNoFilesLimit reports that multipart non-file data exceeded its budget.
 var ErrNoFilesLimit = errors.New("request body exceeds SecRequestBodyNoFilesLimit")
 
-// multipartBudgetReader bounds standard-library parser read-ahead. The
-// no-files count is maintained separately because multipart boundary framing
-// is not part of ModSecurity's counter.
-type multipartBudgetReader struct {
-	reader            io.Reader
-	remaining         int64
-	read              int64
-	limited           bool
-	boundary          []byte
-	wireMode          multipartWireMode
-	lineEligible      bool
-	lineLast          byte
-	boundaryMatch     int
-	boundarySuffix    multipartBoundarySuffix
-	headerLineSize    int64
-	headerSize        int64
-	completedHeaders  []int64
-	usesCRLFBoundary  bool
-	boundaryModeKnown bool
-}
-
-const multipartReadAhead = 8192
-
-type multipartWireMode uint8
-
-const (
-	multipartWirePreamble multipartWireMode = iota
-	multipartWireHeaders
-	multipartWireBody
-	multipartWireDone
-)
-
-type multipartBoundarySuffix uint8
-
-const (
-	multipartBoundarySuffixStart multipartBoundarySuffix = iota
-	multipartBoundarySuffixDash
-	multipartBoundarySuffixOpenPadding
-	multipartBoundarySuffixOpenCR
-	multipartBoundarySuffixClosePadding
-	multipartBoundarySuffixCloseCR
-	multipartBoundarySuffixInvalid
-)
-
-func newMultipartBudgetReader(reader io.Reader, boundary string) *multipartBudgetReader {
-	r := &multipartBudgetReader{
-		reader:       reader,
-		boundary:     []byte("--" + boundary),
-		wireMode:     multipartWirePreamble,
-		lineEligible: true,
-	}
-	r.resetBoundaryCandidate(true)
-	return r
-}
-
-func (r *multipartBudgetReader) begin(remaining int64) {
-	r.remaining = remaining
-	r.read = 0
-	r.limited = true
-}
-
-func (r *multipartBudgetReader) unlimited() {
-	r.limited = false
-}
-
-func (r *multipartBudgetReader) Read(p []byte) (int, error) {
-	wasPreamble := r.wireMode == multipartWirePreamble
-	if r.limited && !wasPreamble {
-		available := r.remaining - r.read
-		if available <= math.MaxInt64-multipartReadAhead {
-			available += multipartReadAhead
-		} else {
-			available = math.MaxInt64
-		}
-		if available <= 0 {
-			return 0, ErrNoFilesLimit
-		}
-		if int64(len(p)) > available {
-			p = p[:available]
-		}
-	}
-	n, err := r.reader.Read(p)
-	r.scanWire(p[:n])
-	if !wasPreamble {
-		r.read += int64(n)
-	}
-	return n, err
-}
-
-func (r *multipartBudgetReader) resetBoundaryCandidate(eligible bool) {
-	r.lineEligible = eligible
-	r.lineLast = 0
-	r.boundaryMatch = 0
-	r.boundarySuffix = multipartBoundarySuffixStart
-}
-
-func (r *multipartBudgetReader) scanWire(data []byte) {
-	for len(data) > 0 {
-		if r.wireMode == multipartWireDone {
-			return
-		}
-		newline := bytes.IndexByte(data, '\n')
-		if newline < 0 {
-			r.scanWireLine(data)
-			return
-		}
-		r.scanWireLine(data[:newline])
-		r.finishWireLine()
-		data = data[newline+1:]
-	}
-}
-
-func (r *multipartBudgetReader) scanWireLine(data []byte) {
-	if r.wireMode == multipartWireHeaders {
-		r.headerSize += int64(len(data))
-		r.headerLineSize += int64(len(data))
-		if len(data) > 0 {
-			r.lineLast = data[len(data)-1]
-		}
-		return
-	}
-	if len(data) == 0 {
-		return
-	}
-
-	r.lineLast = data[len(data)-1]
-	if !r.lineEligible || r.boundarySuffix == multipartBoundarySuffixInvalid {
-		return
-	}
-	for _, b := range data {
-		if r.boundarySuffix == multipartBoundarySuffixInvalid {
-			return
-		}
-		if r.boundaryMatch < len(r.boundary) {
-			if b != r.boundary[r.boundaryMatch] {
-				r.boundarySuffix = multipartBoundarySuffixInvalid
-				return
-			}
-			r.boundaryMatch++
-			continue
-		}
-		switch r.boundarySuffix {
-		case multipartBoundarySuffixStart:
-			switch b {
-			case '-':
-				r.boundarySuffix = multipartBoundarySuffixDash
-			case ' ', '\t':
-				r.boundarySuffix = multipartBoundarySuffixOpenPadding
-			case '\r':
-				r.boundarySuffix = multipartBoundarySuffixOpenCR
-			default:
-				r.boundarySuffix = multipartBoundarySuffixInvalid
-			}
-		case multipartBoundarySuffixDash:
-			if b == '-' {
-				r.boundarySuffix = multipartBoundarySuffixClosePadding
-			} else {
-				r.boundarySuffix = multipartBoundarySuffixInvalid
-			}
-		case multipartBoundarySuffixOpenPadding:
-			if b == '\r' {
-				r.boundarySuffix = multipartBoundarySuffixOpenCR
-			} else if b != ' ' && b != '\t' {
-				r.boundarySuffix = multipartBoundarySuffixInvalid
-			}
-		case multipartBoundarySuffixClosePadding:
-			if b == '\r' {
-				r.boundarySuffix = multipartBoundarySuffixCloseCR
-			} else if b != ' ' && b != '\t' {
-				r.boundarySuffix = multipartBoundarySuffixInvalid
-			}
-		case multipartBoundarySuffixOpenCR, multipartBoundarySuffixCloseCR:
-			r.boundarySuffix = multipartBoundarySuffixInvalid
-		}
-	}
-}
-
-func (r *multipartBudgetReader) finishWireLine() {
-	if r.wireMode == multipartWireHeaders {
-		r.headerSize++
-		blank := r.headerLineSize == 0 || r.headerLineSize == 1 && r.lineLast == '\r'
-		r.headerLineSize = 0
-		r.lineLast = 0
-		if blank {
-			r.completedHeaders = append(r.completedHeaders, r.headerSize)
-			r.headerSize = 0
-			r.wireMode = multipartWireBody
-			r.resetBoundaryCandidate(true)
-		}
-		return
-	}
-
-	lineEndedCR := r.lineLast == '\r'
-	open, close := r.boundaryLineKind()
-	switch {
-	case open:
-		if !r.boundaryModeKnown {
-			r.usesCRLFBoundary = lineEndedCR
-			r.boundaryModeKnown = true
-		}
-		r.wireMode = multipartWireHeaders
-		r.headerLineSize = 0
-		r.headerSize = 0
-		r.lineLast = 0
-	case close:
-		r.wireMode = multipartWireDone
-	default:
-		eligible := r.wireMode == multipartWirePreamble || !r.boundaryModeKnown || !r.usesCRLFBoundary || lineEndedCR
-		r.resetBoundaryCandidate(eligible)
-	}
-}
-
-func (r *multipartBudgetReader) boundaryLineKind() (bool, bool) {
-	if !r.lineEligible || r.boundaryMatch != len(r.boundary) {
-		return false, false
-	}
-	switch r.boundarySuffix {
-	case multipartBoundarySuffixStart, multipartBoundarySuffixOpenPadding, multipartBoundarySuffixOpenCR:
-		return true, false
-	case multipartBoundarySuffixClosePadding, multipartBoundarySuffixCloseCR:
-		return false, true
-	default:
-		return false, false
-	}
-}
-
-func (r *multipartBudgetReader) nextHeaderSize() (int64, bool) {
-	if len(r.completedHeaders) == 0 {
-		return 0, false
-	}
-	size := r.completedHeaders[0]
-	r.completedHeaders = r.completedHeaders[1:]
-	return size, true
-}
-
 type multipartPartAccountingReader struct {
 	reader io.Reader
 	raw    int64
@@ -310,6 +75,24 @@ func addMultipartCount(counted *int64, limit, size int64) error {
 	return nil
 }
 
+// multipartHeaderSize counts the normalized representation parsed by
+// mime/multipart: each field line plus the terminating blank line. Using the
+// parsed header keeps boundary and header recognition in one parser.
+func multipartHeaderSize(header textproto.MIMEHeader) (int64, error) {
+	size := int64(2)
+	for key, values := range header {
+		for _, value := range values {
+			for _, partSize := range []int{len(key), len(": "), len(value), len("\r\n")} {
+				if size > math.MaxInt64-int64(partSize) {
+					return 0, errors.New("invalid multipart header size")
+				}
+				size += int64(partSize)
+			}
+		}
+	}
+	return size, nil
+}
+
 func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions, noFilesLimit int64) error {
 	mimeType := options.Mime
 	storagePath := options.StoragePath
@@ -321,13 +104,8 @@ func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintype
 	if !strings.HasPrefix(mediaType, "multipart/") {
 		return errors.New("not a multipart body")
 	}
-	var budget *multipartBudgetReader
+	limited := noFilesLimit > 0
 	var noFilesSize int64
-	if noFilesLimit > 0 {
-		budget = newMultipartBudgetReader(reader, params["boundary"])
-		budget.begin(noFilesLimit)
-		reader = budget
-	}
 	mr := multipart.NewReader(reader, params["boundary"])
 	totalSize := int64(0)
 	type pendingUpdate struct {
@@ -347,9 +125,6 @@ func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintype
 	multipartFilenameLanguageCol := v.MultipartFilenameLanguage()
 	multipartNameCol := v.MultipartName()
 	for {
-		if budget != nil {
-			budget.begin(noFilesLimit - noFilesSize)
-		}
 		p, err := mr.NextRawPart()
 		if err == io.EOF {
 			break
@@ -369,10 +144,10 @@ func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintype
 			v.MultipartStrictError().(*collections.Single).Set("1")
 			return err
 		}
-		if budget != nil {
-			headerSize, ok := budget.nextHeaderSize()
-			if !ok {
-				return errors.New("multipart header accounting desynchronized")
+		if limited {
+			headerSize, err := multipartHeaderSize(p.Header)
+			if err != nil {
+				return err
 			}
 			if err := addMultipartCount(&noFilesSize, noFilesLimit, headerSize); err != nil {
 				return err
@@ -385,14 +160,14 @@ func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintype
 		}
 		var pending []pendingUpdate
 		add := func(col collection.Map, key, value string) {
-			if budget == nil {
+			if !limited {
 				col.Add(key, value)
 			} else {
 				pending = append(pending, pendingUpdate{collection: col, key: key, value: value})
 			}
 		}
 		setIndex := func(col collection.Map, key, value string) {
-			if budget == nil {
+			if !limited {
 				col.SetIndex(key, 0, value)
 			} else {
 				pending = append(pending, pendingUpdate{collection: col, key: key, value: value, setIndex: true})
@@ -473,9 +248,6 @@ func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintype
 			if quotedPrintable {
 				partReader = quotedprintable.NewReader(rawReader)
 			}
-			if budget != nil {
-				budget.unlimited()
-			}
 			if environment.HasAccessToFS {
 				// Only copy file to temp when not running in TinyGo
 				temp, err := os.CreateTemp(storagePath, "crzmp*")
@@ -515,7 +287,7 @@ func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintype
 				size = sz
 			}
 			totalSize += size
-			if seenUnexpectedEOF && budget != nil && v.InboundDataError().Get() != "1" {
+			if seenUnexpectedEOF && limited && v.InboundDataError().Get() != "1" {
 				// A truncated file part has no verified closing boundary.
 				// Do not exempt its payload as a complete upload.
 				if err := addMultipartCount(&noFilesSize, noFilesLimit, rawReader.raw); err != nil {
@@ -542,8 +314,7 @@ func (mbp *multipartBodyProcessor) processRequest(reader io.Reader, v plugintype
 		} else {
 			// if is a field
 			rawReader := &multipartPartAccountingReader{reader: p}
-			if budget != nil {
-				budget.begin(noFilesLimit - noFilesSize)
+			if limited {
 				rawReader.count = func(size int64) error {
 					return addMultipartCount(&noFilesSize, noFilesLimit, size)
 				}

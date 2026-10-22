@@ -966,6 +966,9 @@ func (tx *Transaction) configureRequestBodyNoFilesLimit() {
 	if limit <= 0 || limit >= tx.RequestBodyLimit {
 		return
 	}
+	if tx.variables.reqbodyProcessor.Get() == "" && !tx.ForceRequestBodyVariable {
+		return
+	}
 	tx.requestBodyNoFilesLimit = limit
 
 	processor, err := bodyprocessors.GetBodyProcessor("multipart")
