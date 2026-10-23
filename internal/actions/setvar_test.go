@@ -108,6 +108,12 @@ func TestSetvarEvaluate(t *testing.T) {
 			expectInvalidSyntaxError: false,
 			expectNewVarValue:        "+++expected_value",
 		},
+		{
+			name:                     "No value - The variable is set to 1",
+			init:                     "TX.newvar",
+			expectInvalidSyntaxError: false,
+			expectNewVarValue:        "1",
+		},
 	}
 
 	for _, tt := range tests {
@@ -157,6 +163,31 @@ func TestSetvarEvaluate(t *testing.T) {
 			}
 			if tt.expectNewVarValue != "" {
 				checkCollectionValue(t, a.(*setvarFn), tx, "newvar", tt.expectNewVarValue)
+			}
+		})
+	}
+}
+
+func TestSetvarRemove(t *testing.T) {
+	for _, remove := range []string{"!TX.newvar", "!tx.NEWVAR", "!TX.newvar=ignored"} {
+		t.Run(remove, func(t *testing.T) {
+			metadata := &md{}
+			tx := corazawaf.NewWAF().NewTransaction()
+
+			a := setvar()
+			if err := a.Init(metadata, "TX.newvar=value"); err != nil {
+				t.Fatal(err)
+			}
+			a.Evaluate(metadata, tx)
+			checkCollectionValue(t, a.(*setvarFn), tx, "newvar", "value")
+
+			a = setvar()
+			if err := a.Init(metadata, remove); err != nil {
+				t.Fatal(err)
+			}
+			a.Evaluate(metadata, tx)
+			if v := tx.Variables().TX().Get("newvar"); len(v) != 0 {
+				t.Errorf("expected the variable to be removed, got %q", v)
 			}
 		})
 	}

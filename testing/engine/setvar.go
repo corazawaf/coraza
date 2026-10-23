@@ -24,7 +24,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 							URI: "/fields?name=foo&var=foo&var=foo2",
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{920271},
+							TriggeredRules:    []int{920271, 2, 4},
+							NonTriggeredRules: []int{5},
 						},
 					},
 				},
@@ -38,5 +39,11 @@ SecRule ARGS_NAMES "@rx ." \
 	setvar:'TX.paramcounter_%{MATCHED_VAR_NAME}=+1'"
 
 SecRule TX:/paramcounter_.*/ "@eq 2" "id:920271,log"
+
+SecAction "id:1,nolog,setvar:TX.flag"
+SecRule TX:flag "@streq 1" "id:2,log"
+SecAction "id:3,nolog,setvar:!TX.flag"
+SecRule &TX:flag "@eq 0" "id:4,log"
+SecRule TX:flag "@unconditionalMatch" "id:5,log"
 `,
 })
