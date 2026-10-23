@@ -1,11 +1,11 @@
-# ADR-0063: Add ARGS_RAW, ARGS_GET_RAW, ARGS_POST_RAW, and ARGS_NAMES_RAW collections
+# ADR-0067: Add ARGS_RAW, ARGS_GET_RAW, ARGS_POST_RAW, and ARGS_NAMES_RAW collections
 
-- **Status:** accepted
-- **Date:** 2026-10-20
-- **Version:** unreleased
-- **PR:** [#1493](https://github.com/corazawaf/coraza/pull/1493)
+- **Status:** proposed
+- **Date:** 2026-10-21
+- **Version:** unreleased (post-v3.8.1)
+- **PR:** [#1791](https://github.com/corazawaf/coraza/pull/1791)
 - **Issue(s):** [#1491](https://github.com/corazawaf/coraza/issues/1491)
-- **Deciders:** @fzipi, @jptosso
+- **Deciders:** @fzipi
 - **Category:** Parity (ModSecurity parity)
 
 ## Context and Problem
@@ -61,7 +61,8 @@ Key discussion from PR #1493 on argument storage and performance:
 
 ## References
 
-- PR: https://github.com/corazawaf/coraza/pull/1493
+- PR: https://github.com/corazawaf/coraza/pull/1791
+- Predecessor PR: https://github.com/corazawaf/coraza/pull/1493
 - Issue: https://github.com/corazawaf/coraza/issues/1491
 - ModSecurity parallel issue: https://github.com/owasp-modsecurity/ModSecurity/issues/2118
 - Related ADRs: ADR-0001, ADR-0002, ADR-0016
