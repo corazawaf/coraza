@@ -1604,17 +1604,10 @@ func TestCollectionReturnsExpectedTypes(t *testing.T) {
 
 		c := tx.Collection(v)
 
-		// JSON is explicitly unimplemented (returns nil).
-		if v == variables.JSON {
-			if c != nil {
-				t.Errorf("Collection(%s) should return nil, got %v", name, c)
-			}
-			continue
-		}
-
 		// Variables that exist in the variables package but are not backed by
-		// a collection in Transaction.Collection() fall through to the default
-		// Noop case. We just verify they don't panic.
+		// a collection in Transaction.Collection() (e.g. JSON) fall through to
+		// the default Noop case. Callers such as macro expansion rely on never
+		// receiving nil.
 		if c == nil {
 			t.Errorf("Collection(%s) returned nil, expected non-nil collection", name)
 		}
