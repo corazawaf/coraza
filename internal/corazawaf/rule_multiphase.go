@@ -14,10 +14,10 @@
 //
 //   - allow (phase-mode only): with allow:request or allow:all, the rule is
 //     skipped in its declared phase by the AllowType check regardless of the
-//     build tag. With allow:phase, the allow state resets between phases, so
-//     the rule enters evaluation in the earlier phase and is then skipped by
-//     the multiphase variable-skip logic (the variable's minimum phase has
-//     already passed), resulting in no evaluation at all.
+//     build tag. With allow:phase, a preceding rule's allow breaks the phase
+//     loop before the anticipated rule evaluates (rulegroup.go:224-233); the
+//     rule's own allow:phase resets between phases, so the variable-skip logic
+//     prevents re-evaluation in the declared phase.
 //
 // The skip counter is reset between phases (see rulegroup.go), so under normal
 // (single-phase) evaluation skip stays within the current processing phase.
