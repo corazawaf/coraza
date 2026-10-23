@@ -138,3 +138,134 @@ func BenchmarkPmShortInput(b *testing.B) {
 		}
 	})
 }
+
+func TestPMSnortCapturing(t *testing.T) {
+	op, err := newPM(plugintypes.OperatorOptions{
+		Arguments: "A|42|C|44|F",
+	})
+	if err != nil {
+		t.Fatalf("unexpected constructor error: %s", err)
+	}
+
+	tx := newTestTx()
+	defer tx.Close()
+	tx.Capture = true
+
+	input := "xxABCDFxx"
+	if !op.Evaluate(tx, input) {
+		t.Fatalf("expected match on %q", input)
+	}
+
+	captures := tx.Variables().TX().Get("0")
+	if len(captures) == 0 {
+		t.Fatal("expected TX:0 capture, got none")
+	}
+	if captures[0] != "ABCDF" {
+		t.Errorf("expected capture %q, got %q", "ABCDF", captures[0])
+	}
+}
+
+func TestPMSnortMinLen(t *testing.T) {
+	op, err := newPM(plugintypes.OperatorOptions{
+		Arguments: "A|42|C",
+	})
+	if err != nil {
+		t.Fatalf("unexpected constructor error: %s", err)
+	}
+	p := op.(*pm)
+	// "A|42|C" decodes to 3 bytes: 'a', 0x42, 'c'
+	if p.minLen != 3 {
+		t.Errorf("expected minLen=3, got %d", p.minLen)
+	}
+}
+
+func TestPmMinLenMultipleSpaces(t *testing.T) {
+	// On main, consecutive spaces produced an empty pattern with minLen=0,
+	// matching every input including empty strings.
+	op, err := newPM(plugintypes.OperatorOptions{
+		Arguments: "a  b",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := op.(*pm)
+	if p.minLen != 1 {
+		t.Fatalf("expected minLen=1, got %d", p.minLen)
+	}
+
+	tx := newTestTx()
+	defer tx.Close()
+
+	if p.Evaluate(tx, "") {
+		t.Error("expected false for empty input with multiple spaces in pattern")
+	}
+}
+
+func TestPMInvalidSyntax(t *testing.T) {
+	tests := []struct {
+		name      string
+		arguments string
+		wantErr   string
+	}{
+		{
+			name:      "unclosed block at end",
+			arguments: "a|4",
+			wantErr:   "@pm: unclosed hex block at offset 1 (use |7C| for literal pipe)",
+		},
+		{
+			name:      "odd number of hex digits",
+			arguments: "a|4|",
+			wantErr:   "@pm: odd number of hex digits in block at offset 1",
+		},
+		{
+			name:      "invalid hex character",
+			arguments: "a|4g|",
+			wantErr:   `@pm: invalid hex character 'g' at offset 3`,
+		},
+		{
+			name:      "empty hex block",
+			arguments: "a||b",
+			wantErr:   "@pm: empty hex block at offset 1 (use |7C| for literal pipe)",
+		},
+		{
+			name:      "tab inside hex block",
+			arguments: "|41\t42|",
+			wantErr:   `@pm: invalid hex character '\t' at offset 3`,
+		},
+		{
+			name:      "empty argument",
+			arguments: "",
+			wantErr:   "@pm: empty operator pattern",
+		},
+		{
+			name:      "spaces only argument",
+			arguments: "   ",
+			wantErr:   "@pm: empty operator pattern",
+		},
+		{
+			name:      "unclosed hex block after valid hex",
+			arguments: "foo|41",
+			wantErr:   "@pm: unclosed hex block at offset 3 (use |7C| for literal pipe)",
+		},
+		{
+			name:      "unclosed pipe followed by non-hex",
+			arguments: "foo|bar",
+			wantErr:   `@pm: invalid hex character 'r' at offset 6`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := newPM(plugintypes.OperatorOptions{
+				Arguments: tc.arguments,
+			})
+			if err == nil {
+				t.Fatalf("expected error for %q, got nil", tc.arguments)
+			}
+			if err.Error() != tc.wantErr {
+				t.Errorf("expected error %q, got %q", tc.wantErr, err.Error())
+			}
+		})
+	}
+}
