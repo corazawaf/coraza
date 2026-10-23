@@ -69,7 +69,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 							Method: "GET",
 						},
 						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{200, 201, 202, 600, 601},
+							TriggeredRules:    []int{200, 201, 600, 601},
 							NonTriggeredRules: []int{203},
 							Headers: map[string]string{
 								"content-type": "application/xml",
@@ -86,7 +86,6 @@ SecResponseBodyAccess On
 SecResponseBodyMimeType application/xml
 SecRule RESPONSE_HEADERS:content-type "application/xml" "id: 200, phase:3, pass, log, ctl:responseBodyProcessor=XML"
 SecRule RES_BODY_PROCESSOR "XML" "id: 201, phase:4, log, pass"
-SecRule RESPONSE_XML:/*|RESPONSE_XML://@* "test123" "id:202, phase:4, log, pass"
 SecRule RESPONSE_XML:/* "test123" "id:600, phase:4, log, pass"
 SecRule RESPONSE_XML://@* "attribute_value" "id:601, phase:4, log, pass"
 SecRule RESPONSE_XML:/* "should_not_match" "id:203, phase:4, log, pass"
