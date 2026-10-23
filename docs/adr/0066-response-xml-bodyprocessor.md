@@ -58,8 +58,8 @@ Chosen: **Option 3**.
 - `xmlBodyProcessor.ProcessResponse` parses the response stream using `encoding/xml` and
   populates `v.ResponseXML()` with attribute values (`//@*`) and text contents (`/*`).
 - Both `ProcessRequest` and `ProcessResponse` respect `options.ArgumentLimit` (`SecArgumentsLimit`).
-  When the combined total of attributes and text contents reaches the configured limit, collection
-  stops and `ARGUMENTS_LIMIT_REACHED` is set to `1`.
+  When the combined total of attributes and text contents reaches the configured limit and additional
+  items are encountered, collection stops and `ARGUMENTS_LIMIT_REACHED` is set to `1`.
 - The SecLang variable parser recognizes `REQUEST_XML` and `RESPONSE_XML` (case-insensitively via
   `strings.EqualFold`) as path-based collections so leading slashes are parsed as XPath queries.
 
