@@ -20,6 +20,7 @@ import (
 	coreruleset "github.com/corazawaf/coraza-coreruleset/crs/v4"
 	"github.com/corazawaf/coraza/v3/debuglog"
 	coraza "github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/types"
 )
 
 //go:embed testdata
@@ -876,5 +877,115 @@ func TestGlobIncludeFromSubdirectory(t *testing.T) {
 	}
 	if waf.Rules.Count() != 2 {
 		t.Errorf("expected 2 rules from the glob, found %d", waf.Rules.Count())
+	}
+}
+
+func TestDirectiveTokenization(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  string
+		wantErr bool
+		check   func(t *testing.T, w *coraza.WAF)
+	}{
+		{
+			name:   "tabs between directive and arguments",
+			config: "SecAction\t\"id:1001,phase:1,pass\"\nSecRuleEngine\tOn",
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.RuleEngine != types.RuleEngineOn || w.Rules.Count() != 1 {
+					t.Errorf("unexpected WAF state: engine=%v, rules=%d", w.RuleEngine, w.Rules.Count())
+				}
+			},
+		},
+		{
+			name:   "multiple spaces between directive and arguments",
+			config: "SecAction  \"id:1001,phase:1,pass\"\nSecRuleEngine  Off",
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.RuleEngine != types.RuleEngineOff || w.Rules.Count() != 1 {
+					t.Errorf("unexpected WAF state: engine=%v, rules=%d", w.RuleEngine, w.Rules.Count())
+				}
+			},
+		},
+		{
+			name:   "single-quoted argument",
+			config: "SecServerSignature 'My Server'",
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.ServerSignature != "My Server" {
+					t.Errorf("expected 'My Server', got %q", w.ServerSignature)
+				}
+			},
+		},
+		{
+			name:   "double-quoted argument with escaped quote preserved",
+			config: `SecServerSignature "say \"hi\""`,
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.ServerSignature != `say \"hi\"` {
+					t.Errorf("expected %q, got %q", `say \"hi\"`, w.ServerSignature)
+				}
+			},
+		},
+		{
+			name: "SecRuleRemoveByMsg with single quotes",
+			config: `SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,pass,msg:'test-msg'"` + "\n" +
+				`SecRuleRemoveByMsg 'test-msg'`,
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.Rules.Count() != 0 {
+					t.Errorf("expected rule to be removed, got %d", w.Rules.Count())
+				}
+			},
+		},
+		{
+			name: "SecRuleRemoveByTag with single quotes",
+			config: `SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,pass,tag:'test-tag'"` + "\n" +
+				`SecRuleRemoveByTag 'test-tag'`,
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.Rules.Count() != 0 {
+					t.Errorf("expected rule to be removed, got %d", w.Rules.Count())
+				}
+			},
+		},
+		{
+			name: "SecRuleRemoveByMsg with tab and double quotes",
+			config: `SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,pass,msg:'test-msg'"` + "\n" +
+				"SecRuleRemoveByMsg\t\"test-msg\"",
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.Rules.Count() != 0 {
+					t.Errorf("expected rule to be removed, got %d", w.Rules.Count())
+				}
+			},
+		},
+		{
+			name: "literal single-quoted message not double unquoted",
+			config: `SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,pass,msg:'''quoted'''"` + "\n" +
+				`SecRuleRemoveByMsg "'quoted'"`,
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.Rules.Count() != 0 {
+					t.Errorf("expected rule with literal 'quoted' msg to be removed, got %d", w.Rules.Count())
+				}
+			},
+		},
+		{
+			name: "malformed double-double quotes does not match unquoted rule",
+			config: `SecRule REQUEST_URI "@rx attack" "id:1000,phase:1,pass,msg:'test-msg'"` + "\n" +
+				`SecRuleRemoveByMsg ""test-msg""`,
+			check: func(t *testing.T, w *coraza.WAF) {
+				if w.Rules.Count() != 1 {
+					t.Errorf("expected rule not to be removed by malformed quotes, got %d", w.Rules.Count())
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := coraza.NewWAF()
+			p := NewParser(waf)
+			err := p.FromString(tt.config)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("FromString() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.check != nil {
+				tt.check(t, waf)
+			}
+		})
 	}
 }
