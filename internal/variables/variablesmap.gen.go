@@ -102,6 +102,12 @@ func (v RuleVariable) Name() string {
 		return "ARGS_GET"
 	case ArgsPost:
 		return "ARGS_POST"
+	case ArgsRaw:
+		return "ARGS_RAW"
+	case ArgsGetRaw:
+		return "ARGS_GET_RAW"
+	case ArgsPostRaw:
+		return "ARGS_POST_RAW"
 	case ArgsPath:
 		return "ARGS_PATH"
 	case FilesSizes:
@@ -146,6 +152,12 @@ func (v RuleVariable) Name() string {
 		return "ARGS_GET_NAMES"
 	case ArgsPostNames:
 		return "ARGS_POST_NAMES"
+	case ArgsNamesRaw:
+		return "ARGS_NAMES_RAW"
+	case ArgsGetNamesRaw:
+		return "ARGS_GET_NAMES_RAW"
+	case ArgsPostNamesRaw:
+		return "ARGS_POST_NAMES_RAW"
 	case TX:
 		return "TX"
 	case Rule:
@@ -253,6 +265,12 @@ func (v RuleVariable) CanBeSelected() bool {
 		return true
 	case ArgsPost:
 		return true
+	case ArgsRaw:
+		return true
+	case ArgsGetRaw:
+		return true
+	case ArgsPostRaw:
+		return true
 	case ArgsPath:
 		return true
 	case FilesSizes:
@@ -292,6 +310,12 @@ func (v RuleVariable) CanBeSelected() bool {
 	case ArgsGetNames:
 		return true
 	case ArgsPostNames:
+		return true
+	case ArgsNamesRaw:
+		return true
+	case ArgsGetNamesRaw:
+		return true
+	case ArgsPostNamesRaw:
 		return true
 	case TX:
 		return true
@@ -361,6 +385,9 @@ var rulemapRev = map[string]RuleVariable{
 	"ARGS":                             Args,
 	"ARGS_GET":                         ArgsGet,
 	"ARGS_POST":                        ArgsPost,
+	"ARGS_RAW":                         ArgsRaw,
+	"ARGS_GET_RAW":                     ArgsGetRaw,
+	"ARGS_POST_RAW":                    ArgsPostRaw,
 	"ARGS_PATH":                        ArgsPath,
 	"FILES_SIZES":                      FilesSizes,
 	"FILES_NAMES":                      FilesNames,
@@ -383,6 +410,9 @@ var rulemapRev = map[string]RuleVariable{
 	"ARGS_NAMES":                       ArgsNames,
 	"ARGS_GET_NAMES":                   ArgsGetNames,
 	"ARGS_POST_NAMES":                  ArgsPostNames,
+	"ARGS_NAMES_RAW":                   ArgsNamesRaw,
+	"ARGS_GET_NAMES_RAW":               ArgsGetNamesRaw,
+	"ARGS_POST_NAMES_RAW":              ArgsPostNamesRaw,
 	"TX":                               TX,
 	"RULE":                             Rule,
 	"JSON":                             JSON,
