@@ -5,24 +5,12 @@
 // rule variables to be evaluated in the earliest phase they become available,
 // rather than waiting for the phase the rule is defined in.
 //
-// Known limitations with flow actions:
+// Known limitations:
 //
-//   - skip and skipAfter: these actions alter rule iteration within a phase.
-//     When a rule is anticipated to an earlier phase, its skip/skipAfter actions
-//     fire in that earlier phase instead of the defined one, potentially skipping
-//     unrelated rules.
-//
-//   - allow (phase-mode only): with allow:request or allow:all, the rule is
-//     skipped in its declared phase by the AllowType check regardless of the
-//     build tag. With allow:phase, a preceding rule's allow breaks the phase
-//     loop before the anticipated rule evaluates (rulegroup.go:224-233); the
-//     rule's own allow:phase resets between phases, so the variable-skip logic
-//     prevents re-evaluation in the declared phase.
-//
-// The skip counter is reset between phases (see rulegroup.go), so under normal
-// (single-phase) evaluation skip stays within the current processing phase.
-// Under multiphase evaluation the interaction is less predictable because rules
-// from different defined phases share the same evaluation loop.
+// Flow actions (skip, skipAfter) and allow actions behave differently under
+// multiphase evaluation because rules from different defined phases share
+// the same evaluation loop. See rulegroup.go:224-252 for the allow/skip
+// handling and allow.go (internal/actions) for the allow variants.
 //
 // See https://github.com/corazawaf/coraza/issues/804 and
 // https://gist.github.com/M4tteoP/57001a5066f2f76c9f99c6dc3e9bf4af for context.
