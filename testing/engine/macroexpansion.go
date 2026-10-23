@@ -21,7 +21,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Output: profile.ExpectedOutput{
-							TriggeredRules:    []int{100, 150, 200, 300},
+							TriggeredRules:    []int{100, 150, 200, 300, 301},
 							NonTriggeredRules: []int{901500},
 						},
 					},
@@ -40,7 +40,9 @@ SecRule TX:blocking_paranoia_level "@eq 1" "id:200,log,pass"
 
 SecRule TX:executing_paranoia_level "@lt %{tx.blocking_paranoia_level}" "id:901500,phase:1,log"
 
-# JSON is a known variable without a backing collection: expanding it must not panic
+# JSON is a known variable without a backing collection: expanding it must not panic,
+# and the macro falls back to its text without the %{}
 SecAction "id:300,pass,log,setvar:'tx.from_json=%{JSON.field}'"
+SecRule TX:from_json "@streq JSON.field" "id:301,log,pass"
 `,
 })
