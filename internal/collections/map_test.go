@@ -16,6 +16,7 @@ package collections
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -148,6 +149,20 @@ func TestMapTotalValuesTracksAllMutations(t *testing.T) {
 	c.Reset()
 	if got := c.TotalValues(); got != 0 {
 		t.Fatalf("after Reset: expected TotalValues() == 0, got %d", got)
+	}
+
+	// Reset past maxRetainedKeys rebuilds the map instead of clearing it; the
+	// collection must still be empty and usable afterwards.
+	for i := 0; i <= maxRetainedKeys; i++ {
+		c.Add(strconv.Itoa(i), "v")
+	}
+	c.Reset()
+	if got := c.Len(); got != 0 {
+		t.Fatalf("after Reset of a large map: expected Len() == 0, got %d", got)
+	}
+	c.Add("after", "v")
+	if got := c.TotalValues(); got != 1 {
+		t.Fatalf("after Reset of a large map and Add: expected TotalValues() == 1, got %d", got)
 	}
 }
 

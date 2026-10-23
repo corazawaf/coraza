@@ -33,7 +33,43 @@ func TestBodyReaderMemory(t *testing.T) {
 	if buf.String() != "test" {
 		t.Error("Failed to get BodyReader from memory")
 	}
+
+	// WriteTo (used by io.Copy) must continue from where Read stopped.
+	reader, _ = br.Reader()
+	if _, err := reader.Read(make([]byte, 2)); err != nil {
+		t.Error(err)
+	}
+	buf.Reset()
+	if _, err := io.Copy(buf, reader); err != nil {
+		t.Error(err)
+	}
+	if buf.String() != "st" {
+		t.Errorf("WriteTo after a partial Read: want %q, have %q", "st", buf.String())
+	}
 	_ = br.Reset()
+}
+
+// Not a profile: buffer capacity is not observable through rules.
+func TestBodyBufferResetReleasesLargeBuffer(t *testing.T) {
+	br := NewBodyBuffer(types.BodyBufferOptions{
+		MemoryLimit: 2 * maxRetainedBufferCap,
+		Limit:       2 * maxRetainedBufferCap,
+	})
+	if _, err := br.Write(make([]byte, maxRetainedBufferCap+1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := br.Reset(); err != nil {
+		t.Fatal(err)
+	}
+	if got := br.buffer.Cap(); got > maxRetainedBufferCap {
+		t.Fatalf("buffer capacity retained after Reset: %d > %d", got, maxRetainedBufferCap)
+	}
+	if _, err := br.Write([]byte("test")); err != nil {
+		t.Fatal(err)
+	}
+	if got := br.buffer.String(); got != "test" {
+		t.Fatalf("buffer not usable after Reset: %q", got)
+	}
 }
 
 func TestBodyReaderFile(t *testing.T) {

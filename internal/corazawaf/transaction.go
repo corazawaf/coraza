@@ -1584,9 +1584,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		case types.AuditLogPartRequestBody:
 			reader, err := tx.requestBodyBuffer.Reader()
 			if err == nil {
-				content, err := io.ReadAll(reader)
-				if err == nil {
-					al.Transaction_.Request_.Body_ = string(content)
+				// io.Copy into a Builder uses the reader's WriteTo: one write and
+				// no []byte -> string copy, unlike io.ReadAll.
+				var body strings.Builder
+				if _, err := io.Copy(&body, reader); err == nil {
+					al.Transaction_.Request_.Body_ = body.String()
 				}
 			}
 

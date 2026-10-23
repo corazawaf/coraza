@@ -215,10 +215,17 @@ func (c *Map) Name() string {
 	return c.variable.Name()
 }
 
+// maxRetainedKeys bounds what a pooled transaction keeps after Reset: Go maps
+// never shrink, so clearing a map that one request grew to ArgumentLimit keys
+// would pin its bucket array in that transaction for good.
+const maxRetainedKeys = 256
+
 // Reset removes all key/value pairs from the map.
 func (c *Map) Reset() {
-	for k := range c.data {
-		delete(c.data, k)
+	if len(c.data) > maxRetainedKeys {
+		c.data = map[string][]keyValue{}
+	} else {
+		clear(c.data)
 	}
 	c.totalValues = 0
 }
