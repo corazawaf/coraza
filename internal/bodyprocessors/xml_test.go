@@ -5,10 +5,42 @@ package bodyprocessors
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
-	"github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
+	corazaStrings "github.com/corazawaf/coraza/v3/internal/strings"
+	"github.com/corazawaf/coraza/v3/internal/variables"
 )
+
+type testTransactionVariables struct {
+	plugintypes.TransactionVariables
+	requestXML            *collections.Map
+	responseXML           *collections.Map
+	argumentsLimitReached *collections.Single
+}
+
+func (tv *testTransactionVariables) RequestXML() collection.Map {
+	return tv.requestXML
+}
+
+func (tv *testTransactionVariables) ResponseXML() collection.Map {
+	return tv.responseXML
+}
+
+func (tv *testTransactionVariables) ArgumentsLimitReached() collection.Single {
+	return tv.argumentsLimitReached
+}
+
+func newTestTransactionVariables() *testTransactionVariables {
+	return &testTransactionVariables{
+		requestXML:            collections.NewMap(variables.RequestXML),
+		responseXML:           collections.NewMap(variables.ResponseXML),
+		argumentsLimitReached: collections.NewSingle(variables.ArgumentsLimitReached),
+	}
+}
 
 func TestXMLAttribures(t *testing.T) {
 	xmldoc := `<?xml version="1.0" encoding="UTF-8"?>
@@ -24,7 +56,7 @@ func TestXMLAttribures(t *testing.T) {
 </book>
 
 </bookstore>`
-	attrs, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
+	attrs, contents, _, err := readXML(bytes.NewReader([]byte(xmldoc)), 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -37,12 +69,12 @@ func TestXMLAttribures(t *testing.T) {
 	eattrs := []string{"en", "value"}
 	econtent := []string{"Harry", "Potter", "Biography", "29.99", "Learning XML", "39.95"}
 	for _, attr := range eattrs {
-		if !strings.InSlice(attr, attrs) {
+		if !corazaStrings.InSlice(attr, attrs) {
 			t.Errorf("Expected attribute %s, got %v", attr, attrs)
 		}
 	}
 	for _, content := range econtent {
-		if !strings.InSlice(content, contents) {
+		if !corazaStrings.InSlice(content, contents) {
 			t.Errorf("Expected content %s, got %v", content, contents)
 		}
 	}
@@ -55,12 +87,12 @@ func TestXMLPayloadFlexibility(t *testing.T) {
 			<heading>Reminder</heading>
 			<body>Don't forget me this weekend!
 		</note>`
-	_, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
+	_, contents, _, err := readXML(bytes.NewReader([]byte(xmldoc)), 0)
 	if err != nil {
 		t.Error(err)
 	}
 	for _, content := range []string{"Tove", "Jani", "Reminder", "Don't forget me this weekend!"} {
-		if !strings.InSlice(content, contents) {
+		if !corazaStrings.InSlice(content, contents) {
 			t.Errorf("Expected content %s, got %v", content, contents)
 		}
 	}
@@ -105,7 +137,7 @@ func TestXMLUnexpectedEOF(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			xmldoc := tc.Input
-			_, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
+			_, contents, _, err := readXML(bytes.NewReader([]byte(xmldoc)), 0)
 			if err != nil {
 				t.Error(err)
 			}
@@ -118,5 +150,42 @@ func TestXMLUnexpectedEOF(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestXMLProcessResponseAndArgumentLimit(t *testing.T) {
+	bp := &xmlBodyProcessor{}
+	xmldoc := `<response status="ok" code="200" extra="val"><data>SecretPayload</data><more>Text</more></response>`
+
+	// Without limit
+	v := newTestTransactionVariables()
+	err := bp.ProcessResponse(strings.NewReader(xmldoc), v, plugintypes.BodyProcessorOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.ArgumentsLimitReached().Get() == "1" {
+		t.Error("expected ArgumentsLimitReached not to be set")
+	}
+	if len(v.ResponseXML().Get("//@*")) != 3 {
+		t.Errorf("expected 3 attributes, got %d", len(v.ResponseXML().Get("//@*")))
+	}
+	if len(v.ResponseXML().Get("/*")) != 2 {
+		t.Errorf("expected 2 contents, got %d", len(v.ResponseXML().Get("/*")))
+	}
+
+	// With ArgumentLimit = 2 (caps total collected attrs + contents to 2)
+	vLimited := newTestTransactionVariables()
+	err = bp.ProcessResponse(strings.NewReader(xmldoc), vLimited, plugintypes.BodyProcessorOptions{
+		ArgumentLimit: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vLimited.ArgumentsLimitReached().Get() != "1" {
+		t.Error("expected ArgumentsLimitReached to be set to 1")
+	}
+	total := len(vLimited.ResponseXML().Get("//@*")) + len(vLimited.ResponseXML().Get("/*"))
+	if total != 2 {
+		t.Errorf("expected 2 total XML items with limit=2, got %d", total)
 	}
 }

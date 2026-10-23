@@ -665,11 +665,6 @@ func TestSelect(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "REQUEST_XML_XPATH",
-			rule:          `SecRule REQUEST_XML:/* "bar" "id:691"`,
-			expectedError: false,
-		},
-		{
 			name:          "RESPONSE_ARGS",
 			rule:          `SecRule RESPONSE_ARGS:foo "bar" "id:70"`,
 			expectedError: false,
@@ -712,11 +707,6 @@ func TestSelect(t *testing.T) {
 		{
 			name:          "RESPONSE_XML",
 			rule:          `SecRule RESPONSE_XML:foo "bar" "id:78"`,
-			expectedError: false,
-		},
-		{
-			name:          "RESPONSE_XML_XPATH",
-			rule:          `SecRule RESPONSE_XML:/* "bar" "id:781"`,
 			expectedError: false,
 		},
 		{

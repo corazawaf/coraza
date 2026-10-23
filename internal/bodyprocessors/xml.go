@@ -10,44 +10,56 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 )
 
 type xmlBodyProcessor struct {
 }
 
 func (*xmlBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
-	values, contents, err := readXML(reader)
+	values, contents, truncated, err := readXML(reader, options.ArgumentLimit)
 	if err != nil {
 		return err
 	}
 	col := v.RequestXML()
 	col.Set("//@*", values)
 	col.Set("/*", contents)
+	if truncated {
+		if alr := v.ArgumentsLimitReached(); alr != nil {
+			alr.(*collections.Single).Set("1")
+		}
+	}
 	return nil
 }
 
 func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.TransactionVariables, options plugintypes.BodyProcessorOptions) error {
-	values, contents, err := readXML(reader)
+	values, contents, truncated, err := readXML(reader, options.ArgumentLimit)
 	if err != nil {
 		return err
 	}
 	col := v.ResponseXML()
 	col.Set("//@*", values)
 	col.Set("/*", contents)
+	if truncated {
+		if alr := v.ArgumentsLimitReached(); alr != nil {
+			alr.(*collections.Single).Set("1")
+		}
+	}
 	return nil
 }
 
-func readXML(reader io.Reader) ([]string, []string, error) {
+func readXML(reader io.Reader, limit int) ([]string, []string, bool, error) {
 	var attrs []string
 	var content []string
 	dec := xml.NewDecoder(reader)
 	dec.Strict = false
 	dec.AutoClose = xml.HTMLAutoClose
 	dec.Entity = xml.HTMLEntity
+	truncated := false
 	for {
 		token, err := dec.Token()
 		if err != nil && err != io.EOF && !isUnexpectedEOFXMLSyntaxError(err) {
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 		if token == nil {
 			break
@@ -55,15 +67,26 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 		switch tok := token.(type) {
 		case xml.StartElement:
 			for _, attr := range tok.Attr {
+				if limit > 0 && len(attrs)+len(content) >= limit {
+					truncated = true
+					break
+				}
 				attrs = append(attrs, attr.Value)
 			}
 		case xml.CharData:
 			if c := strings.TrimSpace(string(tok)); c != "" {
-				content = append(content, c)
+				if limit > 0 && len(attrs)+len(content) >= limit {
+					truncated = true
+				} else {
+					content = append(content, c)
+				}
 			}
 		}
+		if truncated {
+			break
+		}
 	}
-	return attrs, content, nil
+	return attrs, content, truncated, nil
 }
 
 func isUnexpectedEOFXMLSyntaxError(err error) bool {
