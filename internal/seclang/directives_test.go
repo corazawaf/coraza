@@ -143,23 +143,6 @@ func TestSecRuleRemoveByMsg(t *testing.T) {
 			t.Errorf("expected rule 1001 to remain, got %d", waf.Rules.GetRules()[0].ID())
 		}
 	})
-	t.Run("supports single quotes and extra whitespace", func(t *testing.T) {
-		waf := corazawaf.NewWAF()
-		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,msg:'test-msg'"`)
-		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1001,phase:1,log,pass,msg:'test-msg-2'"`)
-		if err := directiveSecRuleRemoveByMsg(&DirectiveOptions{WAF: waf, Opts: "   'test-msg'   "}); err != nil {
-			t.Fatal(err)
-		}
-		if waf.Rules.Count() != 1 {
-			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
-		}
-		if err := directiveSecRuleRemoveByMsg(&DirectiveOptions{WAF: waf, Opts: "   'test-msg-2'   "}); err != nil {
-			t.Fatal(err)
-		}
-		if waf.Rules.Count() != 0 {
-			t.Errorf("expected 0 rules, got %d", waf.Rules.Count())
-		}
-	})
 }
 
 func TestSecRuleRemoveByTag(t *testing.T) {
@@ -187,17 +170,6 @@ func TestSecRuleRemoveByTag(t *testing.T) {
 		}
 		if waf.Rules.Count() != 1 {
 			t.Errorf("expected 1 rule, got %d", waf.Rules.Count())
-		}
-	})
-
-	t.Run("supports single quotes and extra whitespace", func(t *testing.T) {
-		waf := corazawaf.NewWAF()
-		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,tag:'test-tag'"`)
-		if err := directiveSecRuleRemoveByTag(&DirectiveOptions{WAF: waf, Opts: "   'test-tag'   "}); err != nil {
-			t.Fatal(err)
-		}
-		if waf.Rules.Count() != 0 {
-			t.Errorf("expected 0 rules, got %d", waf.Rules.Count())
 		}
 	})
 }
@@ -346,10 +318,14 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecRuleRemoveByTag": {
 			{"", expectErrorOnDirective},
+			{"''", expectErrorOnDirective},
+			{`""`, expectErrorOnDirective},
 			{"attack-sqli", expectNoErrorOnDirective},
 		},
 		"SecRuleRemoveByMsg": {
 			{"", expectErrorOnDirective},
+			{"''", expectErrorOnDirective},
+			{`""`, expectErrorOnDirective},
 		},
 		"SecRuleRemoveById": {
 			{"", expectErrorOnDirective},
@@ -402,6 +378,8 @@ func TestDirectives(t *testing.T) {
 			{"", expectErrorOnDirective},
 			{"a", expectErrorOnDirective},
 			{"tag-1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"'tag-1' \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"'tag-1' 'ARGS:wp_post'", expectNoErrorOnDirective},
 			{"tag-1 tag-2 \"ARGS:wp_post\"", expectErrorOnDirective}, // Multiple tags in line is not supported
 			{"tag-2 \"ARGS:wp_post|RESPONSE_HEADERS|!REQUEST_BODY\"", expectNoErrorOnDirective},
 		},
