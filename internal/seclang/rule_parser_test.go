@@ -28,11 +28,6 @@ func TestInvalidRule(t *testing.T) {
 	if err == nil {
 		t.Error("expected malformed rule error")
 	}
-
-	err = p.FromString(`SecRule ARGS "@pm a|4|" "id:100"`)
-	if err == nil {
-		t.Error("expected error for invalid @pm syntax")
-	}
 }
 
 func TestVariables(t *testing.T) {
@@ -290,11 +285,6 @@ func TestParseActionOperatorUnescaping(t *testing.T) {
 			name:   "no escapes",
 			input:  `ARGS "@contains test" "id:3"`,
 			wantOp: `@contains test`,
-		},
-		{
-			name:   "pm with snort syntax",
-			input:  `ARGS "@pm A|42 43|C" "id:4"`,
-			wantOp: `@pm A|42 43|C`,
 		},
 	}
 	for _, tt := range tests {

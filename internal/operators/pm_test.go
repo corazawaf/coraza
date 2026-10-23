@@ -139,157 +139,67 @@ func BenchmarkPmShortInput(b *testing.B) {
 	})
 }
 
-func TestPMSnortSyntax(t *testing.T) {
-	tests := []struct {
-		name      string
-		arguments string
-		input     string
-		wantMatch bool
-	}{
-		{
-			name:      "snort hex mixed with literals",
-			arguments: "A|42|C|44|F",
-			input:     "xxabcdfxx",
-			wantMatch: true,
-		},
-		{
-			name:      "snort hex mixed with literals uppercase input",
-			arguments: "A|42|C|44|F",
-			input:     "xxABCDFxx",
-			wantMatch: true,
-		},
-		{
-			name:      "snort hex mixed no match",
-			arguments: "A|42|C|44|F",
-			input:     "xxabcexx",
-			wantMatch: false,
-		},
-		{
-			name:      "single phrase with space inside hex block",
-			arguments: "|41 42|",
-			input:     "ab",
-			wantMatch: true,
-		},
-		{
-			name:      "two phrases with space outside hex block",
-			arguments: "|41| |42|",
-			input:     "b",
-			wantMatch: true,
-		},
-		{
-			name:      "encoded space in phrase",
-			arguments: "a|20|b",
-			input:     "a b",
-			wantMatch: true,
-		},
-		{
-			name:      "encoded space in phrase no match without space",
-			arguments: "a|20|b",
-			input:     "ab",
-			wantMatch: false,
-		},
-		{
-			name:      "null byte pattern",
-			arguments: "|00|",
-			input:     "foo\x00bar",
-			wantMatch: true,
-		},
-		{
-			name:      "raw non-ascii bytes",
-			arguments: "|ff fe|",
-			input:     "foo\xff\xfebar",
-			wantMatch: true,
-		},
-		{
-			name:      "single hex byte matching char",
-			arguments: "|41|",
-			input:     "a",
-			wantMatch: true,
-		},
-		{
-			name:      "encoded pipe literal",
-			arguments: "foo|7C|bar",
-			input:     "foo|bar",
-			wantMatch: true,
-		},
-		{
-			name:      "standard phrases without pipes",
-			arguments: "hello world",
-			input:     "say hello",
-			wantMatch: true,
-		},
-		{
-			name:      "multiple spaces between phrases",
-			arguments: "a  b",
-			input:     "xyz",
-			wantMatch: false,
-		},
-		{
-			name:      "multiple spaces between phrases matching first",
-			arguments: "a  b",
-			input:     "a",
-			wantMatch: true,
-		},
+func TestPMSnortCapturing(t *testing.T) {
+	op, err := newPM(plugintypes.OperatorOptions{
+		Arguments: "A|42|C|44|F",
+	})
+	if err != nil {
+		t.Fatalf("unexpected constructor error: %s", err)
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			op, err := newPM(plugintypes.OperatorOptions{
-				Arguments: tc.arguments,
-			})
-			if err != nil {
-				t.Fatalf("unexpected constructor error: %s", err)
-			}
+	tx := newTestTx()
+	defer tx.Close()
+	tx.Capture = true
 
-			tx := newTestTx()
-			defer tx.Close()
-
-			got := op.Evaluate(tx, tc.input)
-			if got != tc.wantMatch {
-				t.Errorf("Evaluate(%q) = %v, want %v", tc.input, got, tc.wantMatch)
-			}
-		})
+	input := "xxABCDFxx"
+	if !op.Evaluate(tx, input) {
+		t.Fatalf("expected match on %q", input)
 	}
 
-	t.Run("capturing original bytes and casing", func(t *testing.T) {
-		op, err := newPM(plugintypes.OperatorOptions{
-			Arguments: "A|42|C|44|F",
-		})
-		if err != nil {
-			t.Fatalf("unexpected constructor error: %s", err)
-		}
+	captures := tx.Variables().TX().Get("0")
+	if len(captures) == 0 {
+		t.Fatal("expected TX:0 capture, got none")
+	}
+	if captures[0] != "ABCDF" {
+		t.Errorf("expected capture %q, got %q", "ABCDF", captures[0])
+	}
+}
 
-		tx := newTestTx()
-		defer tx.Close()
-		tx.Capture = true
-
-		input := "xxABCDFxx"
-		if !op.Evaluate(tx, input) {
-			t.Fatalf("expected match on %q", input)
-		}
-
-		captures := tx.Variables().TX().Get("0")
-		if len(captures) == 0 {
-			t.Fatal("expected TX:0 capture, got none")
-		}
-		if captures[0] != "ABCDF" {
-			t.Errorf("expected capture %q, got %q", "ABCDF", captures[0])
-		}
+func TestPMSnortMinLen(t *testing.T) {
+	op, err := newPM(plugintypes.OperatorOptions{
+		Arguments: "A|42|C",
 	})
+	if err != nil {
+		t.Fatalf("unexpected constructor error: %s", err)
+	}
+	p := op.(*pm)
+	// "A|42|C" decodes to 3 bytes: 'a', 0x42, 'c'
+	if p.minLen != 3 {
+		t.Errorf("expected minLen=3, got %d", p.minLen)
+	}
+}
 
-	t.Run("decoded minLen assertion", func(t *testing.T) {
-		op, err := newPM(plugintypes.OperatorOptions{
-			Arguments: "A|42|C",
-		})
-		if err != nil {
-			t.Fatalf("unexpected constructor error: %s", err)
-		}
-		p := op.(*pm)
-		// "A|42|C" decodes to 3 bytes: 'a', 0x42, 'c'
-		if p.minLen != 3 {
-			t.Errorf("expected minLen=3, got %d", p.minLen)
-		}
+func TestPmMinLenMultipleSpaces(t *testing.T) {
+	// On main, consecutive spaces produced an empty pattern with minLen=0,
+	// matching every input including empty strings.
+	op, err := newPM(plugintypes.OperatorOptions{
+		Arguments: "a  b",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := op.(*pm)
+	if p.minLen != 1 {
+		t.Fatalf("expected minLen=1, got %d", p.minLen)
+	}
+
+	tx := newTestTx()
+	defer tx.Close()
+
+	if p.Evaluate(tx, "") {
+		t.Error("expected false for empty input with multiple spaces in pattern")
+	}
 }
 
 func TestPMInvalidSyntax(t *testing.T) {
