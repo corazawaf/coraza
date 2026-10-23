@@ -194,6 +194,7 @@ func TestWriteRequestBody(t *testing.T) {
 		requestBodyLimit                int
 		requestBodyLimitAction          types.BodyLimitAction
 		avoidRequestBodyLimitActionInit bool
+		detectionOnly                   bool // The transaction runs in DetectionOnly, as after ctl:ruleEngine=DetectionOnly
 		shouldInterrupt                 bool
 		limitReached                    bool // If the limit is reached, INBOUND_DATA_ERROR should be set
 	}{
@@ -225,6 +226,13 @@ func TestWriteRequestBody(t *testing.T) {
 			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 			limitReached:           true,
 		},
+		{
+			name:                   "LimitReachedAndRejectsInDetectionOnly",
+			requestBodyLimit:       urlencodedBodyLen - 3,
+			requestBodyLimitAction: types.BodyLimitActionReject,
+			detectionOnly:          true,
+			limitReached:           true,
+		},
 	}
 
 	urlencodedBodyLenThird := urlencodedBodyLen / 3
@@ -247,6 +255,9 @@ func TestWriteRequestBody(t *testing.T) {
 								waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 							}
 							tx := waf.NewTransaction()
+							if testCase.detectionOnly {
+								tx.RuleEngine = types.RuleEngineDetectionOnly
+							}
 							tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 
 							it := tx.ProcessRequestHeaders()
@@ -269,6 +280,9 @@ func TestWriteRequestBody(t *testing.T) {
 									t.Fatal("Expected interruption, got nil")
 								}
 							} else {
+								if it != nil {
+									t.Fatalf("Unexpected interruption while writing the body: %+v", it)
+								}
 								it, err := tx.ProcessRequestBody()
 								if err != nil {
 									t.Fatal(err)
@@ -278,9 +292,16 @@ func TestWriteRequestBody(t *testing.T) {
 									t.Fatalf("Unexpected interruption")
 								}
 
-								val := tx.variables.argsPost.Get("some")
-								if len(val) != 1 || val[0] != "result" {
-									t.Fatalf("Failed to set urlencoded POST data with arguments: \"%s\"", strings.Join(val, "\", \""))
+								if testCase.detectionOnly {
+									// The would-be 413 is recorded for the audit log, nothing more.
+									if !tx.IsDetectionOnlyInterrupted() {
+										t.Fatal("Expected the body limit interruption to be recorded in DetectionOnly")
+									}
+								} else {
+									val := tx.variables.argsPost.Get("some")
+									if len(val) != 1 || val[0] != "result" {
+										t.Fatalf("Failed to set urlencoded POST data with arguments: \"%s\"", strings.Join(val, "\", \""))
+									}
 								}
 							}
 
@@ -598,6 +619,7 @@ func TestWriteResponseBody(t *testing.T) {
 		name                    string
 		responseBodyLimit       int
 		responseBodyLimitAction types.BodyLimitAction
+		detectionOnly           bool // The transaction runs in DetectionOnly, as after ctl:ruleEngine=DetectionOnly
 		shouldInterrupt         bool
 		limitReached            bool // If the limit is reached, OUTBOUND_DATA_ERROR should be set
 	}{
@@ -627,6 +649,13 @@ func TestWriteResponseBody(t *testing.T) {
 			// responseBodyLimitAction: types.BodyLimitActionProcessPartial,
 			limitReached: true,
 		},
+		{
+			name:                    "LimitReachedAndRejectsInDetectionOnly",
+			responseBodyLimit:       urlencodedBodyLen - 3,
+			responseBodyLimitAction: types.BodyLimitActionReject,
+			detectionOnly:           true,
+			limitReached:            true,
+		},
 	}
 
 	urlencodedBodyLenThird := urlencodedBodyLen / 3
@@ -653,6 +682,9 @@ func TestWriteResponseBody(t *testing.T) {
 							}
 
 							tx := waf.NewTransaction()
+							if testCase.detectionOnly {
+								tx.RuleEngine = types.RuleEngineDetectionOnly
+							}
 							tx.AddResponseHeader("content-type", "text/plain")
 
 							it := tx.ProcessResponseHeaders(200, "HTTP/1")
@@ -675,6 +707,9 @@ func TestWriteResponseBody(t *testing.T) {
 									t.Fatal("Expected interruption, got nil")
 								}
 							} else {
+								if it != nil {
+									t.Fatalf("Unexpected interruption while writing the body: %+v", it)
+								}
 								it, err := tx.ProcessResponseBody()
 								if err != nil {
 									t.Fatal(err)
@@ -683,10 +718,17 @@ func TestWriteResponseBody(t *testing.T) {
 								if it != nil {
 									t.Fatalf("Unexpected interruption")
 								}
-								// checking if the body has been populated up to the first POST arg
-								index := strings.Index(urlencodedBody, "&")
-								if tx.variables.responseBody.Get()[:index] != urlencodedBody[:index] {
-									t.Fatal("failed to set response body")
+								if testCase.detectionOnly {
+									// The would-be 500 is recorded for the audit log, nothing more.
+									if !tx.IsDetectionOnlyInterrupted() {
+										t.Fatal("Expected the body limit interruption to be recorded in DetectionOnly")
+									}
+								} else {
+									// checking if the body has been populated up to the first POST arg
+									index := strings.Index(urlencodedBody, "&")
+									if tx.variables.responseBody.Get()[:index] != urlencodedBody[:index] {
+										t.Fatal("failed to set response body")
+									}
 								}
 							}
 
