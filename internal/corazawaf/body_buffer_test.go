@@ -174,3 +174,55 @@ func TestBodyBufferResetAndReadTheReader(t *testing.T) {
 		t.Fatalf("unexpected number of bytes read, want: %d, have: %d", 5, nCopied)
 	}
 }
+
+func TestBodyBufferResetReleasesLargeBuffer(t *testing.T) {
+	tests := []struct {
+		name     string
+		size     int
+		wantKept bool
+	}{
+		{name: "small body keeps the buffer", size: 4 * 1024, wantKept: true},
+		{name: "body below the keep capacity keeps the buffer", size: 32 * 1024, wantKept: true},
+		{name: "large body releases the buffer", size: 1024 * 1024, wantKept: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			br := NewBodyBuffer(types.BodyBufferOptions{
+				MemoryLimit: 2 * 1024 * 1024,
+				Limit:       2 * 1024 * 1024,
+			})
+			if _, err := br.Write([]byte(strings.Repeat("a", tc.size))); err != nil {
+				t.Fatal(err)
+			}
+			before := br.buffer
+			if err := br.Reset(); err != nil {
+				t.Fatal(err)
+			}
+			if kept := br.buffer == before; kept != tc.wantKept {
+				t.Errorf("buffer kept = %t, want %t (capacity before reset %d)", kept, tc.wantKept, before.Cap())
+			}
+			if got := br.buffer.Cap(); got > bodyBufferKeepCap {
+				t.Errorf("capacity after reset = %d, want at most %d", got, bodyBufferKeepCap)
+			}
+			if br.Size() != 0 || br.buffer.Len() != 0 {
+				t.Errorf("expected an empty buffer after reset, size %d, len %d", br.Size(), br.buffer.Len())
+			}
+
+			// The buffer must work as before for the next request.
+			if _, err := br.Write([]byte("next")); err != nil {
+				t.Fatal(err)
+			}
+			r, err := br.Reader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != "next" {
+				t.Errorf("body after reset = %q, want %q", got, "next")
+			}
+		})
+	}
+}

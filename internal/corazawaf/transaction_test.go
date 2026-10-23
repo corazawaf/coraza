@@ -5,6 +5,8 @@ package corazawaf
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -2935,6 +2937,136 @@ func TestCloseReleasesPerRequestReferences(t *testing.T) {
 	}
 	if len(tx.transformationCache) != 0 {
 		t.Errorf("expected empty transformation cache after Close, got %d entries", len(tx.transformationCache))
+	}
+}
+
+func TestCloseReleasesLargeRequestBody(t *testing.T) {
+	tests := []struct {
+		name     string
+		size     int
+		wantKept bool
+	}{
+		{name: "small body", size: 1024, wantKept: true},
+		{name: "large body", size: 1024 * 1024, wantKept: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := NewWAF()
+			waf.SetRequestBodyInMemoryLimit(2 * 1024 * 1024)
+			waf.RequestBodyLimit = 2 * 1024 * 1024
+			tx := waf.NewTransaction()
+			tx.RequestBodyAccess = true
+			tx.ProcessURI("/", "POST", "HTTP/1.1")
+			tx.AddRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+			tx.ProcessRequestHeaders()
+			if _, _, err := tx.WriteRequestBody([]byte("a=" + strings.Repeat("b", tc.size))); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := tx.ProcessRequestBody(); err != nil {
+				t.Fatal(err)
+			}
+			before := tx.requestBodyBuffer.buffer
+			if err := tx.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if kept := tx.requestBodyBuffer.buffer == before; kept != tc.wantKept {
+				t.Errorf("request body buffer kept = %t, want %t (capacity before Close %d)", kept, tc.wantKept, before.Cap())
+			}
+			if got := tx.requestBodyBuffer.buffer.Cap(); got > bodyBufferKeepCap {
+				t.Errorf("request body buffer capacity after Close = %d, want at most %d", got, bodyBufferKeepCap)
+			}
+		})
+	}
+}
+
+// The cache is observed from inside the phase by an action rule, which a
+// profile cannot do; profile transformations_cache_release.yaml checks that
+// the rule results do not change.
+func TestTransformationCacheReleasedAfterPhase(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        int
+		phase       types.RulePhase
+		cancel      bool
+		wantSameMap bool
+	}{
+		{name: "few arguments keep the map", args: 10, phase: types.PhaseRequestHeaders, wantSameMap: true},
+		{name: "arguments at the limit keep the map", args: transformationCacheKeepLen, phase: types.PhaseRequestHeaders, wantSameMap: true},
+		{name: "many arguments replace the map", args: transformationCacheKeepLen + 1, phase: types.PhaseRequestHeaders, wantSameMap: false},
+		{name: "request body phase", args: 2000, phase: types.PhaseRequestBody, wantSameMap: false},
+		{name: "phase cut short by the context", args: 2000, phase: types.PhaseRequestBody, cancel: true, wantSameMap: false},
+		{name: "logging phase", args: 2000, phase: types.PhaseLogging, wantSameMap: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := NewWAF()
+			waf.ArgumentLimit = 4 * transformationCacheKeepLen
+			lowercase, err := transformations.GetTransformation("lowercase")
+			if err != nil {
+				t.Fatal(err)
+			}
+			rule := NewRule()
+			rule.ID_ = 1
+			rule.LogID_ = "1"
+			rule.Phase_ = tc.phase
+			rule.operator = &ruleOperatorParams{Operator: newTestUnconditionalMatch(t), Function: "@unconditionalMatch"}
+			if err := rule.AddTransformation("lowercase", lowercase); err != nil {
+				t.Fatal(err)
+			}
+			if err := rule.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatal(err)
+			}
+			if err := waf.Rules.Add(rule); err != nil {
+				t.Fatal(err)
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			tx := waf.NewTransactionWithOptions(Options{Context: ctx})
+			defer func() { _ = tx.Close() }()
+
+			var duringLen int
+			var duringMap uintptr
+			addActionRule(t, waf, 2, tc.phase, func() {
+				duringLen = len(tx.transformationCache)
+				duringMap = reflect.ValueOf(tx.transformationCache).Pointer()
+				if tc.cancel {
+					cancel()
+				}
+			})
+			ranAfterCancel := false
+			addActionRule(t, waf, 3, tc.phase, func() { ranAfterCancel = true })
+
+			var uri strings.Builder
+			uri.WriteString("/?")
+			for i := 0; i < tc.args; i++ {
+				fmt.Fprintf(&uri, "a%d=VALUE&", i)
+			}
+			tx.ProcessURI(uri.String(), "GET", "HTTP/1.1")
+			tx.ProcessRequestHeaders()
+			if tc.phase >= types.PhaseRequestBody {
+				if _, err := tx.ProcessRequestBody(); tc.cancel != errors.Is(err, ErrPhaseCanceled) {
+					t.Fatalf("ProcessRequestBody error = %v, cancel = %t", err, tc.cancel)
+				}
+			}
+			if tc.phase == types.PhaseLogging {
+				tx.ProcessLogging()
+			}
+
+			if duringLen != tc.args {
+				t.Fatalf("cache entries during the phase = %d, want %d", duringLen, tc.args)
+			}
+			if tc.cancel && ranAfterCancel {
+				t.Fatal("test setup: the phase was not cut short")
+			}
+			if got := len(tx.transformationCache); got != 0 {
+				t.Errorf("cache entries after the phase = %d, want 0", got)
+			}
+			sameMap := reflect.ValueOf(tx.transformationCache).Pointer() == duringMap
+			if sameMap != tc.wantSameMap {
+				t.Errorf("cache map kept = %t, want %t", sameMap, tc.wantSameMap)
+			}
+		})
 	}
 }
 

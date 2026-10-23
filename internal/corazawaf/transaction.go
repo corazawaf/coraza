@@ -1945,6 +1945,21 @@ func (tx *Transaction) auditLogCollectFiles() []plugintypes.AuditLogTransactionR
 	return files
 }
 
+// transformationCacheKeepLen is the largest number of cached transformations a
+// transaction keeps the map for. A request with many arguments grows the map,
+// and a Go map does not shrink when cleared, so a larger one is replaced.
+const transformationCacheKeepLen = 1024
+
+// releaseTransformationCache empties the transformation cache, replacing the
+// map when it grew past transformationCacheKeepLen.
+func (tx *Transaction) releaseTransformationCache() {
+	if len(tx.transformationCache) > transformationCacheKeepLen {
+		tx.transformationCache = map[transformationKey]transformationValue{}
+		return
+	}
+	clear(tx.transformationCache)
+}
+
 // Close closes the transaction after phase 5
 // This method helps the GC to clean up the transaction faster and release resources
 // It also allows caches the transaction back into the sync.Pool
@@ -1979,7 +1994,7 @@ func (tx *Transaction) Close() error {
 	tx.detectionOnlyInterruption = nil
 	tx.context = nil
 	tx.ruleFilter = nil
-	clear(tx.transformationCache)
+	tx.releaseTransformationCache()
 	if err := tx.requestBodyBuffer.Reset(); err != nil {
 		errs = append(errs, fmt.Errorf("reseting request body buffer: %v", err))
 	}

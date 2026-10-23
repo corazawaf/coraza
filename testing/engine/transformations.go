@@ -5,6 +5,8 @@ package engine
 
 import (
 	"crypto/fips140"
+	"fmt"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )
@@ -112,5 +114,83 @@ SecRule REQUEST_URI "@rx this_very_specific" \
 
 SecRule TX:matched_times "@eq 1" "id:11, phase:1, pass, log, t:none"
 SecRule TX:matched_times2 "@eq 2" "id:12, phase:1, pass, log, t:none"
+`,
+})
+
+// manyArgsBody holds more arguments than the transaction keeps its transformation cache map for
+// (transformationCacheKeepLen in internal/corazawaf), so the map is replaced at the end of the phase.
+func manyArgsBody() string {
+	var b strings.Builder
+	for i := 0; i < 1500; i++ {
+		fmt.Fprintf(&b, "p%d=VALUE&", i)
+	}
+	b.WriteString("x=ATTACK")
+	return b.String()
+}
+
+// The transformation cache is emptied at the end of every phase. A cached value must keep serving
+// the rules of its own phase, the rules of later phases must see the same transformed value, and a
+// rule without the transformation must never get a cached transformed value.
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "Ruslan Shmelev",
+		Description: "Test that releasing the transformation cache after each phase does not change rule results",
+		Enabled:     true,
+		Name:        "transformations_cache_release.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "transformations_cache_release",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?x=ATTACK",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{101, 102, 103, 104, 105, 106, 111, 112, 113},
+							NonTriggeredRules: []int{107, 108, 109, 110},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "POST",
+							URI:    "/",
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+							},
+							Data: manyArgsBody(),
+						},
+						Output: profile.ExpectedOutput{
+							// x is in the body only, so the phase 1 rule 101 does not see it.
+							TriggeredRules:    []int{102, 103, 104, 105, 106, 111, 112, 113},
+							NonTriggeredRules: []int{107, 108, 109, 110},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRequestBodyAccess On
+SecArgumentsLimit 5000
+
+SecRule ARGS:x "@streq attack" "id:101, phase:1, pass, log, t:none, t:lowercase"
+SecRule ARGS "@streq attack" "id:113, phase:2, pass, log, t:none, t:urlDecode, t:lowercase"
+SecRule ARGS:x "@streq attack" "id:102, phase:2, pass, log, t:none, t:lowercase"
+SecRule ARGS:x "@streq attack" "id:103, phase:2, pass, log, t:none, t:lowercase"
+SecRule ARGS:x "@streq attack" "id:104, phase:3, pass, log, t:none, t:lowercase"
+SecRule ARGS:x "@streq attack" "id:105, phase:4, pass, log, t:none, t:lowercase"
+SecRule ARGS:x "@streq attack" "id:106, phase:5, pass, log, t:none, t:lowercase"
+
+SecRule ARGS:x "@streq attack" "id:107, phase:2, pass, log, t:none"
+SecRule ARGS:x "@streq attack" "id:108, phase:3, pass, log, t:none"
+SecRule ARGS:x "@streq attack" "id:109, phase:4, pass, log, t:none"
+SecRule ARGS:x "@streq attack" "id:110, phase:5, pass, log, t:none"
+
+SecRule ARGS:x "@streq ATTACK" "id:111, phase:3, pass, log, t:none"
+SecRule ARGS "@streq attack" "id:112, phase:4, pass, log, t:none, t:lowercase"
 `,
 })

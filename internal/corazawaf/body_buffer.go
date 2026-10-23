@@ -209,7 +209,13 @@ func (br *BodyBuffer) invalidateReaders() {
 
 // Reset will reset buffers and delete temporary files
 func (br *BodyBuffer) Reset() error {
-	br.buffer.Reset()
+	// A pooled transaction keeps its buffer, so a buffer grown by one large
+	// body would stay allocated until the transaction is reused, or forever.
+	if br.buffer.Cap() > bodyBufferKeepCap {
+		br.buffer = &bytes.Buffer{}
+	} else {
+		br.buffer.Reset()
+	}
 	br.length = 0
 
 	// close all readers, this is important because connectors may have
@@ -231,6 +237,10 @@ func (br *BodyBuffer) Reset() error {
 
 	return nil
 }
+
+// bodyBufferKeepCap is the largest in-memory buffer capacity Reset keeps for
+// reuse; a larger buffer is dropped.
+const bodyBufferKeepCap = 64 * 1024
 
 // NewBodyBuffer Initializes a body reader
 // After writing memLimit bytes to the memory buffer, data will be

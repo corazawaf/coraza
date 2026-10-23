@@ -311,6 +311,11 @@ RulesLoop:
 	// Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
 	tx.Skip = 0
 
+	// The cache only serves this phase: the next one clears it before use.
+	// Releasing it now keeps the transformed values of a large request from
+	// staying reachable while the connector waits for the next phase.
+	tx.releaseTransformationCache()
+
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.IsInterrupted()
 }
