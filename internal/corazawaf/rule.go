@@ -138,6 +138,11 @@ type Rule struct {
 
 	HasChain bool
 
+	// EvalDepth makes a chain starter evaluate the rest of the chain once per
+	// match, each time with the MATCHED_VAR, MATCHED_VAR_NAME and TX:0-9 values
+	// left by that match, instead of once with the values of the last match.
+	EvalDepth bool
+
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
 	// Multiphase specific field
@@ -189,9 +194,21 @@ func (r *Rule) Evaluate(phase types.RulePhase, tx plugintypes.TransactionState, 
 const noID = 0
 
 func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue) []types.MatchData {
+	return r.evaluate(logger, phase, tx, collectiveMatchedValues, chainLevel, cache, nil, nil)
+}
+
+// evaluate is doEvaluate for depth first chain evaluation: when not nil,
+// contexts gets the state left by each match of this rule and budget is
+// decremented on every operator evaluation.
+func (r *Rule) evaluate(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collectiveMatchedValues *[]types.MatchData, chainLevel int, cache map[transformationKey]transformationValue, contexts *[]chainContext, budget *int) []types.MatchData {
 	tx.Capture = r.Capture
 
 	var matchedValues []types.MatchData
+	var depthContexts []chainContext
+	depthFirst := r.EvalDepth && r.Chain != nil && r.ParentID_ == noID
+	if depthFirst {
+		contexts = &depthContexts
+	}
 	// we log if we are the parent rule
 	logger.Debug().Msg("Evaluating rule")
 	defer logger.Debug().Msg("Finished rule evaluation")
@@ -291,6 +308,9 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 						Str("operator_data", r.operator.Data).
 						Str("arg", carg)
 
+					if budget != nil {
+						*budget--
+					}
 					match := r.executeOperator(carg, tx)
 					if match {
 						mr := &corazarules.MatchData{
@@ -318,6 +338,9 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 
 						if !multiphaseEvaluation {
 							matchedValues = append(matchedValues, mr)
+							if contexts != nil {
+								*contexts = append(*contexts, newChainContext(tx, mr))
+							}
 						} else {
 							if isMultiphaseDoubleEvaluation(tx, phase, r, collectiveMatchedValues, mr) {
 								// This variables chain already matched, let's evaluate the next variable
@@ -343,6 +366,9 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 							if r.LogData != nil {
 								mr.Data_ = r.LogData.Expand(tx)
 							}
+							if contexts != nil {
+								*contexts = append(*contexts, newChainContext(tx, mr))
+							}
 						}
 
 						evalLog.Msg("Evaluating operator: MATCH")
@@ -362,7 +388,18 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	// also, expansion of Msg and LogData of the parent rule is postponed after the chain evaluation (if any)
 	if r.ParentID_ == noID {
 		// we only run the chains for the parent rule
-		for nr := r.Chain; nr != nil; {
+		chain := r.Chain
+		if depthFirst {
+			budget := depthFirstEvaluationLimit
+			path := chain.evaluateDepthFirst(logger, phase, tx, nil, chainLevel+1, cache, depthContexts, &budget)
+			if len(path) == 0 {
+				return nil
+			}
+			// Only the parent match the whole chain matched with is reported.
+			matchedValues = path
+			chain = nil
+		}
+		for nr := chain; nr != nil; {
 			chainLevel++
 
 			var nrLogger debuglog.Logger
@@ -415,6 +452,87 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		}
 	}
 	return matchedValues
+}
+
+// depthFirstEvaluationLimit is a soft bound on the operator evaluations
+// evalDepth spends on the chained rules of one chain starter. Every parent
+// match multiplies the work of the rules below it, so a request with many
+// arguments would otherwise make a three link chain cubic. The budget is
+// checked between parent contexts, so one rule evaluation may overshoot the
+// limit. Once exhaustion is observed, the rest of the chain is evaluated once,
+// breadth first, as it would be without evalDepth.
+const depthFirstEvaluationLimit = 10000
+
+// evaluateDepthFirst evaluates r, and the rules chained after it, once for
+// each context in parents, restoring that context first. It returns the
+// parent match followed by the matches of the rest of the chain for the first
+// context the whole remaining chain matched with, or nil. budget is shared by
+// the whole chain and is checked before evaluating each parent context.
+// ancestors are the matches of the path above the parents; together with one
+// parent they form the multiphase bookkeeping of that branch only, so matches
+// of a branch that failed never pair with those of another one.
+func (r *Rule) evaluateDepthFirst(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, ancestors []types.MatchData, chainLevel int, cache map[transformationKey]transformationValue, parents []chainContext, budget *int) []types.MatchData {
+	ruleLogger := chainRuleLogger(logger, r)
+
+	var contexts []chainContext
+	for _, parent := range parents {
+		if *budget <= 0 {
+			logger.Warn().
+				Int("limit", depthFirstEvaluationLimit).
+				Msg("evalDepth evaluation limit reached, evaluating the rest of the chain breadth first")
+			last := parents[len(parents)-1]
+			return r.evaluateBreadthFirst(logger, phase, tx, branchMatches(ancestors, last), chainLevel, cache, last)
+		}
+		parent.restore(tx)
+		branch := branchMatches(ancestors, parent)
+		collected := branch
+		if r.Chain == nil {
+			if matched := r.evaluate(ruleLogger, phase, tx, &collected, chainLevel, cache, nil, budget); len(matched) > 0 {
+				return append([]types.MatchData{parent.match}, matched...)
+			}
+			continue
+		}
+		contexts = contexts[:0]
+		if len(r.evaluate(ruleLogger, phase, tx, &collected, chainLevel, cache, &contexts, budget)) == 0 {
+			continue
+		}
+		if path := r.Chain.evaluateDepthFirst(logger, phase, tx, branch, chainLevel+1, cache, contexts, budget); len(path) > 0 {
+			return append([]types.MatchData{parent.match}, path...)
+		}
+	}
+	return nil
+}
+
+// evaluateBreadthFirst evaluates r and the rules chained after it once each,
+// with the state left by parent. collected starts with the matches of the
+// branch above r.
+func (r *Rule) evaluateBreadthFirst(logger debuglog.Logger, phase types.RulePhase, tx *Transaction, collected []types.MatchData, chainLevel int, cache map[transformationKey]transformationValue, parent chainContext) []types.MatchData {
+	parent.restore(tx)
+	path := []types.MatchData{parent.match}
+	for nr := r; nr != nil; nr = nr.Chain {
+		matched := nr.doEvaluate(chainRuleLogger(logger, nr), phase, tx, &collected, chainLevel, cache)
+		if len(matched) == 0 {
+			return nil
+		}
+		path = append(path, matched...)
+		chainLevel++
+	}
+	return path
+}
+
+// branchMatches returns a new slice holding ancestors followed by the match of
+// parent.
+func branchMatches(ancestors []types.MatchData, parent chainContext) []types.MatchData {
+	branch := make([]types.MatchData, len(ancestors), len(ancestors)+1)
+	copy(branch, ancestors)
+	return append(branch, parent.match)
+}
+
+func chainRuleLogger(logger debuglog.Logger, r *Rule) debuglog.Logger {
+	if r.ID_ == noID {
+		return logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", r.File_, r.Line_)))
+	}
+	return logger.With(debuglog.Int("chain_rule_id", r.ID_))
 }
 
 func (r *Rule) transformMultiMatchArg(arg types.MatchData) ([]string, []error) {
