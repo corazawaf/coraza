@@ -137,7 +137,9 @@ const (
 	// Description: Contains the status of the request body processor used for request body
 	// parsing. The values can be 0 (no error) or 1 (error). This variable will be set by
 	// request body processors (typically the multipart/request-data parser, JSON or the XML
-	// parser) when they fail to do their work.
+	// parser) when they fail to do their work. It is also set to 1 when a request body
+	// argument is dropped because SecArgumentsLimit was reached, with
+	// "SecArgumentsLimit exceeded" added to REQBODY_ERROR_MSG.
 	// ---
 	// ```seclang
 	// SecRule REQBODY_ERROR "@eq 1" "phase:2,id:39,deny,log,msg:'Request Body Processor Error Detected'"
@@ -146,18 +148,20 @@ const (
 	// **Note**: Your policies must have a rule to check for request body processor errors at the very beginning of phase 2. Failure to do so will leave the door open for impedance mismatch attacks. It is possible, for example, that a payload that cannot be parsed by Coraza can be successfully parsed by more tolerant parser operating in the application. If your policy dictates blocking, then you should reject the request if error is detected. When operating in detection-only mode, your rule should alert with high severity when request body processing fails.
 	ReqbodyError
 	// Description: If there's been an error during request body parsing, the variable will
-	// contain the following error message:
+	// contain the error message, prefixed with the processor name when a body processor is
+	// active. A body that both exceeds SecArgumentsLimit and fails to parse lists both
+	// reasons, separated by "; ".
 	// ---
 	// ```seclang
 	// SecRule REQBODY_ERROR_MSG "failed to parse" "id:40"
 	// ```
 	ReqbodyErrorMsg
-	// Description: Same as REQBODY_ERROR, set to 1 when the request body processor fails.
-	// Unlike REQBODY_ERROR_MSG, the corresponding error message in REQBODY_PROCESSOR_ERROR_MSG
-	// contains only the raw error string without the processor name prefix.
+	// Description: Set to 1 when the request body processor fails. Unlike REQBODY_ERROR, it
+	// is not set by an argument dropped because of SecArgumentsLimit.
 	ReqbodyProcessorError
-	// Description: Same as REQBODY_ERROR_MSG, but contains only the raw error string from
-	// the body processor, without the processor name prepended.
+	// Description: Contains only the raw error string from the body processor, without the
+	// processor name prefix and without the SecArgumentsLimit reason that REQBODY_ERROR_MSG
+	// may also carry.
 	ReqbodyProcessorErrorMsg
 	// Description: Contains the name of the currently used request body processor. The default
 	// possible values are URLENCODED, MULTIPART, XML, JSON, and RAW.

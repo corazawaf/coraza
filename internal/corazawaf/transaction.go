@@ -813,6 +813,8 @@ func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsPost) {
 		tx.variables.argumentsLimitReached.Set("1")
+		// A dropped body argument is also a request body error.
+		bodyprocessors.RecordRequestBodyError(&tx.variables, bodyprocessors.ArgumentsLimitExceededMsg)
 		tx.debugLogger.Warn().Msg("skipping post request argument, over limit")
 		return
 	}
@@ -1784,8 +1786,7 @@ func (tx *Transaction) String() string {
 
 // generateRequestBodyError generates all the error variables for the request body parser
 func (tx *Transaction) generateRequestBodyError(err error) {
-	tx.variables.reqbodyError.Set("1")
-	tx.variables.reqbodyErrorMsg.Set(fmt.Sprintf("%s: %s", tx.variables.reqbodyProcessor.Get(), err.Error()))
+	bodyprocessors.RecordRequestBodyError(&tx.variables, err.Error())
 	tx.variables.reqbodyProcessorError.Set("1")
 	tx.variables.reqbodyProcessorErrorMsg.Set(err.Error())
 }

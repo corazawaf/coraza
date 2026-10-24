@@ -62,9 +62,11 @@ SecRequestBodyJsonDepthLimit 1024
 # separately: the query string (ARGS_GET), the path (ARGS_PATH), and
 # urlencoded or JSON request bodies (ARGS_POST). JSON response bodies
 # (RESPONSE_ARGS) use the same limit.
-# Arguments beyond it are dropped and ARGUMENTS_LIMIT_REACHED is set.
-# Rules 200004 and 200005 are enforcing this limit, rejecting requests that exceed it.
-# If legitimate requests send more values, raise this value rather than removing those rules.
+# Arguments beyond it are dropped and ARGUMENTS_LIMIT_REACHED is set. A dropped
+# request-body argument also sets REQBODY_ERROR. Rules 200002, 200004 and
+# 200005 below reject a request whose query, path or body arguments were
+# dropped; if legitimate requests send more values, raise this value rather
+# than removing those rules.
 SecArgumentsLimit 1000
 
 # Maximum request body size (bytes) Coraza will accept for buffering. When
@@ -95,7 +97,8 @@ SecRequestBodyLimitAction Reject
 # the request should be rejected (when deployed in blocking mode)
 # or a high-severity alert logged (when deployed in detection-only mode).
 #
-# It also fires for valid JSON whose flattened form exceeds its memory budget.
+# It also fires for valid JSON whose flattened form exceeds its memory budget,
+# and for a request body with more arguments than SecArgumentsLimit.
 #
 SecRule REQBODY_ERROR "!@eq 0" \
     "id:'200002', phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.',logdata:'%{reqbody_error_msg}',severity:2"
@@ -122,9 +125,10 @@ SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     MULTIPART_INVALID_QUOTING=%{MULTIPART_INVALID_QUOTING}'"
 
 # Rejects requests when the argument limit has been reached and arguments
-# were silently dropped. Without this rule, an attacker can flood a request
-# with filler parameters to push a malicious payload past the limit,
-# causing it to be invisible to all ARGS-targeted rules.
+# were dropped. Filler parameters could otherwise push a malicious payload
+# past the limit, out of sight of all ARGS-targeted rules. A request-body
+# overflow also sets REQBODY_ERROR, so rule 200002 catches it before 200005;
+# 200005 still covers it when 200002 is not loaded.
 #
 SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" \
     "id:'200004',phase:1,t:none,log,deny,status:400, \
