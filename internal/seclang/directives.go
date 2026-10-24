@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -567,7 +568,7 @@ func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	options.WAF.ResponseBodyMimeTypes = strings.Split(options.Opts, " ")
+	options.WAF.ResponseBodyMimeTypes = strings.Fields(options.Opts)
 	return nil
 }
 
@@ -1677,10 +1678,12 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 		return errors.New("syntax error: SecRuleUpdateTargetByTag tag \"VARIABLES\"")
 	}
 
+	inputTag := utils.MaybeRemoveQuotes(tagAndvars[0])
+	inputVars := utils.MaybeRemoveQuotes(tagAndvars[1])
+
 	// Indexed, not ranged: see the note in directiveSecRuleUpdateTargetByID.
 	rules := options.WAF.Rules.GetRules()
 	for i := range rules {
-		inputTag := strings.Trim(tagAndvars[0], "\"")
 		if utils.InSlice(inputTag, rules[i].Tags_) {
 			rp := RuleParser{
 				rule: &rules[i],
@@ -1689,7 +1692,6 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 				},
 				defaultActions: map[types.RulePhase][]ruleAction{},
 			}
-			inputVars := strings.Trim(tagAndvars[1], "\"")
 			if err := rp.ParseVariables(inputVars); err != nil {
 				return err
 			}
@@ -1738,8 +1740,13 @@ func directiveSecDataset(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	name, d, ok := strings.Cut(options.Opts, " ")
-	if !ok {
+	var name, d string
+	if idx := strings.IndexFunc(options.Opts, unicode.IsSpace); idx != -1 {
+		name, d = options.Opts[:idx], strings.TrimLeftFunc(options.Opts[idx:], unicode.IsSpace)
+	} else {
+		return errors.New("syntax error: SecDataset name `\n...\n`")
+	}
+	if len(d) == 0 {
 		return errors.New("syntax error: SecDataset name `\n...\n`")
 	}
 	if _, ok := options.Datasets[name]; ok {
