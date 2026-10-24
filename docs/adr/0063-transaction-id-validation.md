@@ -46,7 +46,7 @@ applies.
 Chosen: **refuse only path separators and control characters, and replace the
 ID with a generated one**, checked in `WAF.NewTransactionWithOptions`, which
 both `NewTransactionWithID` and the experimental options API go through. A
-warning carrying the rejected value (quoted by the debug logger) is logged.
+warning is logged without copying the rejected value into the log sink.
 
 Sanitizing in the writer would rename the file while the record and the index
 kept the raw value, breaking the correlation the format is for. Returning an
@@ -78,8 +78,8 @@ handed an `AuditLog` built elsewhere.
 
 - For an ID with `/`, `\` or a control character, the transaction,
   `UNIQUE_ID`, the audit record and the index all carry the generated ID; the
-  rejected value only appears, quoted, in the warning. Connectors that relied
-  on such IDs lose correlation for those requests.
+  rejected value is not logged. Connectors that relied on such IDs lose
+  correlation for those requests.
 - Every other ID is used byte for byte, as before.
 
 ## References

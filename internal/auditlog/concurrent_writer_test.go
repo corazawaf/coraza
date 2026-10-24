@@ -110,6 +110,8 @@ func TestConcurrentWriterRejectsUnsafeID(t *testing.T) {
 			al := &Log{Transaction_: Transaction{UnixTimestamp_: time.Now().UnixNano(), ID_: id}}
 			if err := writer.Write(al); err == nil {
 				t.Fatal("expected an error")
+			} else if got, want := err.Error(), "transaction id cannot be used in an audit log file name"; got != want {
+				t.Errorf("want %q, have %q", want, got)
 			}
 			if _, err := os.Stat(filepath.Join(base, "ESCAPED")); !errors.Is(err, fs.ErrNotExist) {
 				t.Errorf("audit record escaped the storage dir: %v", err)

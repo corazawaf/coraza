@@ -4,10 +4,13 @@
 package corazawaf
 
 import (
+	"bytes"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -75,6 +78,22 @@ func TestNewTransactionWithOptionsID(t *testing.T) {
 				t.Errorf("want a generated id instead of %q, have %q", tt.id, tx.id)
 			}
 		})
+	}
+}
+
+func TestNewTransactionWithOptionsDoesNotLogRejectedID(t *testing.T) {
+	const id = "sensitive-token/child"
+	logs := &bytes.Buffer{}
+	waf := NewWAF()
+	waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logs)
+
+	tx := waf.NewTransactionWithOptions(Options{ID: id})
+	defer tx.Close()
+
+	if got := logs.String(); strings.Contains(got, id) {
+		t.Errorf("warning contains rejected transaction ID: %q", got)
+	} else if !strings.Contains(got, "generating a new one") {
+		t.Errorf("missing replacement warning: %q", got)
 	}
 }
 
