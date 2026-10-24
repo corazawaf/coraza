@@ -35,7 +35,6 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 	var content []string
 	dec := xml.NewDecoder(reader)
 	dec.Strict = false
-	dec.AutoClose = xml.HTMLAutoClose
 	dec.Entity = xml.HTMLEntity
 	for {
 		token, err := dec.Token()
