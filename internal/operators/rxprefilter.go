@@ -607,43 +607,17 @@ func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
 		return result
 
 	case syntax.OpConcat:
-		// Try the full extractLiterals pipeline first (handles deeper nesting
-		// through the trieReconstruct fallback it already calls).
-		lits := extractLiterals(re, ci)
-		if lits != nil {
-			switch v := lits.(type) {
-			case allRequired:
-				// Only safe to return a single trie suffix when the concat
-				// collapses to exactly one contiguous literal. Multiple
-				// allRequired elements mean there are wildcards between them
-				// (e.g. "elect.*from" → allRequired{"elect","from"}). Joining
-				// them would produce "electfrom" — a phantom string that never
-				// appears contiguously in a real input — causing false negatives
-				// on valid matches like "select x from". Return nil here so the
-				// caller falls back to the safer anyRequired propagation instead.
-				if len(v) == 1 {
-					return []string{v[0]}
-				}
-				return nil
-			case anyRequired:
-				return []string(v)
-			case combinedRequired:
-				// For trie-reconstruction we need a suffix that is *always* present
-				// when this sub-concat fires. The .all elements are guaranteed;
-				// .any elements are only conditionally present (one of them must be
-				// present, but not a specific one). Returning a .any element would
-				// let the outer prefix combine with a wrong suffix (e.g. "s"+"execute"
-				// instead of "s"+"p_"+"execute" → "sp_execute"), producing a phantom
-				// literal that never appears contiguously in real input.
-				// Return the single longest .all element as the guaranteed suffix.
-				rep := longest([]string(v.all))
-				if rep == "" {
-					return nil
-				}
-				return []string{rep}
-			}
+		// The caller prepends its prefix, so the suffix must start at this
+		// concat's first byte. Later literals may be separated by consuming
+		// nodes and cannot be joined safely.
+		lead := rawLiteral(re.Sub[0], ci)
+		if lead == "" {
+			return nil
 		}
-		return nil
+		if reconstructed := trieReconstruct(re, ci); reconstructed != nil {
+			return []string(reconstructed)
+		}
+		return []string{lead}
 
 	case syntax.OpCapture:
 		return rawExtractSuffixes(re.Sub[0], ci)
