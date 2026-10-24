@@ -121,7 +121,11 @@ func TestNewTransactionWithIDRejectsTrailingControl(t *testing.T) {
 	}
 
 	tx := waf.NewTransactionWithID("abc\n")
-	defer tx.Close()
+	t.Cleanup(func() {
+		if err := tx.Close(); err != nil {
+			t.Errorf("close transaction: %v", err)
+		}
+	})
 	if got := tx.ID(); got == "abc" || got == "abc\n" {
 		t.Fatalf("expected a generated transaction ID, got %q", got)
 	}
