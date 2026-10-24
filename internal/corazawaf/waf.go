@@ -173,6 +173,8 @@ type WAF struct {
 
 // Options is used to pass options to the WAF instance
 type Options struct {
+	// ID is the transaction unique ID. When empty, or when it contains a path
+	// separator or a control character, a random ID is generated.
 	ID      string
 	Context context.Context
 }
@@ -190,6 +192,9 @@ func (w *WAF) NewTransaction() *Transaction {
 func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
 	if opts.ID == "" {
 		opts.ID = stringutils.RandomString(19)
+	} else if !isValidTransactionID(opts.ID) {
+		w.Logger.Warn().Msg("Transaction ID contains a path separator or control character, generating a new one")
+		opts.ID = stringutils.RandomString(19)
 	}
 
 	if opts.Context == nil {
@@ -197,6 +202,19 @@ func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
 	}
 
 	return w.newTransaction(opts)
+}
+
+// isValidTransactionID reports whether id can be used verbatim wherever the
+// transaction ID ends up: as one element of the concurrent audit log file path
+// and as a field of single-line log records. Only bytes that break either use
+// are refused, anything else (UUIDs, proxy request IDs, ...) is kept as is.
+func isValidTransactionID(id string) bool {
+	for i := 0; i < len(id); i++ {
+		if c := id[i]; c == '/' || c == '\\' || c < 0x20 || c == 0x7f {
+			return false
+		}
+	}
+	return true
 }
 
 // NewTransactionWithID Creates a new initialized transaction for this WAF instance
