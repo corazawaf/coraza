@@ -54,13 +54,16 @@ const (
 	// RemotePort is the remote port of the connection
 	RemotePort = variables.RemotePort
 	// ReqbodyError contains the status of the request body processor used
-	// for request body parsing, 0 means no error, 1 means error
+	// for request body parsing, 0 means no error, 1 means error. It is also 1
+	// when a request body argument was dropped because of SecArgumentsLimit.
 	ReqbodyError = variables.ReqbodyError
-	// ReqbodyErrorMsg contains the error message of the request body processor error
+	// ReqbodyErrorMsg contains the request body error reasons, normally prefixed
+	// with the processor name and joined with "; " when there is more than one
 	ReqbodyErrorMsg = variables.ReqbodyErrorMsg
-	// ReqbodyProcessorError is the same as ReqbodyErrr ?
+	// ReqbodyProcessorError is 1 when the request body processor failed; unlike
+	// ReqbodyError, it is not set by an argument dropped because of SecArgumentsLimit
 	ReqbodyProcessorError = variables.ReqbodyProcessorError
-	// ReqbodyProcessorErrorMsg is the same as ReqbodyErrorMsg ?
+	// ReqbodyProcessorErrorMsg contains only the raw error string from the body processor
 	ReqbodyProcessorErrorMsg = variables.ReqbodyProcessorErrorMsg
 	// ReqbodyProcessor contains the name of the request body processor used, default
 	// ones are: URLENCODED, MULTIPART, and XML. They can be extended using plugins.

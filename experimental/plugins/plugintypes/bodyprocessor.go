@@ -27,6 +27,8 @@ type BodyProcessorOptions struct {
 	ResponseBodyRecursionLimit int
 	// ArgumentLimit is the maximum number of arguments accepted per collection.
 	// When exceeded, additional arguments are dropped and ArgumentsLimitReached is set.
+	// A built-in request body processor that drops arguments also sets RequestBodyError
+	// and RequestBodyErrorMsg.
 	ArgumentLimit int
 }
 
