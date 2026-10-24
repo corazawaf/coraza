@@ -84,6 +84,9 @@ Semantics that follow from reusing the existing evaluation path:
   attempt, as the breadth first loop leaves the state of the last match.
 - A snapshot records which of `TX:0`-`TX:9` existed; restoring it removes
   the ones that did not instead of creating them empty.
+- `MATCHED_VARS` and `MATCHED_VARS_NAMES` are not snapshotted or restored per
+  match. They keep entries from every attempted match, including failed paths,
+  until the next rule is evaluated.
 - The work has a soft bound. Every match of a rule can make the rules after it
   run again, so a three link chain over `ARGS` is cubic in the number of
   arguments. The chained rules of one chain starter get a budget of 10000

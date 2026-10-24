@@ -17,7 +17,9 @@ import (
 // match only. With `evalDepth`, the rest of the chain runs once per match of the
 // chain starter, with the values that match produced, until a whole chain path
 // matches. The same applies between chained rules that match several targets.
-// Target iteration order is unspecified.
+// Target iteration order is unspecified. `MATCHED_VARS` and
+// `MATCHED_VARS_NAMES` are not restored per match. They keep entries from every
+// attempted match, including failed paths, until the next rule is evaluated.
 //
 // Each match of a rule can make the rules after it run again, so the work has a
 // soft bound. The budget is checked between parent contexts, so one rule
