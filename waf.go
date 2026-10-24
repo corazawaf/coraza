@@ -166,7 +166,7 @@ func (w wafWrapper) NewTransaction() types.Transaction {
 
 // NewTransactionWithID implements the same method on WAF.
 func (w wafWrapper) NewTransactionWithID(id string) types.Transaction {
-	id = strings.TrimSpace(id)
+	id = strings.Trim(id, " ")
 	if len(id) == 0 {
 		w.waf.Logger.Warn().Msg("Empty ID passed for new transaction")
 	}
