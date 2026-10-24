@@ -120,3 +120,54 @@ func TestXMLUnexpectedEOF(t *testing.T) {
 		})
 	}
 }
+
+func TestXMLHTMLVoidElementNames(t *testing.T) {
+	testCases := []struct {
+		name      string
+		input     string
+		wantAttrs []string
+		want      []string
+	}{
+		{
+			name:  "xmlrpcParamWithEndTag",
+			input: `<methodCall><methodName>m</methodName><params><param><value><int>0</int></value></param></params></methodCall>`,
+			want:  []string{"m", "0"},
+		},
+		{
+			name:      "atomLinkAndMetaWithEndTags",
+			input:     `<feed><link href="a"></link><link href="b"/><meta>m</meta><source>s</source></feed>`,
+			wantAttrs: []string{"a", "b"},
+			want:      []string{"m", "s"},
+		},
+		{
+			name:      "unclosedVoidElementIsStillTolerated",
+			input:     `<root><br><img src="a"><x>text</x></root>`,
+			wantAttrs: []string{"a"},
+			want:      []string{"text"},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			attrs, contents, err := readXML(bytes.NewReader([]byte(tc.input)))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got, want := len(attrs), len(tc.wantAttrs); got != want {
+				t.Errorf("attributes count mismatch, got=%v, want=%v", attrs, tc.wantAttrs)
+			}
+			for i := range min(len(attrs), len(tc.wantAttrs)) {
+				if got, want := attrs[i], tc.wantAttrs[i]; got != want {
+					t.Errorf("Expected attribute got=%s, want=%s", got, want)
+				}
+			}
+			if got, want := len(contents), len(tc.want); got != want {
+				t.Errorf("contents count mismatch, got=%v, want=%v", contents, tc.want)
+			}
+			for i := range min(len(contents), len(tc.want)) {
+				if got, want := contents[i], tc.want[i]; got != want {
+					t.Errorf("Expected content got=%s, want=%s", got, want)
+				}
+			}
+		})
+	}
+}
