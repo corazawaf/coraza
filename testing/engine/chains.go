@@ -326,6 +326,16 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 					},
 				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?a=A&b=B",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{105, 106},
+						},
+					},
+				},
 			},
 		},
 	},
@@ -343,5 +353,12 @@ SecRule ARGS_GET "@rx ^(k\d)$" "id:103,phase:1,log,capture,chain,evalDepth,logda
 
 SecRule ARGS "@rx ^(attack\d+)$" "id:104,phase:1,log,capture,chain,evalDepth"
   SecRule TX:1 "@streq nothing" ""
+
+# Non-disruptive actions on chain links run for every attempted parent context,
+# including failed paths. The A attempt adds 5 before it fails, then B adds 5.
+SecRule ARGS_GET:a|ARGS_GET:b "@rx ^(A|B)$" "id:105,phase:1,log,capture,chain,evalDepth"
+  SecRule REQUEST_METHOD "@streq GET" "setvar:'tx.eval_depth_score=+5',chain"
+    SecRule TX:1 "@streq B" ""
+SecRule TX:eval_depth_score "@eq 10" "id:106,phase:1,pass,log"
 `,
 })

@@ -130,6 +130,6 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0059](0059-secresponsebodyjsondepthlimit.md) | GHSA-3c6w-j9xm-8h2h | 2026-09-26 | unreleased | F | `SecResponseBodyJsonDepthLimit` directive |
 | [0060](0060-json-bounded-recursion-prescan.md) | GHSA-6gcq-wc29-5xf2 | 2026-09-30 | unreleased | P | Iterative depth pre-scan before `gjson.Valid` in the JSON body processor |
 | [0061](0061-transformation-cache-value-identity.md) | [#1682](https://github.com/corazawaf/coraza/pull/1682) | 2026-10-15 | unreleased | ⚡ | Transformation cache keyed by value identity |
-| [0064](0064-evaldepth-chain-action.md) | [#1744](https://github.com/corazawaf/coraza/pull/1744) | 2026-10-18 (expected) | unreleased | F | `evalDepth` action for depth first chain evaluation |
+| [0068](0068-evaldepth-chain-action.md) | [#1744](https://github.com/corazawaf/coraza/pull/1744) | 2026-10-18 (expected) | unreleased | F | `evalDepth` action for depth first chain evaluation |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

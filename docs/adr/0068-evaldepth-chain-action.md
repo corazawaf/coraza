@@ -1,11 +1,11 @@
-# ADR-0064: `evalDepth` action for depth first chain evaluation
+# ADR-0068: `evalDepth` action for depth first chain evaluation
 
 - **Status:** proposed
 - **Date:** 2026-10-18 (expected; update before merge)
 - **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1744](https://github.com/corazawaf/coraza/pull/1744)
 - **Issue(s):** [#1608](https://github.com/corazawaf/coraza/issues/1608)
-- **Deciders:** @adilalperenciftci
+- **Deciders:** @fzipi
 - **Category:** Feature
 
 ## Context and Problem
@@ -50,11 +50,15 @@ Chosen: **A as the opt-in, D as the mechanism.** The flow action `evalDepth`
 on the chain starter sets `Rule.EvalDepth`. When it is set, each accepted
 match records a `chainContext` snapshot. The chained rules are then evaluated
 per snapshot, restoring it first; a chained rule that has further links
-records its own snapshots and recurses. Evaluation stops at the first
-snapshot for which the whole remaining chain matches, and only that path
+records its own snapshots and recurses. Evaluation stops when a snapshot is
+found for which the whole remaining chain matches, and only that path
 (the parent match plus the matches below it) is reported to `MatchRule`, so
 `msg`/`logdata` expansion and the logged `MatchedDatas` describe the match
 that actually satisfied the chain.
+
+Collection and map iteration order is unspecified. `evalDepth` therefore does
+not define which matching path is selected when more than one path satisfies
+the chain.
 
 B changes semantics for every loaded ruleset at once, which is the risk the
 issue flags for CRS. C duplicates the whole `SecRule` parsing path for one
@@ -66,8 +70,9 @@ Semantics that follow from reusing the existing evaluation path:
 
 - Non-disruptive actions of the chain starter still run once per match, as
   they do today. Those of a chained rule run every time it matches, so a
-  chained rule can run its `setvar` once per parent context it is tried with.
-  Rules relying on counting should keep their `setvar` on the chain starter.
+  chained rule can run its `setvar` once per parent context it is tried with,
+  including contexts whose remaining chain later fails. Rules relying on
+  counting should keep their `setvar` on the chain starter.
 - `multiMatch` keeps working per target; each matching transformation result
   is one context.
 - Under `coraza.rule.multiphase_evaluation` the snapshots are taken after the
@@ -85,11 +90,13 @@ Semantics that follow from reusing the existing evaluation path:
   operator evaluations (`depthFirstEvaluationLimit`). The budget is checked
   between parent contexts, so one rule evaluation may take the count past
   10000. Once exhaustion is observed, the rest of the chain is evaluated once,
-  breadth first, with the last parent match, and a warning is logged. Falling
-  back to the default evaluation
-  rather than declaring no match keeps padding a request with arguments from
-  turning the bound into a bypass: past the limit the rule behaves exactly as
-  without `evalDepth`.
+  breadth first, with the final parent context in the engine's unspecified
+  iteration order, and a warning is logged. Correlation is best-effort under
+  attacker-controlled target padding: a matching path may not be attempted
+  before the budget is exhausted, and the breadth-first fallback may not find
+  it. Rules must not rely on `evalDepth` as their only blocking control when an
+  attacker can raise the evaluated target cardinality enough to exhaust the
+  budget.
 
 ## Technical Discussion
 

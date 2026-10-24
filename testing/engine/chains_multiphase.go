@@ -470,9 +470,10 @@ SecRequestBodyAccess On
 # evaluation and is skipped, the B branch is new and counts.
 SecRule ARGS "@rx ^(A|B)$" "id:110,phase:2,pass,log,capture,chain,evalDepth"
   SecRule ARGS_GET:y "@rx ^y$" "chain"
-    SecRule REQUEST_METHOD "@streq POST" "setvar:'tx.eval_depth_paths=+1'"
+    SecRule REQUEST_METHOD "@streq POST" "setvar:'tx.eval_depth_paths=+1',setvar:'tx.eval_depth_last=%{tx.1}'"
 
-SecRule TX:eval_depth_paths "@eq 2" "id:111,phase:5,pass,log"
+SecRule TX:eval_depth_paths "@eq 2" "id:111,phase:5,pass,log,chain"
+  SecRule TX:eval_depth_last "@streq B" ""
 `,
 })
 
