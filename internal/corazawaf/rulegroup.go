@@ -164,6 +164,15 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	for k := range transformationCache {
 		delete(transformationCache, k)
 	}
+	// The transaction's context bounds the request and response phases: once
+	// it is done, no further rule of the phase is evaluated. Done is read once;
+	// a context that can never be cancelled returns nil, and a select with a
+	// default never blocks on a nil channel. The logging phase still runs so
+	// the transaction is audited.
+	done := tx.context.Done()
+	if phase == types.PhaseLogging {
+		done = nil
+	}
 RulesLoop:
 	for i := range rg.rules {
 		r := &rg.rules[i]
@@ -171,6 +180,16 @@ RulesLoop:
 		// we break the loop
 		if tx.IsInterrupted() && phase != types.PhaseLogging {
 			break RulesLoop
+		}
+		select {
+		case <-done:
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Int("rule_id", r.ID_).
+				Err(tx.context.Err()).
+				Msg("Stopping phase because the transaction's context is done")
+			break RulesLoop
+		default:
 		}
 		// Rules with phase 0 will always run
 		if r.Phase_ != 0 && r.Phase_ != phase {
