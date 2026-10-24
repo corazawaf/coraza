@@ -90,7 +90,7 @@ func TestConcurrentWriter(t *testing.T) {
 }
 
 func TestConcurrentWriterRejectsUnsafeID(t *testing.T) {
-	for _, id := range []string{"../../ESCAPED", `..\..\ESCAPED`, "a/b", "a\nEVIL 1.2.3.4 - - [forged]", "a\x00b"} {
+	for _, id := range []string{"../../../../../ESCAPED", `..\..\ESCAPED`, "a/b", "a\nEVIL 1.2.3.4 - - [forged]", "a\x00b"} {
 		t.Run(id, func(t *testing.T) {
 			base := t.TempDir()
 			dir := filepath.Join(base, "audit")
