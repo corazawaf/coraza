@@ -129,6 +129,7 @@ func TestXMLDeclaredEncoding(t *testing.T) {
 		Input     string
 		WantAttrs []string
 		Want      []string
+		WantErr   bool
 	}{
 		{
 			Name:      "ISO-8859-1 with ASCII content",
@@ -154,10 +155,26 @@ func TestXMLDeclaredEncoding(t *testing.T) {
 			WantAttrs: []string{"c"},
 			Want:      []string{"d"},
 		},
+		{
+			Name:    "US-ASCII with non-ASCII content",
+			Input:   "<?xml version=\"1.0\" encoding=\"US-ASCII\"?><a>Ren\xe9e</a>",
+			WantErr: true,
+		},
+		{
+			Name:    "unsupported Shift_JIS encoding",
+			Input:   `<?xml version="1.0" encoding="Shift_JIS"?><a>b</a>`,
+			WantErr: true,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			attrs, contents, err := readXML(bytes.NewReader([]byte(tc.Input)))
+			if tc.WantErr {
+				if err == nil {
+					t.Fatal("expected an error")
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -168,13 +185,6 @@ func TestXMLDeclaredEncoding(t *testing.T) {
 				t.Errorf("unexpected contents, got=%q, want=%q", contents, tc.Want)
 			}
 		})
-	}
-}
-
-func TestXMLUnsupportedEncoding(t *testing.T) {
-	xmldoc := `<?xml version="1.0" encoding="Shift_JIS"?><a>b</a>`
-	if _, _, err := readXML(bytes.NewReader([]byte(xmldoc))); err == nil {
-		t.Error("expected an error for an unsupported encoding")
 	}
 }
 

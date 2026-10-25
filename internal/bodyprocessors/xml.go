@@ -73,10 +73,33 @@ func isUnexpectedEOFXMLSyntaxError(err error) bool {
 // results in an error.
 func xmlCharsetReader(label string, input io.Reader) (io.Reader, error) {
 	switch strings.ToLower(label) {
-	case "iso-8859-1", "iso8859-1", "latin1", "us-ascii", "ascii":
+	case "iso-8859-1", "iso8859-1", "latin1":
 		return newLatin1Reader(input), nil
+	case "us-ascii", "ascii":
+		return &asciiReader{r: input}, nil
 	}
 	return nil, fmt.Errorf("unsupported XML encoding %q", label)
+}
+
+// asciiReader passes US-ASCII input through unchanged and fails at the first
+// byte outside the ASCII range, returning only the valid bytes before it.
+type asciiReader struct {
+	r   io.Reader
+	err error
+}
+
+func (a *asciiReader) Read(p []byte) (int, error) {
+	if a.err != nil {
+		return 0, a.err
+	}
+	n, err := a.r.Read(p)
+	for i, b := range p[:n] {
+		if b > 0x7f {
+			a.err = fmt.Errorf("invalid US-ASCII byte 0x%02x", b)
+			return i, a.err
+		}
+	}
+	return n, err
 }
 
 // latin1Reader converts ISO-8859-1 input into UTF-8.
