@@ -49,11 +49,11 @@ func TestNidUs(t *testing.T) {
 		in   string
 		want bool
 	}{
-		{name: "area 219", in: "219-09-9999", want: true},
+		{name: "area 574", in: "574-57-8065", want: true},
 		{name: "area 739", in: "739-12-3456", want: true},
 		{name: "area 740 assigned since 2011", in: "740-12-3456", want: true},
 		{name: "area 899 assigned since 2011", in: "899-12-3456", want: true},
-		{name: "no dashes", in: "574578065", want: true},
+		{name: "no dashes", in: "432198765", want: true},
 		{name: "area 000", in: "000-09-9999", want: false},
 		{name: "area 666", in: "666-12-3456", want: false},
 		{name: "area 900", in: "900-12-3456", want: false},
