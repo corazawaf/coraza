@@ -9,8 +9,11 @@ package transformations
 // equivalent. It mirrors the codepage 20127 section of ModSecurity's
 // unicode.mapping, which the official CRS reference containers load by
 // default via SecUnicodeMapFile, plus the RFC 3490 section 3.1 label
-// separators (U+3002, U+FF0E, U+FF61 -> '.') that ModSecurity's map loader
-// seeds for every codepage before reading that file.
+// separators (U+002E, U+3002, U+FF0E, U+FF61 -> '.') that ModSecurity's map
+// loader seeds before reading that file. Entries read from the file override
+// the seeds; the 20127 section only overlaps them at U+FF0E, also '.'. U+3002
+// and U+FF61 come from the seeds, not the file, so keep them when
+// re-syncing this table from unicode.mapping.
 //
 // A codepoint absent from this table falls back to the raw low byte of the
 // %uXXXX escape, matching ModSecurity's behavior when no mapping is found.
