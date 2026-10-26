@@ -342,6 +342,10 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 // the client.
 func (tx *Transaction) setInterruption(interruption *types.Interruption) {
 	tx.interruption = interruption
+	if interruption == nil {
+		tx.interruptionStatus = 0
+		return
+	}
 	if tx.interruptionStatus == 0 && tx.lastPhase != types.PhaseLogging && interruption.Action != "drop" {
 		tx.interruptionStatus = interruption.Status
 	}
