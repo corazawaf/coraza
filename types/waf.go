@@ -199,8 +199,9 @@ func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 // ApplyAuditLogParts applies audit log parts modifications to the base parts.
 // It supports adding parts with '+' prefix (e.g., "+E") or removing parts with '-' prefix (e.g., "-E").
 // For absolute values (e.g., "ABCDEFZ"), use ParseAuditLogParts instead.
-// Parts 'A' and 'Z' are mandatory and cannot be added or removed: when the base
-// contains them, the result keeps 'A' first and 'Z' last.
+// Parts 'A' and 'Z' cannot be added or removed this way. Whichever of them the
+// base contains is kept in the result, 'A' first and 'Z' last; the remaining
+// parts are returned in canonical order (BCDEFGHIJK).
 func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts, error) {
 	if len(modification) == 0 {
 		return nil, errors.New("modification string cannot be empty")

@@ -131,9 +131,9 @@ func TestApplyAuditLogParts(t *testing.T) {
 		},
 		{
 			name:             "add part keeps mandatory A and Z",
-			base:             AuditLogParts("ABHZ"),
+			base:             AuditLogParts("ABIJDEFHZ"),
 			modification:     "+E",
-			expectedParts:    AuditLogParts("ABEHZ"),
+			expectedParts:    AuditLogParts("ABDEFHIJZ"),
 			expectedHasError: false,
 		},
 		{
