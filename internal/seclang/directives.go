@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -1705,7 +1706,8 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 // whose `msg` equals the first parameter, with the targets provided in the second parameter.
 // Matching is by case-sensitive string equality against the rule's unexpanded message, as in
 // `SecRuleRemoveByMsg` and ModSecurity v3; ModSecurity v2 treats the message as a regular expression.
-// The message can be quoted and may contain spaces. The targets are separated by a pipe character.
+// Quote the message with ' or " when it contains spaces; a quote inside it is escaped with a
+// backslash. The targets are separated by a pipe character.
 //
 // Example:
 // ```seclang
@@ -1737,36 +1739,63 @@ func directiveSecRuleUpdateTargetByMsg(options *DirectiveOptions) error {
 	return nil
 }
 
-// splitMsgAndTargets splits `MESSAGE TARGETS` into its unquoted parts. The targets are the
-// last whitespace-separated field and the message, which may contain spaces, is everything
-// before it.
+// splitMsgAndTargets splits `MESSAGE TARGETS` into its two arguments. An argument is either
+// quoted with ' or ", in which case it may contain spaces and quotes escaped with a backslash,
+// or a run of non-space characters.
 func splitMsgAndTargets(opts string) (msg string, targets string, ok bool) {
-	opts = strings.TrimSpace(opts)
-	idx := strings.LastIndexFunc(opts, unicode.IsSpace)
-	if idx == -1 {
-		return "", "", false
+	if msg, targets, ok = splitTwoArgs(opts); ok {
+		return msg, targets, true
 	}
-	msg, targets = strings.TrimSpace(opts[:idx]), opts[idx+1:]
-
 	// Parser.evaluateLine strips the outer double quotes of options that start and end with
-	// one, so `"my msg" "ARGS"` arrives here as `my msg" "ARGS`. Restore the pair first.
-	if len(msg) > 0 && msg[0] != '"' && msg[len(msg)-1] == '"' &&
-		len(targets) > 0 && targets[0] == '"' && targets[len(targets)-1] != '"' {
-		msg, targets = `"`+msg, targets+`"`
-	}
-
-	msg, targets = utils.MaybeRemoveQuotes(msg), utils.MaybeRemoveQuotes(targets)
-	// A quote left at the edge after unquoting is an unterminated one, for example in
-	// `"my msg"` with the targets missing, which would otherwise split into `"my` and `msg"`.
-	if msg == "" || targets == "" || isQuote(msg[0]) ||
-		isQuote(targets[0]) || isQuote(targets[len(targets)-1]) {
-		return "", "", false
-	}
-	return msg, targets, true
+	// one, so `"my msg" "ARGS"` arrives here as `my msg" "ARGS`. Retry with the pair restored.
+	return splitTwoArgs(`"` + opts + `"`)
 }
 
-func isQuote(c byte) bool {
-	return c == '"' || c == '\''
+// splitTwoArgs returns the two arguments of s, failing if there are more or fewer.
+func splitTwoArgs(s string) (first string, second string, ok bool) {
+	first, rest, ok := cutArg(s)
+	if !ok {
+		return "", "", false
+	}
+	second, rest, ok = cutArg(rest)
+	if !ok || strings.TrimSpace(rest) != "" {
+		return "", "", false
+	}
+	return first, second, true
+}
+
+// cutArg returns the first non-empty argument of s, unquoted, and the text after it.
+func cutArg(s string) (arg string, rest string, ok bool) {
+	s = strings.TrimLeftFunc(s, unicode.IsSpace)
+	if s == "" {
+		return "", "", false
+	}
+	q := s[0]
+	if q != '"' && q != '\'' {
+		if end := strings.IndexFunc(s, unicode.IsSpace); end != -1 {
+			return s[:end], s[end:], true
+		}
+		return s, "", true
+	}
+	escaped := false
+	for i := 1; i < len(s); i++ {
+		switch {
+		case escaped:
+			escaped = false
+		case s[i] == '\\':
+			escaped = true
+		case s[i] == q:
+			arg, rest = s[1:i], s[i+1:]
+			// The closing quote must end the argument.
+			if r, _ := utf8.DecodeRuneInString(rest); rest != "" && !unicode.IsSpace(r) {
+				return "", "", false
+			}
+			arg = strings.ReplaceAll(arg, `\`+string(q), string(q))
+			return arg, rest, arg != ""
+		}
+	}
+	// Unterminated quote.
+	return "", "", false
 }
 
 // Description: Continues loading a rule set when a rule fails to compile, instead of aborting.
