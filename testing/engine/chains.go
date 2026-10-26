@@ -240,3 +240,65 @@ SecRule REQUEST_URI|REQUEST_HEADERS "test" "id:1, phase:2, t:none, pass, log, ch
 SecRule TX:counter "@eq 3" "id:2, phase:2, t:none, pass, log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "fzipi",
+		Description: "SecIgnoreRuleCompilationErrors drops a chain whole when one of its links fails to compile",
+		Enabled:     true,
+		Name:        "chains_ignore_compilation_errors.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "chains with a faulty link are dropped whole",
+			Stages: []profile.Stage{
+				{
+					// The links of chain 100 must not load on their own, so the ctl
+					// does not run and rule 200, after the faulty chain 120, still blocks.
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/partner/orders?q=attack",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{200},
+							NonTriggeredRules: []int{100, 110, 120},
+							Interruption: &profile.ExpectedInterruption{
+								RuleID: 200,
+								Action: "deny",
+								Status: 403,
+							},
+						},
+					},
+				},
+				{
+					// The link after the faulty middle link of chain 110 must not
+					// complete that chain.
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/pay?card=1",
+						},
+						Output: profile.ExpectedOutput{
+							NonTriggeredRules: []int{100, 110, 120, 200},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRuleEngine On
+SecIgnoreRuleCompilationErrors On
+
+SecRule UNKNOWN_VARIABLE "@unconditionalMatch" "id:100,phase:1,pass,nolog,chain"
+    SecRule REQUEST_URI "@beginsWith /partner/" "ctl:ruleEngine=Off"
+
+SecRule REQUEST_URI "@beginsWith /pay" "id:110,phase:2,deny,status:403,chain"
+    SecRule ARGS:card "@unknownOperator x" "chain"
+        SecRule ARGS:card "@rx ." ""
+
+SecRule REQUEST_URI "@beginsWith /pay" "id:120,phase:2,deny,status:403,chain"
+    SecRule ARGS:card "@unknownOperator x"
+
+SecRule ARGS "@contains attack" "id:200,phase:2,deny,status:403"
+`,
+})

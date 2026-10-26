@@ -145,6 +145,10 @@ func directiveSecAction(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
+	if skipBrokenChainLink(options, false) {
+		return nil
+	}
+
 	rule, err := ParseRule(RuleOptions{
 		WithOperator: false,
 		WAF:          options.WAF,
@@ -185,7 +189,10 @@ func directiveSecRule(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	ignoreErrors := options.Parser.IgnoreRuleCompilationErrors
+	if skipBrokenChainLink(options, true) {
+		return nil
+	}
+
 	rule, err := ParseRule(RuleOptions{
 		WithOperator: true,
 		WAF:          options.WAF,
@@ -195,26 +202,39 @@ func directiveSecRule(options *DirectiveOptions) error {
 		Data:         options.Opts,
 		Datasets:     options.Datasets,
 	})
-	if err != nil && !ignoreErrors {
-		return err
-	} else if err != nil && ignoreErrors {
-		options.WAF.Logger.Debug().
-			Str("rule_id", options.Opts).
-			Err(err).
-			Msg("Ignoring rule compilation error")
-		return nil
+	if err == nil {
+		err = options.WAF.Rules.Add(rule)
 	}
-	err = options.WAF.Rules.Add(rule)
-	if err != nil && !ignoreErrors {
-		return err
-	} else if err != nil && ignoreErrors {
+	if err != nil {
+		if !options.Parser.IgnoreRuleCompilationErrors {
+			return err
+		}
+		// A chain is loaded whole or not at all: drop the links already read
+		// and skip the ones still to come, so they are neither loaded as rules
+		// of their own nor attached to the next rule.
+		options.WAF.Rules.DiscardPendingChain()
+		options.Parser.skipChainLinks = declaresChain(options.Opts, true)
 		options.WAF.Logger.Debug().
 			Str("rule_id", options.Opts).
 			Err(err).
 			Msg("Ignoring rule compilation error")
-		return nil
 	}
 	return nil
+}
+
+// skipBrokenChainLink reports whether the directive being read is a link of a
+// chain that was dropped because one of its links failed to compile while
+// SecIgnoreRuleCompilationErrors is On. Skipping goes on until a link that does
+// not declare chain.
+func skipBrokenChainLink(options *DirectiveOptions, withOperator bool) bool {
+	if !options.Parser.skipChainLinks {
+		return false
+	}
+	options.Parser.skipChainLinks = declaresChain(options.Opts, withOperator)
+	options.WAF.Logger.Debug().
+		Str("rule", options.Opts).
+		Msg("Ignoring link of a chain dropped for a rule compilation error")
+	return true
 }
 
 // Description: Configures whether response bodies are to be buffered.
@@ -1700,7 +1720,8 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 
 // Description: Continues loading a rule set when a rule fails to compile, instead of aborting.
 // Enabling it logs a warning: a faulty rule that does not load cannot protect anything, so this
-// is a migration aid rather than a setting to run with.
+// is a migration aid rather than a setting to run with. When one link of a chain fails, the whole
+// chain is dropped.
 // Syntax: SecIgnoreRuleCompilationErrors On|Off
 // ---
 // Example:
