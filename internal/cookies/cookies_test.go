@@ -4,36 +4,10 @@
 package cookies
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
-
-func equalMaps(map1 map[string][]string, map2 map[string][]string) bool {
-	if len(map1) != len(map2) {
-		return false
-	}
-
-	// Iterate through the key-value pairs of the first map
-	for key, slice1 := range map1 {
-		// Check if the key exists in the second map
-		slice2, ok := map2[key]
-		if !ok {
-			return false
-		}
-
-		// Compare the values of the corresponding keys
-		for i, val1 := range slice1 {
-			val2 := slice2[i]
-
-			// Compare the elements
-			if val1 != val2 {
-				return false
-			}
-		}
-	}
-
-	return true
-}
 
 func TestParseCookies(t *testing.T) {
 	type args struct {
@@ -42,37 +16,37 @@ func TestParseCookies(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want map[string][]string
+		want []Cookie
 	}{
 		{
 			name: "EmptyString",
 			args: args{rawCookies: "  "},
-			want: map[string][]string{},
+			want: nil,
 		},
 		{
 			name: "SimpleCookie",
 			args: args{rawCookies: "test=test_value"},
-			want: map[string][]string{"test": {"test_value"}},
+			want: []Cookie{{"test", "test_value"}},
 		},
 		{
 			name: "MultipleCookies",
 			args: args{rawCookies: "test1=test_value1; test2=test_value2"},
-			want: map[string][]string{"test1": {"test_value1"}, "test2": {"test_value2"}},
+			want: []Cookie{{"test1", "test_value1"}, {"test2", "test_value2"}},
 		},
 		{
 			name: "SpacesInCookieName",
 			args: args{rawCookies: " test1  =test_value1; test2  =test_value2"},
-			want: map[string][]string{"test1": {"test_value1"}, "test2": {"test_value2"}},
+			want: []Cookie{{"test1", "test_value1"}, {"test2", "test_value2"}},
 		},
 		{
 			name: "SpacesInCookieValue",
 			args: args{rawCookies: "test1=test   _value1; test2  =test_value2"},
-			want: map[string][]string{"test1": {"test   _value1"}, "test2": {"test_value2"}},
+			want: []Cookie{{"test1", "test   _value1"}, {"test2", "test_value2"}},
 		},
 		{
 			name: "EmptyCookie",
 			args: args{rawCookies: ";;foo=bar"},
-			want: map[string][]string{"foo": {"bar"}},
+			want: []Cookie{{"foo", "bar"}},
 		},
 		// A pair whose name is empty, or trims to empty, is kept under ""
 		// so its value stays inspectable: Node's cookie package still
@@ -80,27 +54,27 @@ func TestParseCookies(t *testing.T) {
 		{
 			name: "EmptyName",
 			args: args{rawCookies: "=bar;"},
-			want: map[string][]string{"": {"bar"}},
+			want: []Cookie{{"", "bar"}},
 		},
 		{
 			name: "CTLOnlyName",
 			args: args{rawCookies: "a=1; \x01\x02=bar"},
-			want: map[string][]string{"a": {"1"}, "": {"bar"}},
+			want: []Cookie{{"a", "1"}, {"", "bar"}},
 		},
 		{
 			name: "EmptyNameAndValue",
 			args: args{rawCookies: "=; foo=bar"},
-			want: map[string][]string{"foo": {"bar"}},
+			want: []Cookie{{"foo", "bar"}},
 		},
 		{
 			name: "MultipleEqualsInValues",
 			args: args{rawCookies: "test1=val==ue1;test2=value2"},
-			want: map[string][]string{"test1": {"val==ue1"}, "test2": {"value2"}},
+			want: []Cookie{{"test1", "val==ue1"}, {"test2", "value2"}},
 		},
 		{
 			name: "RepeatedCookieNameShouldGiveList",
 			args: args{rawCookies: "test1=value1;test1=value2"},
-			want: map[string][]string{"test1": {"value1", "value2"}},
+			want: []Cookie{{"test1", "value1"}, {"test1", "value2"}},
 		},
 		// A CTL character (RFC 2616) directly adjacent to '=' used to be
 		// kept as part of the cookie name instead of being treated as a
@@ -111,18 +85,18 @@ func TestParseCookies(t *testing.T) {
 		{
 			name: "CTLAdjacentToEqualsIsTrimmedFromName",
 			args: args{rawCookies: "a\v=\t'"},
-			want: map[string][]string{"a": {"'"}},
+			want: []Cookie{{"a", "'"}},
 		},
 		{
 			name: "CTLAndSpaceTrimmedFromBothEnds",
 			args: args{rawCookies: "\ftest1\v = \tvalue1\r; test2=value2"},
-			want: map[string][]string{"test1": {"value1"}, "test2": {"value2"}},
+			want: []Cookie{{"test1", "value1"}, {"test2", "value2"}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ParseCookies(tt.args.rawCookies)
-			if !equalMaps(got, tt.want) {
+			if !slices.Equal(got, tt.want) {
 				t.Errorf("ParseCookies() = %v, want %v", got, tt.want)
 			}
 		})
@@ -154,7 +128,7 @@ func BenchmarkParseCookies(b *testing.B) {
 		{"CTLFlood", strings.Repeat("\x00", 64<<10) + "name=value"},
 	}
 
-	var sink map[string][]string
+	var sink []Cookie
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ReportAllocs()

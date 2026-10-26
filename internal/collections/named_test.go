@@ -82,7 +82,7 @@ func TestNamedCollection(t *testing.T) {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
-	if c.Len() != len(c.data) {
+	if c.Len() != len(c.index) {
 		t.Fatal("The lengths are not equal.")
 	}
 

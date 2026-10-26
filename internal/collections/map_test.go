@@ -58,7 +58,7 @@ func TestMap(t *testing.T) {
 		}
 	}
 
-	if c.Len() != len(c.data) {
+	if c.Len() != len(c.index) {
 		t.Fatal("The lengths are not equal.")
 	}
 
@@ -199,7 +199,7 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 		}
 	}
 
-	if c.Len() != len(c.data) {
+	if c.Len() != len(c.index) {
 		t.Fatal("The lengths are not equal.")
 	}
 

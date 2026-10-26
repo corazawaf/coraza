@@ -26,10 +26,13 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	// ParseQuery itself stops once options.ArgumentLimit total pairs have
 	// been parsed (see GHSA-3ww9-vw83-9w5x): the copy below never needs to
 	// re-enforce the cap, since values can never hold more than the limit.
-	values, truncated := urlutil.ParseQuery(b, '&', options.ArgumentLimit)
+	//
+	// The ordered variant keeps ARGS_POST in body order, so rules see the
+	// arguments in the same order on every evaluation (corazawaf/coraza#1815).
+	pairs, truncated := urlutil.ParseQueryOrdered(b, '&', options.ArgumentLimit)
 	argsCol := v.ArgsPost()
-	for k, vs := range values {
-		argsCol.Set(k, vs)
+	for _, kv := range pairs {
+		argsCol.Add(kv.Key, kv.Value)
 	}
 	if truncated {
 		v.ArgumentsLimitReached().(*collections.Single).Set("1")

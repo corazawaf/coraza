@@ -97,8 +97,57 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			// A chain reads the captures of the parent's last match, so the
+			// parent must see the arguments in request order. Only the last
+			// argument captures "ttt"; with any other order rule 500 does
+			// not match. See corazawaf/coraza#1815.
+			Title: "chain reads the captures of the last argument in request order",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/?a=attack&b=attack&c=attack&d=attack&e=attack&f=attack&g=attack&h=atttack",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{500},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+							},
+							Data: "a=attack&b=attack&c=attack&d=attack&e=attack&f=attack&g=attack&h=atttack",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{500},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/",
+							Headers: map[string]string{
+								"Cookie": "a=attack; b=attack; c=attack; d=attack; e=attack; f=attack; g=attack; h=atttack",
+							},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{500},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
+SecRequestBodyAccess On
+
 SecAction "id: 1, log, chain"
   SecAction "msg:'chain 2',chain"
   SecAction "msg:'chain 3',chain"
@@ -157,6 +206,9 @@ SecRule REQUEST_HEADERS "@rx attack21" \
     SecRule MATCHED_VAR_NAME "@rx MATCHED_VARS_NAMES" \
     "msg:'Sub Sub Chain Rule',\
     logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}'"
+
+SecRule ARGS|REQUEST_COOKIES "@rx a(t+)ack" "id:500, phase:2, log, capture, chain"
+  SecRule TX:1 "@streq ttt" ""
 `,
 })
 
