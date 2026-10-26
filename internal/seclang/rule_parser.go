@@ -653,8 +653,14 @@ func declaresChain(data string, withOperator bool) bool {
 		_, _, acts, err := parseActionOperator(data)
 		if err != nil {
 			// The rule is malformed; fall back to its last quoted argument,
-			// which is where the actions are.
+			// or to its last token when the actions are not quoted.
 			acts = trailingQuoted(data)
+			if acts == "" {
+				trimmed := strings.TrimRight(data, " ")
+				if i := strings.LastIndexByte(trimmed, ' '); i >= 0 {
+					acts = trimmed[i+1:]
+				}
+			}
 		}
 		actions = acts
 	}

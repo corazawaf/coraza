@@ -253,7 +253,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "chains with a faulty link are dropped whole",
 			Stages: []profile.Stage{
 				{
-					// The links of chains 100 and 130 must not load on their own, so
+					// The links of chains 100, 130 and 160 must not load on their own, so
 					// the ctl does not run, and neither the faulty chain 120 nor the
 					// marker after chain 140 drops rule 200, which still blocks.
 					Stage: profile.SubStage{
@@ -262,7 +262,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{200},
-							NonTriggeredRules: []int{100, 110, 120, 130, 140, 150},
+							NonTriggeredRules: []int{100, 110, 120, 130, 140, 150, 160},
 							Interruption: &profile.ExpectedInterruption{
 								RuleID: 200,
 								Action: "deny",
@@ -279,7 +279,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 							URI: "/pay?card=1",
 						},
 						Output: profile.ExpectedOutput{
-							NonTriggeredRules: []int{100, 110, 120, 130, 140, 150, 200},
+							NonTriggeredRules: []int{100, 110, 120, 130, 140, 150, 160, 200},
 						},
 					},
 				},
@@ -303,6 +303,10 @@ SecRule REQUEST_URI "@beginsWith /pay" "id:120,phase:2,deny,status:403,chain"
 
 # Malformed: the operator is not quoted.
 SecRule REQUEST_URI @beginsWith /partner/ "id:130,phase:1,pass,nolog,chain"
+    SecRule REQUEST_URI "@beginsWith /partner/" "ctl:ruleEngine=Off"
+
+# Malformed: the actions are not quoted.
+SecRule REQUEST_URI "@beginsWith /partner/" id:160,phase:1,pass,nolog,chain
     SecRule REQUEST_URI "@beginsWith /partner/" "ctl:ruleEngine=Off"
 
 # A marker ends a chain, even one left open by a faulty starter.
