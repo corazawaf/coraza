@@ -37,6 +37,9 @@ func TestURLDecodeUni(t *testing.T) {
 		// A codepoint outside the best-fit table and outside the fullwidth
 		// range decodes to the raw low byte, unmodified.
 		{input: "%u1234", want: "4", wantChanged: true},
+		// RFC 3490 label separators U+3002 and U+FF61 map to '.', as seeded
+		// by ModSecurity's unicode map loader (issue #1822).
+		{input: "10%u30020%uff610%uFF0E5", want: "10.0.0.5", wantChanged: true},
 		// Exactly one byte short of a full %uXXXX escape: treated as
 		// truncated, "%u" is copied verbatim and the rest is left as-is.
 		{input: "%u004", want: "%u004", wantChanged: false},
