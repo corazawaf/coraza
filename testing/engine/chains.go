@@ -253,15 +253,16 @@ var _ = profile.RegisterProfile(profile.Profile{
 			Title: "chains with a faulty link are dropped whole",
 			Stages: []profile.Stage{
 				{
-					// The links of chain 100 must not load on their own, so the ctl
-					// does not run and rule 200, after the faulty chain 120, still blocks.
+					// The links of chains 100 and 130 must not load on their own, so
+					// the ctl does not run, and neither the faulty chain 120 nor the
+					// marker after chain 140 drops rule 200, which still blocks.
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
 							URI: "/partner/orders?q=attack",
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{200},
-							NonTriggeredRules: []int{100, 110, 120},
+							NonTriggeredRules: []int{100, 110, 120, 130, 140, 150},
 							Interruption: &profile.ExpectedInterruption{
 								RuleID: 200,
 								Action: "deny",
@@ -271,14 +272,14 @@ var _ = profile.RegisterProfile(profile.Profile{
 					},
 				},
 				{
-					// The link after the faulty middle link of chain 110 must not
-					// complete that chain.
+					// The link after the faulty middle link of chain 110 must neither
+					// complete that chain nor load on its own.
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
 							URI: "/pay?card=1",
 						},
 						Output: profile.ExpectedOutput{
-							NonTriggeredRules: []int{100, 110, 120, 200},
+							NonTriggeredRules: []int{100, 110, 120, 130, 140, 150, 200},
 						},
 					},
 				},
@@ -294,10 +295,19 @@ SecRule UNKNOWN_VARIABLE "@unconditionalMatch" "id:100,phase:1,pass,nolog,chain"
 
 SecRule REQUEST_URI "@beginsWith /pay" "id:110,phase:2,deny,status:403,chain"
     SecRule ARGS:card "@unknownOperator x" "chain"
-        SecRule ARGS:card "@rx ." ""
+        SecRule ARGS:card "@rx ." "setvar:tx.chain_110_leak=1"
+SecRule TX:chain_110_leak "@eq 1" "id:150,phase:2,pass,log"
 
 SecRule REQUEST_URI "@beginsWith /pay" "id:120,phase:2,deny,status:403,chain"
     SecRule ARGS:card "@unknownOperator x"
+
+# Malformed: the operator is not quoted.
+SecRule REQUEST_URI @beginsWith /partner/ "id:130,phase:1,pass,nolog,chain"
+    SecRule REQUEST_URI "@beginsWith /partner/" "ctl:ruleEngine=Off"
+
+# A marker ends a chain, even one left open by a faulty starter.
+SecRule UNKNOWN_VARIABLE "@unconditionalMatch" "id:140,phase:1,pass,nolog,chain"
+SecMarker END_140
 
 SecRule ARGS "@contains attack" "id:200,phase:2,deny,status:403"
 `,

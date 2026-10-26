@@ -622,6 +622,28 @@ func splitActions(actions string, fn func(key, val string) error) (unclosedQuote
 	return inQuotes, fn(actions[beforeKey+1:afterKey], val)
 }
 
+// trailingQuoted returns the content of the double-quoted string that ends
+// data, or "" when data does not end with one.
+func trailingQuoted(data string) string {
+	data = strings.TrimRight(data, " ")
+	if len(data) < 2 || data[len(data)-1] != '"' {
+		return ""
+	}
+	for i := len(data) - 2; i >= 0; i-- {
+		if data[i] != '"' {
+			continue
+		}
+		backslashes := 0
+		for j := i - 1; j >= 0 && data[j] == '\\'; j-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			return data[i+1 : len(data)-1]
+		}
+	}
+	return ""
+}
+
 // declaresChain reports whether the actions of a SecRule (withOperator) or
 // SecAction directive include chain. It only splits the action list, so it
 // works for a rule that fails to compile, unknown actions included.
@@ -630,7 +652,9 @@ func declaresChain(data string, withOperator bool) bool {
 	if withOperator {
 		_, _, acts, err := parseActionOperator(data)
 		if err != nil {
-			return false
+			// The rule is malformed; fall back to its last quoted argument,
+			// which is where the actions are.
+			acts = trailingQuoted(data)
 		}
 		actions = acts
 	}

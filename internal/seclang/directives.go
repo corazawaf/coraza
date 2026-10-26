@@ -126,6 +126,8 @@ func directiveSecMarker(options *DirectiveOptions) error {
 	if err := options.WAF.Rules.Add(rule); err != nil {
 		return err
 	}
+	// A marker ends a pending chain, so it also ends a dropped one.
+	options.Parser.skipChainLinks = false
 	options.WAF.Logger.Debug().Msg("Added secmark rule")
 	return nil
 }
@@ -145,8 +147,8 @@ func directiveSecAction(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	if skipBrokenChainLink(options, false) {
-		return nil
+	if skip, err := skipBrokenChainLink(options, false); skip || err != nil {
+		return err
 	}
 
 	rule, err := ParseRule(RuleOptions{
@@ -189,8 +191,8 @@ func directiveSecRule(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	if skipBrokenChainLink(options, true) {
-		return nil
+	if skip, err := skipBrokenChainLink(options, true); skip || err != nil {
+		return err
 	}
 
 	rule, err := ParseRule(RuleOptions{
@@ -225,16 +227,21 @@ func directiveSecRule(options *DirectiveOptions) error {
 // skipBrokenChainLink reports whether the directive being read is a link of a
 // chain that was dropped because one of its links failed to compile while
 // SecIgnoreRuleCompilationErrors is On. Skipping goes on until a link that does
-// not declare chain.
-func skipBrokenChainLink(options *DirectiveOptions, withOperator bool) bool {
+// not declare chain. If SecIgnoreRuleCompilationErrors was turned Off in the
+// meantime, the link is reported as an error instead of being skipped silently.
+func skipBrokenChainLink(options *DirectiveOptions, withOperator bool) (bool, error) {
 	if !options.Parser.skipChainLinks {
-		return false
+		return false, nil
+	}
+	if !options.Parser.IgnoreRuleCompilationErrors {
+		options.Parser.skipChainLinks = false
+		return false, errors.New("rule is a link of a chain dropped for an ignored compilation error")
 	}
 	options.Parser.skipChainLinks = declaresChain(options.Opts, withOperator)
 	options.WAF.Logger.Debug().
 		Str("rule", options.Opts).
 		Msg("Ignoring link of a chain dropped for a rule compilation error")
-	return true
+	return true, nil
 }
 
 // Description: Configures whether response bodies are to be buffered.
@@ -1720,8 +1727,8 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 
 // Description: Continues loading a rule set when a rule fails to compile, instead of aborting.
 // Enabling it logs a warning: a faulty rule that does not load cannot protect anything, so this
-// is a migration aid rather than a setting to run with. When one link of a chain fails, the whole
-// chain is dropped.
+// is a migration aid rather than a setting to run with. When a SecRule that is a link of a chain
+// fails, the whole chain is dropped.
 // Syntax: SecIgnoreRuleCompilationErrors On|Off
 // ---
 // Example:
