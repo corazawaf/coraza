@@ -118,6 +118,13 @@ func TestSecRuleRemoveByMsg(t *testing.T) {
 		}
 	})
 
+	t.Run("empty options returns error", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		if err := directiveSecRuleRemoveByMsg(&DirectiveOptions{WAF: waf, Opts: ""}); err != errEmptyOptions {
+			t.Fatalf("expected errEmptyOptions, got %v", err)
+		}
+	})
+
 	t.Run("no-op when message case does not match", func(t *testing.T) {
 		waf := corazawaf.NewWAF()
 		addRule(t, waf, `REQUEST_URI "@rx attack" "id:1000,phase:1,log,pass,msg:'test-msg'"`)
@@ -159,6 +166,13 @@ func TestSecRuleRemoveByTag(t *testing.T) {
 		}
 		if waf.Rules.GetRules()[0].ID() != 1002 {
 			t.Errorf("expected rule 1002 to remain, got %d", waf.Rules.GetRules()[0].ID())
+		}
+	})
+
+	t.Run("empty options returns error", func(t *testing.T) {
+		waf := corazawaf.NewWAF()
+		if err := directiveSecRuleRemoveByTag(&DirectiveOptions{WAF: waf, Opts: ""}); err != errEmptyOptions {
+			t.Fatalf("expected errEmptyOptions, got %v", err)
 		}
 	})
 
@@ -251,18 +265,33 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 }
 
 func TestSecDataset(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	p := NewParser(waf)
-	if err := p.FromString("" +
-		"SecDataset test `\n123\n456\n`\n"); err != nil {
-		t.Error(err)
-	}
-	ds := p.options.Datasets["test"]
-	if len(ds) != 2 {
-		t.Errorf("failed to add dataset, got %d records", len(ds))
-	}
-	if ds[0] != "123" || ds[1] != "456" {
-		t.Error("failed to add dataset")
+	for _, tc := range []struct {
+		name string
+		conf string
+	}{
+		{
+			name: "spaces",
+			conf: "SecDataset test `\n123\n456\n`\n",
+		},
+		{
+			name: "tabs",
+			conf: "SecDataset\ttest\t`\n123\n456\n`\n",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			p := NewParser(waf)
+			if err := p.FromString(tc.conf); err != nil {
+				t.Fatal(err)
+			}
+			ds := p.options.Datasets["test"]
+			if len(ds) != 2 {
+				t.Fatalf("failed to add dataset, got %d records", len(ds))
+			}
+			if ds[0] != "123" || ds[1] != "456" {
+				t.Errorf("unexpected dataset records: %v", ds)
+			}
+		})
 	}
 }
 
@@ -374,6 +403,7 @@ func TestDirectives(t *testing.T) {
 			{"", expectErrorOnDirective},
 			{"a", expectErrorOnDirective},
 			{"tag-1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"'tag-1' '!ARGS:query'", expectNoErrorOnDirective},
 			{"tag-1 tag-2 \"ARGS:wp_post\"", expectErrorOnDirective}, // Multiple tags in line is not supported
 			{"tag-2 \"ARGS:wp_post|RESPONSE_HEADERS|!REQUEST_BODY\"", expectNoErrorOnDirective},
 		},
@@ -384,6 +414,12 @@ func TestDirectives(t *testing.T) {
 		"SecResponseBodyMimeType": {
 			{"", expectErrorOnDirective},
 			{"text/html", func(w *corazawaf.WAF) bool { return w.ResponseBodyMimeTypes[0] == "text/html" }},
+			{"text/html\ttext/plain", func(w *corazawaf.WAF) bool {
+				return len(w.ResponseBodyMimeTypes) == 2 && w.ResponseBodyMimeTypes[1] == "text/plain"
+			}},
+			{"text/html  text/plain", func(w *corazawaf.WAF) bool {
+				return len(w.ResponseBodyMimeTypes) == 2 && w.ResponseBodyMimeTypes[1] == "text/plain"
+			}},
 		},
 		"SecServerSignature": {
 			{"", expectErrorOnDirective},

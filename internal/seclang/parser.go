@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -169,13 +170,16 @@ func (p *Parser) evaluateLine(l string) error {
 		return errors.New("invalid line")
 	}
 	// first we get the directive
-	dir, opts, _ := strings.Cut(l, " ")
+	dir, opts := l, ""
+	if idx := strings.IndexFunc(l, unicode.IsSpace); idx != -1 {
+		dir, opts = l[:idx], strings.TrimLeftFunc(l[idx:], unicode.IsSpace)
+	}
 
 	p.options.WAF.Logger.Debug().Str("line", l).Msg("Parsing directive")
 	directive := strings.ToLower(dir)
 
-	if len(opts) >= 3 && opts[0] == '"' && opts[len(opts)-1] == '"' {
-		opts = strings.Trim(opts, `"`)
+	if isQuoted(opts) {
+		opts = opts[1 : len(opts)-1]
 	}
 
 	if directive == "include" {
@@ -256,4 +260,27 @@ type ParserConfig struct {
 	ConfigDir                   string
 	Root                        fs.FS
 	WorkingDir                  string
+}
+
+func isQuoted(s string) bool {
+	if len(s) < 2 {
+		return false
+	}
+	quote := s[0]
+	if quote != '"' && quote != '\'' {
+		return false
+	}
+	if s[len(s)-1] != quote {
+		return false
+	}
+	for i := 1; i < len(s)-1; i++ {
+		if s[i] == '\\' {
+			i++
+			continue
+		}
+		if s[i] == quote {
+			return false
+		}
+	}
+	return true
 }
