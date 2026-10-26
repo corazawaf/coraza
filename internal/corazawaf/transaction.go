@@ -275,6 +275,18 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.argsGetNames
 	case variables.ArgsPostNames:
 		return tx.variables.argsPostNames
+	case variables.ArgsRaw:
+		return tx.variables.argsRaw
+	case variables.ArgsGetRaw:
+		return tx.variables.argsGetRaw
+	case variables.ArgsPostRaw:
+		return tx.variables.argsPostRaw
+	case variables.ArgsNamesRaw:
+		return tx.variables.argsNamesRaw
+	case variables.ArgsGetNamesRaw:
+		return tx.variables.argsGetNamesRaw
+	case variables.ArgsPostNamesRaw:
+		return tx.variables.argsPostNamesRaw
 	case variables.ResBodyProcessor:
 		return tx.variables.resBodyProcessor
 	case variables.TX:
@@ -786,17 +798,26 @@ func (tx *Transaction) ProcessConnection(client string, cPort int, server string
 	tx.variables.serverPort.Set(p2)
 }
 
-// ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET.
+// ExtractGetArguments transforms an url encoded string to a map and creates ARGS_GET and ARGS_GET_RAW.
 // Arguments are processed in the order they appear in the URI to ensure deterministic
 // behavior when the argument limit is reached.
 func (tx *Transaction) ExtractGetArguments(uri string) {
 	pairs, truncated := urlutil.ParseQueryOrdered(uri, '&', tx.WAF.ArgumentLimit)
 	for _, kv := range pairs {
 		tx.AddGetRequestArgument(kv.Key, kv.Value)
+		tx.addGetRequestArgumentRaw(kv.RawKey, kv.RawValue)
 	}
 	if truncated {
 		tx.variables.argumentsLimitReached.Set("1")
 	}
+}
+
+func (tx *Transaction) addGetRequestArgumentRaw(key string, value string) {
+	if tx.checkArgumentLimit(tx.variables.argsGetRaw) {
+		tx.debugLogger.Warn().Msg("skipping raw get request argument, over limit")
+		return
+	}
+	tx.variables.argsGetRaw.Add(key, value)
 }
 
 // AddGetRequestArgument
@@ -817,6 +838,7 @@ func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 		return
 	}
 	tx.variables.argsPost.Add(key, value)
+	tx.variables.argsPostRaw.Add(key, value)
 }
 
 // AddPathRequestArgument
@@ -1823,10 +1845,16 @@ type TransactionVariables struct {
 	argsCombinedSize             *collections.SizeCollection
 	argsGet                      *collections.NamedCollection
 	argsGetNames                 collection.Keyed
+	argsGetNamesRaw              collection.Keyed
+	argsGetRaw                   *collections.NamedCollection
 	argsNames                    *collections.ConcatKeyed
+	argsNamesRaw                 *collections.ConcatKeyed
 	argsPath                     *collections.NamedCollection
 	argsPost                     *collections.NamedCollection
 	argsPostNames                collection.Keyed
+	argsPostNamesRaw             collection.Keyed
+	argsPostRaw                  *collections.NamedCollection
+	argsRaw                      *collections.ConcatKeyed
 	duration                     *collections.Single
 	env                          *collections.Map
 	files                        *collections.Map
@@ -2005,14 +2033,20 @@ func NewTransactionVariables() *TransactionVariables {
 		v.argsGet = collections.NewCaseSensitiveNamedCollection(variables.ArgsGet)
 		v.argsPost = collections.NewCaseSensitiveNamedCollection(variables.ArgsPost)
 		v.argsPath = collections.NewCaseSensitiveNamedCollection(variables.ArgsPath)
+		v.argsGetRaw = collections.NewCaseSensitiveNamedCollection(variables.ArgsGetRaw)
+		v.argsPostRaw = collections.NewCaseSensitiveNamedCollection(variables.ArgsPostRaw)
 	} else {
 		v.argsGet = collections.NewNamedCollection(variables.ArgsGet)
 		v.argsPost = collections.NewNamedCollection(variables.ArgsPost)
 		v.argsPath = collections.NewNamedCollection(variables.ArgsPath)
+		v.argsGetRaw = collections.NewNamedCollection(variables.ArgsGetRaw)
+		v.argsPostRaw = collections.NewNamedCollection(variables.ArgsPostRaw)
 	}
 
 	v.argsGetNames = v.argsGet.Names(variables.ArgsGetNames)
 	v.argsPostNames = v.argsPost.Names(variables.ArgsPostNames)
+	v.argsGetNamesRaw = v.argsGetRaw.Names(variables.ArgsGetNamesRaw)
+	v.argsPostNamesRaw = v.argsPostRaw.Names(variables.ArgsPostNamesRaw)
 	v.argsCombinedSize = collections.NewSizeCollection(variables.ArgsCombinedSize, v.argsGet, v.argsPost)
 	v.args = collections.NewConcatKeyed(
 		variables.Args,
@@ -2026,6 +2060,16 @@ func NewTransactionVariables() *TransactionVariables {
 		v.argsPostNames,
 		// Only used in a concatenating collection so variable name doesn't matter.
 		v.argsPath.Names(variables.Unknown),
+	)
+	v.argsRaw = collections.NewConcatKeyed(
+		variables.ArgsRaw,
+		v.argsGetRaw,
+		v.argsPostRaw,
+	)
+	v.argsNamesRaw = collections.NewConcatKeyed(
+		variables.ArgsNamesRaw,
+		v.argsGetNamesRaw,
+		v.argsPostNamesRaw,
 	)
 	return v
 }
@@ -2226,6 +2270,18 @@ func (v *TransactionVariables) ArgsPath() collection.Map {
 	return v.argsPath
 }
 
+func (v *TransactionVariables) ArgsRaw() collection.Keyed {
+	return v.argsRaw
+}
+
+func (v *TransactionVariables) ArgsGetRaw() collection.Map {
+	return v.argsGetRaw
+}
+
+func (v *TransactionVariables) ArgsPostRaw() collection.Map {
+	return v.argsPostRaw
+}
+
 func (v *TransactionVariables) FilesTmpNames() collection.Map {
 	return v.filesTmpNames
 }
@@ -2330,6 +2386,18 @@ func (v *TransactionVariables) ArgsPostNames() collection.Keyed {
 	return v.argsPostNames
 }
 
+func (v *TransactionVariables) ArgsNamesRaw() collection.Keyed {
+	return v.argsNamesRaw
+}
+
+func (v *TransactionVariables) ArgsGetNamesRaw() collection.Keyed {
+	return v.argsGetNamesRaw
+}
+
+func (v *TransactionVariables) ArgsPostNamesRaw() collection.Keyed {
+	return v.argsPostNamesRaw
+}
+
 func (v *TransactionVariables) ResBodyError() collection.Single {
 	return v.resBodyError
 }
@@ -2385,6 +2453,24 @@ func (v *TransactionVariables) All(f func(v variables.RuleVariable, col collecti
 		return
 	}
 	if !f(variables.ArgsPostNames, v.argsPostNames) {
+		return
+	}
+	if !f(variables.ArgsRaw, v.argsRaw) {
+		return
+	}
+	if !f(variables.ArgsGetRaw, v.argsGetRaw) {
+		return
+	}
+	if !f(variables.ArgsPostRaw, v.argsPostRaw) {
+		return
+	}
+	if !f(variables.ArgsNamesRaw, v.argsNamesRaw) {
+		return
+	}
+	if !f(variables.ArgsGetNamesRaw, v.argsGetNamesRaw) {
+		return
+	}
+	if !f(variables.ArgsPostNamesRaw, v.argsPostNamesRaw) {
 		return
 	}
 	if !f(variables.Duration, v.duration) {

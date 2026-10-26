@@ -117,6 +117,12 @@ type TransactionVariables interface {
 	ArgsNames() collection.Keyed
 	ArgsGetNames() collection.Keyed
 	ArgsPostNames() collection.Keyed
+	ArgsRaw() collection.Keyed
+	ArgsGetRaw() collection.Map
+	ArgsPostRaw() collection.Map
+	ArgsNamesRaw() collection.Keyed
+	ArgsGetNamesRaw() collection.Keyed
+	ArgsPostNamesRaw() collection.Keyed
 	MultipartStrictError() collection.Single
 
 	// MultipartDuplicatePartHeader is 1 when a multipart part repeated a part header or a
