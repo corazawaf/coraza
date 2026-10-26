@@ -1,4 +1,4 @@
-# ADR-0062: `SecRuleUpdateTargetByMsg` matches the message by string equality
+# ADR-0069: `SecRuleUpdateTargetByMsg` matches the message by string equality
 
 - **Status:** proposed
 - **Date:** 2026-10-27 (expected; update before merge)
