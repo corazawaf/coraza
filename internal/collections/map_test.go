@@ -75,6 +75,27 @@ func TestMap(t *testing.T) {
 		t.Errorf("FindAll() keys after Remove = %q, want %q", keys, want)
 	}
 
+	// Three of the four slots are now deleted, which compacts the slots and
+	// rebuilds the index: lookups and the order must survive it.
+	c.Remove("user")
+	if len(c.entries) != 1 {
+		t.Fatalf("expected the deleted slots to be compacted, have %d slots", len(c.entries))
+	}
+	if got := c.Get("accept"); !slices.Equal(got, []string{"value4"}) {
+		t.Errorf("Get(accept) after compaction = %q", got)
+	}
+	c.Add("user-agent", "value5")
+	keys = keys[:0]
+	for _, m := range c.FindAll() {
+		keys = append(keys, m.Key())
+	}
+	if want := []string{"accept", "user-agent"}; !slices.Equal(keys, want) {
+		t.Errorf("FindAll() keys after compaction = %q, want %q", keys, want)
+	}
+	if c.Len() != 2 || c.TotalValues() != 2 {
+		t.Errorf("Len() = %d, TotalValues() = %d after compaction, want 2 and 2", c.Len(), c.TotalValues())
+	}
+
 	if c.Len() != len(c.index) {
 		t.Fatal("The lengths are not equal.")
 	}
