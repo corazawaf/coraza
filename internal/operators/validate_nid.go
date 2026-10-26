@@ -25,6 +25,11 @@ type validateNidFunction = func(input string) bool
 // Country code and regex pattern separated by space (e.g., "cl ^[0-9]{7,8}-[0-9Kk]$" for Chile RUT).
 // Currently supports: "cl" (Chile RUT), "us" (US SSN).
 //
+// The "us" check accepts area numbers 001-665 and 667-899, the areas the SSA
+// assigns since its 2011 randomization. ModSecurity's @verifySSN still rejects
+// areas 740 and above. It also rejects a zero group or serial and numbers made
+// of one repeated digit or an ascending run.
+//
 // Returns:
 // true if the national ID is valid, false otherwise
 //
