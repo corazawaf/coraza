@@ -254,33 +254,35 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 // matches no rule and the directive silently does nothing.
 func TestSplitMsgAndTargets(t *testing.T) {
 	tests := []struct {
-		name    string
-		opts    string
-		msg     string
-		targets string
-		ok      bool
+		name     string
+		stripped bool
+		opts     string
+		msg      string
+		targets  string
+		ok       bool
 	}{
-		{"unquoted", "my-msg ARGS", "my-msg", "ARGS", true},
-		{"double quoted", `"my msg" "ARGS"`, "my msg", "ARGS", true},
-		{"outer quotes stripped by the parser", `my msg" "ARGS`, "my msg", "ARGS", true},
-		{"single quoted", `'my msg' 'ARGS|!ARGS:foo'`, "my msg", "ARGS|!ARGS:foo", true},
-		{"tabs and extra spaces", "\t'my msg'  \t ARGS ", "my msg", "ARGS", true},
-		{"message starting with a quote", `'"admin" login' ARGS`, `"admin" login`, "ARGS", true},
-		{"escaped quote", `my \"x\" msg" "ARGS`, `my "x" msg`, "ARGS", true},
-		{"target with a space", `"my msg" "ARGS|!REQUEST_HEADERS:/^x y$/"`, "my msg", "ARGS|!REQUEST_HEADERS:/^x y$/", true},
-		{"empty", "", "", "", false},
-		{"targets missing", `"my msg"`, "", "", false},
-		{"empty message", `"" "ARGS"`, "", "", false},
-		{"unquoted message with spaces", "my msg ARGS", "", "", false},
-		{"unterminated quote", `"my msg ARGS`, "", "", false},
-		{"text after closing quote", `"my msg"x ARGS`, "", "", false},
+		{"unquoted", false, "my-msg ARGS", "my-msg", "ARGS", true},
+		{"double quoted", false, `"my msg" "ARGS"`, "my msg", "ARGS", true},
+		{"outer quotes stripped by the parser", true, `my msg" "ARGS`, "my msg", "ARGS", true},
+		{"single quoted", false, `'my msg' 'ARGS|!ARGS:foo'`, "my msg", "ARGS|!ARGS:foo", true},
+		{"tabs and extra spaces", false, "\t'my msg'  \t ARGS ", "my msg", "ARGS", true},
+		{"message starting with a quote", false, `'"admin" login' ARGS`, `"admin" login`, "ARGS", true},
+		{"escaped quote", true, `my \"x\" msg" "ARGS`, `my "x" msg`, "ARGS", true},
+		{"target with a space", false, `"my msg" "ARGS|!REQUEST_HEADERS:/^x y$/"`, "my msg", "ARGS|!REQUEST_HEADERS:/^x y$/", true},
+		{"malformed quotes not stripped by the parser", false, `my msg" "ARGS`, "", "", false},
+		{"empty", false, "", "", "", false},
+		{"targets missing", false, `"my msg"`, "", "", false},
+		{"empty message", false, `"" "ARGS"`, "", "", false},
+		{"unquoted message with spaces", false, "my msg ARGS", "", "", false},
+		{"unterminated quote", false, `"my msg ARGS`, "", "", false},
+		{"text after closing quote", false, `"my msg"x ARGS`, "", "", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			msg, targets, ok := splitMsgAndTargets(tt.opts)
+			msg, targets, ok := splitMsgAndTargets(tt.opts, tt.stripped)
 			if ok != tt.ok || msg != tt.msg || targets != tt.targets {
-				t.Errorf("splitMsgAndTargets(%q) = %q, %q, %v; want %q, %q, %v",
-					tt.opts, msg, targets, ok, tt.msg, tt.targets, tt.ok)
+				t.Errorf("splitMsgAndTargets(%q, %v) = %q, %q, %v; want %q, %q, %v",
+					tt.opts, tt.stripped, msg, targets, ok, tt.msg, tt.targets, tt.ok)
 			}
 		})
 	}
@@ -416,7 +418,8 @@ func TestDirectives(t *testing.T) {
 		"SecRuleUpdateTargetByMsg": {
 			{"", expectErrorOnDirective},
 			{"a", expectErrorOnDirective},
-			{"\"my msg\"", expectErrorOnDirective}, // Variables has also to be provided to the directive
+			{"\"my msg\"", expectErrorOnDirective},      // Variables has also to be provided to the directive
+			{"my msg\" \"ARGS", expectErrorOnDirective}, // Unbalanced quotes
 			{"msg-1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"'my msg' \"ARGS:wp_post|RESPONSE_HEADERS|!REQUEST_BODY\"", expectNoErrorOnDirective},
 		},

@@ -1714,7 +1714,10 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 // SecRuleUpdateTargetByMsg "SQL Injection Attack" "!ARGS:query"
 // ```
 func directiveSecRuleUpdateTargetByMsg(options *DirectiveOptions) error {
-	msg, inputVars, ok := splitMsgAndTargets(options.Opts)
+	// Parser.evaluateLine strips the outer double quotes of options that start and end with
+	// one, so `"my msg" "ARGS"` arrives here as `my msg" "ARGS`.
+	stripped := options.Opts != "" && strings.HasSuffix(options.Raw, `"`+options.Opts+`"`)
+	msg, inputVars, ok := splitMsgAndTargets(options.Opts, stripped)
 	if !ok {
 		return errors.New("syntax error: SecRuleUpdateTargetByMsg \"MESSAGE\" \"VARIABLES\"")
 	}
@@ -1741,14 +1744,13 @@ func directiveSecRuleUpdateTargetByMsg(options *DirectiveOptions) error {
 
 // splitMsgAndTargets splits `MESSAGE TARGETS` into its two arguments. An argument is either
 // quoted with ' or ", in which case it may contain spaces and quotes escaped with a backslash,
-// or a run of non-space characters.
-func splitMsgAndTargets(opts string) (msg string, targets string, ok bool) {
-	if msg, targets, ok = splitTwoArgs(opts); ok {
-		return msg, targets, true
+// or a run of non-space characters. outerQuotesStripped restores the pair of double quotes
+// that the parser removed from around opts.
+func splitMsgAndTargets(opts string, outerQuotesStripped bool) (msg string, targets string, ok bool) {
+	if outerQuotesStripped {
+		opts = `"` + opts + `"`
 	}
-	// Parser.evaluateLine strips the outer double quotes of options that start and end with
-	// one, so `"my msg" "ARGS"` arrives here as `my msg" "ARGS`. Retry with the pair restored.
-	return splitTwoArgs(`"` + opts + `"`)
+	return splitTwoArgs(opts)
 }
 
 // splitTwoArgs returns the two arguments of s, failing if there are more or fewer.
