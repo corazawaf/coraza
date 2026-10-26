@@ -168,6 +168,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	// earlier phase skips the remaining request and response phases, not this one.
 	// An allow issued by a logging phase rule still stops the rest of the phase.
 	if phase == types.PhaseLogging && tx.AllowType == corazatypes.AllowTypeAll {
+		tx.DebugLogger().Debug().
+			Msg("Evaluating logging phase despite allow action")
 		tx.AllowType = corazatypes.AllowTypeUnset
 	}
 RulesLoop:
