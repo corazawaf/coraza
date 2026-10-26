@@ -150,6 +150,17 @@ func TestCtl(t *testing.T) {
 				}
 			},
 		},
+		"requestBodyLimit over the hard limit": {
+			input: "requestBodyLimit=1073741825",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if wantToContain, have := "[ERROR] Invalid limit", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
+				}
+				if want, have := tx.WAF.RequestBodyLimit, tx.RequestBodyLimit; want != have {
+					t.Errorf("Unexpected requestBodyLimit, want %d, have %d", want, have)
+				}
+			},
+		},
 		"requestBodyLimit too late": {
 			prepareTX: func(tx *corazawaf.Transaction) {
 				tx.ProcessRequestHeaders()
@@ -297,6 +308,17 @@ func TestCtl(t *testing.T) {
 			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
 				if wantToContain, have := "[ERROR] Invalid limit", logEntry; !strings.Contains(have, wantToContain) {
 					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
+				}
+			},
+		},
+		"responseBodyLimit zero": {
+			input: "responseBodyLimit=0",
+			checkTX: func(t *testing.T, tx *corazawaf.Transaction, logEntry string) {
+				if wantToContain, have := "[ERROR] Invalid limit", logEntry; !strings.Contains(have, wantToContain) {
+					t.Errorf("Failed to log entry, want to contain %q, have %q", wantToContain, have)
+				}
+				if want, have := tx.WAF.ResponseBodyLimit, tx.ResponseBodyLimit; want != have {
+					t.Errorf("Unexpected responseBodyLimit, want %d, have %d", want, have)
 				}
 			},
 		},
