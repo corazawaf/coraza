@@ -130,7 +130,10 @@ func nidUs(nid string) bool {
 	area, _ := strconv.Atoi(nid[0:3])
 	group, _ := strconv.Atoi(nid[3:5])
 	serial, _ := strconv.Atoi(nid[5:9])
-	if area == 0 || group == 0 || serial == 0 || area >= 740 || area == 666 {
+	// Since the SSA randomized assignment on 25 June 2011, only areas 000, 666
+	// and 900-999 are never assigned (https://www.ssa.gov/employer/randomization.html).
+	// ModSecurity's @verifySSN still rejects areas 740 and above.
+	if area == 0 || group == 0 || serial == 0 || area >= 900 || area == 666 {
 		return false
 	}
 
