@@ -61,6 +61,12 @@ type Transaction struct {
 	// caused an interruption if the engine was On).
 	detectionOnlyInterruption *types.Interruption
 
+	// interruptionStatus is the status of the first interruption that ended
+	// the transaction before the logging phase, i.e. the status the client
+	// received instead of the backend's. It is 0 when there was none, or when
+	// the interruption was a drop, which sends no response at all.
+	interruptionStatus int
+
 	// This is used to store log messages
 	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
 	Logdata string
@@ -331,6 +337,16 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 	return collections.Noop
 }
 
+// setInterruption stores the interruption and, unless it is raised in the
+// logging phase, after the response has been sent, the status it gives
+// the client.
+func (tx *Transaction) setInterruption(interruption *types.Interruption) {
+	tx.interruption = interruption
+	if tx.interruptionStatus == 0 && tx.lastPhase != types.PhaseLogging && interruption.Action != "drop" {
+		tx.interruptionStatus = interruption.Status
+	}
+}
+
 // Interrupt sets the interruption for the transaction.
 // It complies with DetectionOnly definition which requires that disruptive actions are not executed.
 // Depending on the RuleEngine mode:
@@ -340,7 +356,7 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 func (tx *Transaction) Interrupt(interruption *types.Interruption) {
 	switch tx.RuleEngine {
 	case types.RuleEngineOn:
-		tx.interruption = interruption
+		tx.setInterruption(interruption)
 	case types.RuleEngineDetectionOnly:
 		// In DetectionOnly mode, the interruption is not actually triggered, which means that
 		// further rules will continue to be evaluated and more actions can be executed.
@@ -947,10 +963,10 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 
 func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Interruption, int, error) {
 	tx.debugLogger.Warn().Msg("Disrupting transaction with body size above the configured limit (Action Reject)")
-	tx.interruption = &types.Interruption{
+	tx.setInterruption(&types.Interruption{
 		Status: status,
 		Action: "deny",
-	}
+	})
 	return tx.interruption, 0, nil
 }
 
@@ -1604,14 +1620,14 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			if al.Transaction_.Response_ == nil {
 				al.Transaction_.Response_ = &auditlog.TransactionResponse{}
 			}
-			// When the transaction was interrupted with a status, that status
+			// The status of an interruption raised before the logging phase
 			// replaces the backend's: RESPONSE_STATUS is never set for a
 			// request-phase interruption, and holds the backend's status for
-			// a response-phase one. ProcessLogging uses the same status to
-			// decide relevance.
+			// a response-phase one, while the client received the
+			// interruption's status.
 			status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
-			if tx.interruption != nil && tx.interruption.Status != 0 {
-				status = tx.interruption.Status
+			if tx.interruptionStatus != 0 {
+				status = tx.interruptionStatus
 			}
 			al.Transaction_.Response_.Status_ = status
 			al.Transaction_.Response_.Headers_ = tx.variables.responseHeaders.Data()

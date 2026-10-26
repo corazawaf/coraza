@@ -18,17 +18,6 @@ var _ = profile.RegisterProfile(profile.Profile{
 		{
 			Title: "disruptive_actions",
 			Stages: []profile.Stage{
-				// Without an interruption the audit log keeps the backend's status.
-				{
-					Stage: profile.SubStage{
-						Input: profile.StageInput{
-							URI: "/pass",
-						},
-						Output: profile.ExpectedOutput{
-							AuditLogStatus: 200,
-						},
-					},
-				},
 				// Phase 1
 				{
 					Stage: profile.SubStage{
@@ -328,6 +317,25 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
+							URI: "/deny5_audit",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{55},
+							// A phase 5 deny comes after the response was sent, so
+							// the audit log keeps the backend's status.
+							AuditLogStatus: 200,
+							Interruption: &profile.ExpectedInterruption{
+								Status: 500,
+								Data:   "",
+								RuleID: 55,
+								Action: "deny",
+							},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/drop5",
 						},
 						Output: profile.ExpectedOutput{
@@ -382,6 +390,10 @@ SecRule REQUEST_URI "/drop4$" "phase:4,id:43,log,drop"
 SecRule REQUEST_URI "/redirect5$" "phase:5,id:51,log,status:302,redirect:https://www.example.com"
 SecRule REQUEST_URI "/deny5$" "phase:5,id:52,log,status:500,deny"
 SecRule REQUEST_URI "/drop5$" "phase:5,id:53,log,drop"
+# TX is evaluated in its own phase under multiphase evaluation, so rule 55
+# stays in phase 5 with every build tag.
+SecRule REQUEST_URI "/deny5_audit$" "phase:1,id:54,pass,nolog,setvar:tx.deny5_audit=1"
+SecRule TX:deny5_audit "@eq 1" "phase:5,id:55,log,status:500,deny"
 
 SecRule REQUEST_URI "/redirect6$" "phase:2,id:61,log,redirect:https://www.example.com"
 SecRule REQUEST_URI "/redirect7$" "phase:2,id:62,log,status:307,redirect:https://www.example.com"
