@@ -59,7 +59,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{3},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 3,
 								Action: "drop",
@@ -173,7 +173,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{23},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 23,
 								Action: "drop",
@@ -222,7 +222,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{33},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 33,
 								Action: "drop",
@@ -271,7 +271,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{43},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 43,
 								Action: "drop",
@@ -320,7 +320,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{53},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 53,
 								Action: "drop",
