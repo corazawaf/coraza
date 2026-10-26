@@ -816,6 +816,7 @@ func TestAuditLogFields(t *testing.T) {
 	rule.ID_ = 131
 	rule.Log = true
 	rule.Audit = true
+	rule.Severity_ = types.RuleSeverityNotice
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
 			Variable_: variables.UniqueID,
@@ -834,6 +835,12 @@ func TestAuditLogFields(t *testing.T) {
 	}
 	if len(al.Transaction().Response().Headers()) == 0 || al.Transaction().Response().Headers()["test"][0] != "test" {
 		t.Fatal("failed to add Response header to audit log")
+	}
+	if want, have := "5", al.Transaction().HighestSeverity(); want != have {
+		t.Errorf("unexpected highest severity in audit log, want %q, have %q", want, have)
+	}
+	if want, have := "HTTP/1.1", al.Transaction().Request().HTTPVersion(); want != have {
+		t.Errorf("unexpected HTTP version in audit log, want %q, have %q", want, have)
 	}
 	if err := tx.Close(); err != nil {
 		t.Fatalf("Failed to close transaction: %s", err.Error())

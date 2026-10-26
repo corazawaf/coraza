@@ -223,8 +223,11 @@ func (f ocsfFormatter) Format(al plugintypes.AuditLog) ([]byte, error) {
 	// while WebResource Activity Severity is defined by OCSF to represent the severity of the security event.
 	// For now, we're setting severityID to 'Other' and setting Severity to the Highest severity of the matched rules.
 	// A future update should map/translate rule severity to OCSF severity if possible.
-	highestSeverity, _ := types.ParseRuleSeverity(al.Transaction().HighestSeverity())
-	webResourcesActivity.Severity = highestSeverity.String()
+	// HIGHEST_SEVERITY is 255 when no matched rule declared a severity; that value does not
+	// parse, and Severity is then left empty rather than reported as "emergency" (0).
+	if highestSeverity, err := types.ParseRuleSeverity(al.Transaction().HighestSeverity()); err == nil {
+		webResourcesActivity.Severity = highestSeverity.String()
+	}
 	webResourcesActivity.SeverityId = enums.WEB_RESOURCES_ACTIVITY_SEVERITY_ID_WEB_RESOURCES_ACTIVITY_SEVERITY_ID_OTHER
 
 	webResourcesActivity.StartTime = al.Transaction().UnixTimestamp()

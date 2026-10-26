@@ -65,6 +65,13 @@ func TestOCSFFormatter(t *testing.T) {
 			}
 		}
 
+		// validate severity: HIGHEST_SEVERITY is 255 when no matched rule set a
+		// severity, which must not be reported as "emergency"
+		wantSeverity := map[string]string{"2": "critical"}[al.Transaction().HighestSeverity()]
+		if wra.Severity != wantSeverity {
+			t.Errorf("failed to match audit log Severity for highest severity %q, \ngot: %q\nexpected: %q", al.Transaction().HighestSeverity(), wra.Severity, wantSeverity)
+		}
+
 		// validate Server ID
 		for _, observable := range wra.Observables {
 			if observable.Name == "ServerID" {
@@ -313,10 +320,11 @@ func createAuditLogs() []*Log {
 			types.AuditLogPartRulesMatched,
 		},
 		Transaction_: Transaction{
-			Timestamp_:     "02/Jan/2006:15:04:20 -0700",
-			UnixTimestamp_: 1136239460,
-			ID_:            "123",
-			IsInterrupted_: true,
+			Timestamp_:       "02/Jan/2006:15:04:20 -0700",
+			UnixTimestamp_:   1136239460,
+			ID_:              "123",
+			HighestSeverity_: "2",
+			IsInterrupted_:   true,
 			Request_: &TransactionRequest{
 				URI_:    "/test.php?qkey=qvalue",
 				Method_: "GET",
@@ -377,11 +385,12 @@ func createAuditLogs() []*Log {
 			types.AuditLogPartRulesMatched,
 		},
 		Transaction_: Transaction{
-			Timestamp_:     "",
-			UnixTimestamp_: 0,
-			ID_:            "",
-			IsInterrupted_: true,
-			ServerID_:      "someServer",
+			Timestamp_:       "",
+			UnixTimestamp_:   0,
+			ID_:              "",
+			HighestSeverity_: "255",
+			IsInterrupted_:   true,
+			ServerID_:        "someServer",
 			Request_: &TransactionRequest{
 				URI_:    "",
 				Method_: "",

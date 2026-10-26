@@ -1567,13 +1567,15 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		HostPort_:      hostPort,
 		ServerID_:      tx.variables.serverName.Get(), // TODO check
 		Request_: &auditlog.TransactionRequest{
-			Method_:   tx.variables.requestMethod.Get(),
-			URI_:      tx.variables.requestURI.Get(),
-			Protocol_: tx.variables.requestProtocol.Get(),
-			Args_:     tx.variables.args,
-			Length_:   int32(requestLength),
+			Method_:      tx.variables.requestMethod.Get(),
+			URI_:         tx.variables.requestURI.Get(),
+			Protocol_:    tx.variables.requestProtocol.Get(),
+			HTTPVersion_: tx.variables.requestProtocol.Get(),
+			Args_:        tx.variables.args,
+			Length_:      int32(requestLength),
 		},
-		IsInterrupted_: tx.IsInterrupted(),
+		HighestSeverity_: tx.variables.highestSeverity.Get(),
+		IsInterrupted_:   tx.IsInterrupted(),
 	}
 
 	var auditLogPartAuditLogTrailerSet, auditLogPartRulesMatchedSet bool
