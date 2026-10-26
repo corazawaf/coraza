@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -379,9 +380,8 @@ func directiveSecRuleEngine(options *DirectiveOptions) error {
 // existing configurations continue to load.
 // Syntax: SecTmpDir /path/to/dir
 // ---
-// **Note:** This handler backs `SecArgumentSeparator`, `SecCookieFormat`,
-// `SecRuleUpdateTargetByMsg`, `SecRuleScript`, `SecRulePerfTime`, `SecUnicodeMap` and
-// `SecTmpDir`. All are accepted and ignored.
+// **Note:** This handler backs `SecArgumentSeparator`, `SecCookieFormat`, `SecRuleScript`,
+// `SecRulePerfTime`, `SecUnicodeMap` and `SecTmpDir`. All are accepted and ignored.
 //
 // Example:
 // ```seclang
@@ -1696,6 +1696,77 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 		}
 	}
 	return nil
+}
+
+// Description: Updates the target (variable) list of the specified rule(s) by message.
+// Syntax: SecRuleUpdateTargetByMsg MESSAGE TARGET1[|TARGET2|TARGET3]
+// ---
+// As an alternative to `SecRuleUpdateTargetById`, this directive will append variables to every rule
+// whose `msg` equals the first parameter, with the targets provided in the second parameter.
+// Matching is by case-sensitive string equality against the rule's unexpanded message, as in
+// `SecRuleRemoveByMsg` and ModSecurity v3; ModSecurity v2 treats the message as a regular expression.
+// The message can be quoted and may contain spaces. The targets are separated by a pipe character.
+//
+// Example:
+// ```seclang
+// SecRuleUpdateTargetByMsg "SQL Injection Attack" "!ARGS:query"
+// ```
+func directiveSecRuleUpdateTargetByMsg(options *DirectiveOptions) error {
+	msg, inputVars, ok := splitMsgAndTargets(options.Opts)
+	if !ok {
+		return errors.New("syntax error: SecRuleUpdateTargetByMsg \"MESSAGE\" \"VARIABLES\"")
+	}
+
+	// Indexed, not ranged: see the note in directiveSecRuleUpdateTargetByID.
+	rules := options.WAF.Rules.GetRules()
+	for i := range rules {
+		if rules[i].Msg == nil || rules[i].Msg.String() != msg {
+			continue
+		}
+		rp := RuleParser{
+			rule: &rules[i],
+			options: RuleOptions{
+				WAF: options.WAF,
+			},
+			defaultActions: map[types.RulePhase][]ruleAction{},
+		}
+		if err := rp.ParseVariables(inputVars); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// splitMsgAndTargets splits `MESSAGE TARGETS` into its unquoted parts. The targets are the
+// last whitespace-separated field and the message, which may contain spaces, is everything
+// before it.
+func splitMsgAndTargets(opts string) (msg string, targets string, ok bool) {
+	opts = strings.TrimSpace(opts)
+	idx := strings.LastIndexFunc(opts, unicode.IsSpace)
+	if idx == -1 {
+		return "", "", false
+	}
+	msg, targets = strings.TrimSpace(opts[:idx]), opts[idx+1:]
+
+	// Parser.evaluateLine strips the outer double quotes of options that start and end with
+	// one, so `"my msg" "ARGS"` arrives here as `my msg" "ARGS`. Restore the pair first.
+	if len(msg) > 0 && msg[0] != '"' && msg[len(msg)-1] == '"' &&
+		len(targets) > 0 && targets[0] == '"' && targets[len(targets)-1] != '"' {
+		msg, targets = `"`+msg, targets+`"`
+	}
+
+	msg, targets = utils.MaybeRemoveQuotes(msg), utils.MaybeRemoveQuotes(targets)
+	// A quote left at the edge after unquoting is an unterminated one, for example in
+	// `"my msg"` with the targets missing, which would otherwise split into `"my` and `msg"`.
+	if msg == "" || targets == "" || isQuote(msg[0]) ||
+		isQuote(targets[0]) || isQuote(targets[len(targets)-1]) {
+		return "", "", false
+	}
+	return msg, targets, true
+}
+
+func isQuote(c byte) bool {
+	return c == '"' || c == '\''
 }
 
 // Description: Continues loading a rule set when a rule fails to compile, instead of aborting.

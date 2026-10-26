@@ -19,7 +19,7 @@ import (
 // inspects ARGS, so a payload in a header matches only once REQUEST_HEADERS
 // has genuinely been added.
 func TestUpdateTargetAppliesToStoredRule(t *testing.T) {
-	const base = `SecRule ARGS "@rx attackpayload" "id:5,phase:2,pass,log,tag:mytag"`
+	const base = `SecRule ARGS "@rx attackpayload" "id:5,phase:2,pass,log,tag:mytag,msg:'my msg'"`
 
 	tests := []struct {
 		name      string
@@ -28,6 +28,7 @@ func TestUpdateTargetAppliesToStoredRule(t *testing.T) {
 		{"by single id", `SecRuleUpdateTargetById 5 "REQUEST_HEADERS"`},
 		{"by id range", `SecRuleUpdateTargetById 1-10 "REQUEST_HEADERS"`},
 		{"by tag", `SecRuleUpdateTargetByTag "mytag" "REQUEST_HEADERS"`},
+		{"by msg", `SecRuleUpdateTargetByMsg "my msg" "REQUEST_HEADERS"`},
 	}
 
 	for _, tc := range tests {

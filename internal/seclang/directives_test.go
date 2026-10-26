@@ -377,6 +377,14 @@ func TestDirectives(t *testing.T) {
 			{"tag-1 tag-2 \"ARGS:wp_post\"", expectErrorOnDirective}, // Multiple tags in line is not supported
 			{"tag-2 \"ARGS:wp_post|RESPONSE_HEADERS|!REQUEST_BODY\"", expectNoErrorOnDirective},
 		},
+		"SecRuleUpdateTargetByMsg": {
+			{"", expectErrorOnDirective},
+			{"a", expectErrorOnDirective},
+			{"\"my msg\"", expectErrorOnDirective}, // Variables has also to be provided to the directive
+			{"\"\" \"ARGS:wp_post\"", expectErrorOnDirective},
+			{"msg-1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"'my msg' \"ARGS:wp_post|RESPONSE_HEADERS|!REQUEST_BODY\"", expectNoErrorOnDirective},
+		},
 		"SecResponseBodyMimeTypesClear": {
 			{"", func(w *corazawaf.WAF) bool { return len(w.ResponseBodyMimeTypes) == 0 }},
 			{"x", expectErrorOnDirective},
