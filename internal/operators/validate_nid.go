@@ -130,7 +130,9 @@ func nidUs(nid string) bool {
 	area, _ := strconv.Atoi(nid[0:3])
 	group, _ := strconv.Atoi(nid[3:5])
 	serial, _ := strconv.Atoi(nid[5:9])
-	if area == 0 || group == 0 || serial == 0 || area >= 740 || area == 666 {
+	// Areas 000, 666 and 900-999 are never assigned. Since the 2011 SSN randomization,
+	// areas 001-665 and 667-899 are all assignable, so 740-899 must not be rejected.
+	if area == 0 || group == 0 || serial == 0 || area >= 900 || area == 666 {
 		return false
 	}
 

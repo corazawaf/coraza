@@ -41,6 +41,26 @@ func TestNidCl(t *testing.T) {
 	}
 }
 
+func TestNidUs(t *testing.T) {
+	tests := []struct {
+		name string
+		nid  string
+		want bool
+	}{
+		{name: "area 740 is assignable since 2011", nid: "740-12-3456", want: true},
+		{name: "area 899 is assignable", nid: "899-12-3456", want: true},
+		{name: "area 900 is never assigned", nid: "900-12-3456", want: false},
+		{name: "area 666 is never assigned", nid: "666-12-3456", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := nidUs(tt.nid); got != tt.want {
+				t.Errorf("nidUs(%q) = %v, want %v", tt.nid, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDigitToInt(t *testing.T) {
 	if want, have := 0, digitToInt('0'); want != have {
 		t.Errorf("unexpected conversion, want %d, have %d", want, have)
