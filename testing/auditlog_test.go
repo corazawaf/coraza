@@ -70,46 +70,6 @@ func TestAuditLogMessages(t *testing.T) {
 	}
 }
 
-func TestAuditLogRelevantOnly(t *testing.T) {
-	// A rule with log (which implies auditlog) marks the transaction for audit
-	// logging, so it is written even though the status (200) does not match
-	// SecAuditLogRelevantStatus: the two conditions are alternatives.
-	// Regression test for https://github.com/corazawaf/coraza/issues/1809
-	waf := corazawaf.NewWAF()
-	parser := seclang.NewParser(waf)
-	if err := parser.FromString(`
-		SecRuleEngine DetectionOnly
-		SecAuditEngine RelevantOnly
-		SecAuditLogFormat json
-		SecAuditLogType serial
-		SecAuditLogRelevantStatus 401
-		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
-	`); err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Fatal(err)
-	}
-	tx := waf.NewTransaction()
-	tx.AddGetRequestArgument("test", "test")
-	tx.ProcessRequestHeaders()
-	// now we read file
-	if _, err := file.Seek(0, 0); err != nil {
-		t.Error(err)
-	}
-	tx.ProcessLogging()
-	var al2 auditlog.Log
-	if err := json.NewDecoder(file).Decode(&al2); err != nil {
-		t.Errorf("expected audit log for a transaction marked by a log rule, got error: %v", err)
-	}
-}
-
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)

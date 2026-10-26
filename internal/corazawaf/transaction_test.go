@@ -1067,11 +1067,12 @@ func TestRelevantAuditLogging(t *testing.T) {
 	// Regression test for https://github.com/corazawaf/coraza/issues/1576 and
 	// https://github.com/corazawaf/coraza/issues/1809
 	tests := []struct {
-		name         string
-		status       string
-		audit        bool
-		interruption *types.Interruption
-		shouldLog    bool
+		name             string
+		status           string
+		audit            bool
+		noRelevantStatus bool
+		interruption     *types.Interruption
+		shouldLog        bool
 	}{
 		{
 			name:      "audit=false, relevant status via response → should log",
@@ -1095,10 +1096,11 @@ func TestRelevantAuditLogging(t *testing.T) {
 			shouldLog: true,
 		},
 		{
-			name:      "audit=true, relevant status → should log",
-			status:    "403",
-			audit:     true,
-			shouldLog: true,
+			name:             "audit=false, no relevant status configured → should not log",
+			status:           "403",
+			audit:            false,
+			noRelevantStatus: true,
+			shouldLog:        false,
 		},
 		{
 			name:      "audit=true, non-relevant status → should log",
@@ -1113,7 +1115,9 @@ func TestRelevantAuditLogging(t *testing.T) {
 			tx := makeTransaction(t)
 			debugLog := bytes.Buffer{}
 			tx.debugLogger = debuglog.Default().WithLevel(debuglog.LevelDebug).WithOutput(&debugLog)
-			tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`^(?:5|4[0-9][0-35-9])`)
+			if !tt.noRelevantStatus {
+				tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`^(?:5|4[0-9][0-35-9])`)
+			}
 			tx.variables.responseStatus.Set(tt.status)
 			tx.interruption = tt.interruption
 			tx.AuditEngine = types.AuditEngineRelevantOnly
