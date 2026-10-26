@@ -199,7 +199,8 @@ func ParseAuditLogParts(opts string) (AuditLogParts, error) {
 // ApplyAuditLogParts applies audit log parts modifications to the base parts.
 // It supports adding parts with '+' prefix (e.g., "+E") or removing parts with '-' prefix (e.g., "-E").
 // For absolute values (e.g., "ABCDEFZ"), use ParseAuditLogParts instead.
-// Parts 'A' and 'Z' are mandatory and cannot be added or removed.
+// Parts 'A' and 'Z' are mandatory and cannot be added or removed: when the base
+// contains them, the result keeps 'A' first and 'Z' last.
 func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts, error) {
 	if len(modification) == 0 {
 		return nil, errors.New("modification string cannot be empty")
@@ -243,12 +244,20 @@ func ApplyAuditLogParts(base AuditLogParts, modification string) (AuditLogParts,
 		}
 	}
 
-	// Convert map back to slice, maintaining the canonical order
+	// Convert map back to slice, maintaining the canonical order. A and Z are
+	// not in orderedAuditLogParts, so they are kept from the base explicitly:
+	// A first and Z last, as ParseAuditLogParts requires.
 	result := make([]AuditLogPart, 0, len(partsMap))
+	if _, ok := partsMap[AuditLogPartHeader]; ok {
+		result = append(result, AuditLogPartHeader)
+	}
 	for _, part := range orderedAuditLogParts {
 		if _, ok := partsMap[part]; ok {
 			result = append(result, part)
 		}
+	}
+	if _, ok := partsMap[AuditLogPartEndMarker]; ok {
+		result = append(result, AuditLogPartEndMarker)
 	}
 
 	return AuditLogParts(result), nil
