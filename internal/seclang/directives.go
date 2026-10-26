@@ -1531,6 +1531,16 @@ func hasDisruptiveActions(actions []ruleAction) bool {
 	return false
 }
 
+// hasAction reports whether an action with the given name was parsed.
+func hasAction(actions []ruleAction, key string) bool {
+	for _, action := range actions {
+		if action.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
 // Description: Updates the action list of the specified rule(s).
 // Syntax: SecRuleUpdateActionById ID ACTIONLIST
 // ---

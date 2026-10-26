@@ -329,20 +329,30 @@ const wantChainDisruptiveErr = "disruptive actions can only be specified in the 
 
 func TestChainedRuleDisruptiveActionRejected(t *testing.T) {
 	// ModSecurity and compatible engines reject configs where a chained (non-starter)
-	// rule carries a disruptive action. Coraza must do the same so that rule sets
-	// behave identically across implementations.
-	disruptiveActions := []string{"deny", "block", "allow", "pass", "redirect:'http://example.com'"}
-	for _, da := range disruptiveActions {
-		t.Run(da, func(t *testing.T) {
+	// rule carries a disruptive action or an id. Coraza must do the same so that rule
+	// sets behave identically across implementations.
+	tests := []struct {
+		action  string
+		wantErr string
+	}{
+		{"deny", wantChainDisruptiveErr},
+		{"block", wantChainDisruptiveErr},
+		{"allow", wantChainDisruptiveErr},
+		{"pass", wantChainDisruptiveErr},
+		{"redirect:'http://example.com'", wantChainDisruptiveErr},
+		{"id:200", "id can only be specified in the chain starter rule"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.action, func(t *testing.T) {
 			waf := corazawaf.NewWAF()
 			p := NewParser(waf)
 			err := p.FromString(`SecRule REQUEST_URI "abc" "id:100,phase:2,chain"
-SecRule REQUEST_URI "def" "` + da + `"`)
+SecRule REQUEST_URI "def" "` + tt.action + `"`)
 			if err == nil {
-				t.Fatalf("expected error for disruptive action %q on chain member, got nil", da)
+				t.Fatalf("expected error for action %q on chain member, got nil", tt.action)
 			}
-			if !strings.Contains(err.Error(), wantChainDisruptiveErr) {
-				t.Errorf("wrong error for %q: want %q in error, got: %s", da, wantChainDisruptiveErr, err)
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("wrong error for %q: want %q in error, got: %s", tt.action, tt.wantErr, err)
 			}
 		})
 	}
