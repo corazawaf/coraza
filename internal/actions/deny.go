@@ -32,18 +32,22 @@ func (a *denyFn) Init(_ plugintypes.RuleMetadata, data string) error {
 const noID = 0
 const noStatus = 0
 
+// statusOrForbidden returns the rule's status, or 403 when the rule has no
+// status action. deny and drop share this default, as in ModSecurity.
+func statusOrForbidden(r plugintypes.RuleMetadata) int {
+	if status := r.Status(); status != noStatus {
+		return status
+	}
+	return http.StatusForbidden
+}
+
 func (a *denyFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	rid := r.ID()
 	if rid == noID {
 		rid = r.ParentID()
 	}
-	status := r.Status()
-	// deny action defaults to status 403
-	if status == noStatus {
-		status = http.StatusForbidden
-	}
 	tx.Interrupt(&types.Interruption{
-		Status: status,
+		Status: statusOrForbidden(r),
 		RuleID: rid,
 		Action: "deny",
 	})

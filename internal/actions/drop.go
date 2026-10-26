@@ -4,8 +4,6 @@
 package actions
 
 import (
-	"net/http"
-
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -43,13 +41,8 @@ func (a *dropFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transaction
 	if rid == noID {
 		rid = r.ParentID()
 	}
-	status := r.Status()
-	// drop action defaults to status 403, like deny and like ModSecurity
-	if status == noStatus {
-		status = http.StatusForbidden
-	}
 	tx.Interrupt(&types.Interruption{
-		Status: status,
+		Status: statusOrForbidden(r),
 		RuleID: rid,
 		Action: "drop",
 	})
