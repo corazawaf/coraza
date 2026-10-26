@@ -132,6 +132,21 @@ var _ = profile.RegisterProfile(profile.Profile{
 				{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
+							URI:    "/",
+							Method: "POST",
+							Headers: map[string]string{
+								"Content-Type": "application/json",
+							},
+							Data: `{"a":"attack","b":"attack","c":"attack","d":"attack","e":"attack","f":"attack","g":"attack","h":"atttack"}`,
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{500},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
 							URI: "/",
 							Headers: map[string]string{
 								"Cookie": "a=attack; b=attack; c=attack; d=attack; e=attack; f=attack; g=attack; h=atttack",
@@ -207,6 +222,7 @@ SecRule REQUEST_HEADERS "@rx attack21" \
     "msg:'Sub Sub Chain Rule',\
     logdata:'FoundSubSubChain21 %{MATCHED_VAR} in %{MATCHED_VAR_NAME}'"
 
+SecRule REQUEST_HEADERS:Content-Type "@beginsWith application/json" "id:501, phase:1, pass, nolog, ctl:requestBodyProcessor=JSON"
 SecRule ARGS|REQUEST_COOKIES "@rx a(t+)ack" "id:500, phase:2, log, capture, chain"
   SecRule TX:1 "@streq ttt" ""
 `,

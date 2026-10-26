@@ -10,47 +10,21 @@ import (
 var parseQueryInput = `var=EmptyValue'||(select extractvalue(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % awpsd SYSTEM "http://0cddnr5evws01h2bfzn5zd0cm3sxvrjv7oufi4.example'||'foo.bar/">%awpsd;`
 
 func TestUrlPayloads(t *testing.T) {
-	q, _ := ParseQuery(parseQueryInput, '&', 0)
-	if len(q["var"]) == 0 {
-		t.Error("var is empty")
-	}
-}
-
-func TestParseQueryLimit(t *testing.T) {
-	q, truncated := ParseQuery("a=1&b=2&c=3&d=4", '&', 2)
-	if !truncated {
-		t.Error("expected truncated to be true")
-	}
-	if len(q) != 2 {
-		t.Errorf("expected 2 parsed pairs, got %d: %v", len(q), q)
-	}
-
-	q, truncated = ParseQuery("a=1&b=2&c=3&d=4", '&', 10)
-	if truncated {
-		t.Error("expected truncated to be false when limit is not reached")
-	}
-	if len(q) != 4 {
-		t.Errorf("expected 4 parsed pairs, got %d: %v", len(q), q)
-	}
-
-	q, truncated = ParseQuery("a=1&b=2", '&', 0)
-	if truncated {
-		t.Error("expected truncated to be false when limit is 0 (no limit)")
-	}
-	if len(q) != 2 {
-		t.Errorf("expected 2 parsed pairs, got %d: %v", len(q), q)
+	pairs, _ := ParseQueryOrdered(parseQueryInput, '&', 0)
+	if len(pairs) == 0 || pairs[0].Key != "var" || pairs[0].Value == "" {
+		t.Errorf("var is empty: %v", pairs)
 	}
 }
 
 func TestParseQueryLimitCountsTotalPairsNotDistinctKeys(t *testing.T) {
 	// Many values under a single repeated key must still be bounded by the
 	// limit, not just the number of distinct keys.
-	q, truncated := ParseQuery("a=1&a=1&a=1&a=1&a=1", '&', 2)
+	pairs, truncated := ParseQueryOrdered("a=1&a=1&a=1&a=1&a=1", '&', 2)
 	if !truncated {
 		t.Error("expected truncated to be true")
 	}
-	if got := len(q["a"]); got != 2 {
-		t.Errorf("expected 2 values under repeated key 'a', got %d: %v", got, q["a"])
+	if got := len(pairs); got != 2 {
+		t.Errorf("expected 2 values under repeated key 'a', got %d: %v", got, pairs)
 	}
 }
 
@@ -83,21 +57,9 @@ func TestParseQueryOrderedLimit(t *testing.T) {
 	}
 }
 
-// TestParseQueryLimitTrailingSeparatorAtLimit is a regression test: the limit
-// check used to run before the empty-key skip, so a trailing separator right
-// at the limit reported truncation even though nothing more was dropped.
-func TestParseQueryLimitTrailingSeparatorAtLimit(t *testing.T) {
-	q, truncated := ParseQuery("a=1&b=2&&", '&', 2)
-	if truncated {
-		t.Error("expected truncated to be false: the trailing '&&' adds no pair beyond the limit")
-	}
-	if len(q) != 2 {
-		t.Errorf("expected 2 parsed pairs, got %d: %v", len(q), q)
-	}
-}
-
-// TestParseQueryOrderedTrailingSeparatorAtLimit mirrors
-// TestParseQueryLimitTrailingSeparatorAtLimit for the ordered parser.
+// TestParseQueryOrderedTrailingSeparatorAtLimit is a regression test: the
+// limit check used to run before the empty-key skip, so a trailing separator
+// right at the limit reported truncation even though nothing more was dropped.
 func TestParseQueryOrderedTrailingSeparatorAtLimit(t *testing.T) {
 	pairs, truncated := ParseQueryOrdered("a=1&b=2&&", '&', 2)
 	if truncated {
@@ -110,13 +72,13 @@ func TestParseQueryOrderedTrailingSeparatorAtLimit(t *testing.T) {
 
 func BenchmarkParseQuery(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ParseQuery(parseQueryInput, '&', 0)
+		ParseQueryOrdered(parseQueryInput, '&', 0)
 	}
 }
 
 func BenchmarkParseQueryLimited(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ParseQuery(parseQueryInput, '&', 1)
+		ParseQueryOrdered(parseQueryInput, '&', 1)
 	}
 }
 

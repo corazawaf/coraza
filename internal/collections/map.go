@@ -15,19 +15,24 @@ import (
 
 // Map is a default collection.Map.
 //
-// Keys are kept in the order they were first added, and every read returns
-// them in that order, the values of each key in the order they were added.
-// Rules see a collection's values in the order the request carried them, as
-// in ModSecurity, so the last match a chained rule reads through TX:0-9 or
-// MATCHED_VAR is the same on every evaluation of the same request. Ranging
-// over a Go map instead gave a different order on every evaluation (#1815).
+// Every read returns the keys in the order each was first added, and the
+// values of a key in the order they were added. A repeated key is grouped
+// under its first occurrence: ?a=1&b=2&a=3 reads a=1, a=3, b=2, where
+// ModSecurity v2 keeps a=1, b=2, a=3. What matters is that the order is the
+// same on every evaluation of the same request, so the last match a chained
+// rule reads through TX:0-9 or MATCHED_VAR does not change from one
+// transaction to the next. Ranging over a Go map gave a different order on
+// every evaluation (#1815).
 type Map struct {
 	isCaseSensitive bool
 	// index maps a key, lowercased unless the map is case sensitive, to its
 	// position in entries.
 	index map[string]int
-	// entries holds one slot per key, in first-insertion order.
-	entries  []mapEntry
+	// entries holds one slot per key, in first-insertion order. Remove
+	// leaves a deleted slot behind, reclaimed by compact.
+	entries []mapEntry
+	// deleted counts the deleted slots in entries.
+	deleted  int
 	variable variables.RuleVariable
 	// totalValues tracks TotalValues incrementally so it stays O(1) to read;
 	// summing len(values) across every key on each call made checkArgumentLimit
@@ -40,6 +45,8 @@ type mapEntry struct {
 	// key is the lookup key, lowercased unless the map is case sensitive.
 	key    string
 	values []keyValue
+	// deleted marks a slot whose key was removed.
+	deleted bool
 }
 
 var _ collection.Map = &Map{}
@@ -71,12 +78,17 @@ func (c *Map) lookup(key string) []keyValue {
 	return nil
 }
 
-// put stores values under key, which must already be normalised, appending
-// a new slot when the key is not present yet.
-func (c *Map) put(key string, values []keyValue) {
-	if i, ok := c.index[key]; ok {
+// store sets the values of the slot at i, or appends a slot for key, which
+// must already be normalised, when ok is false.
+func (c *Map) store(i int, ok bool, key string, values []keyValue) {
+	if ok {
 		c.entries[i].values = values
 		return
+	}
+	if c.entries == nil {
+		// Start with room for a few keys: most collections hold only a
+		// handful, and growing from zero would allocate at 1, 2 and 4.
+		c.entries = make([]mapEntry, 0, 4)
 	}
 	c.index[key] = len(c.entries)
 	c.entries = append(c.entries, mapEntry{key: key, values: values})
@@ -106,7 +118,7 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
 	var matched [][]keyValue
 	for _, e := range c.entries {
-		if key.MatchString(e.key) {
+		if !e.deleted && key.MatchString(e.key) {
 			n += len(e.values)
 			matched = append(matched, e.values)
 		}
@@ -194,7 +206,7 @@ func (c *Map) Add(key string, value string) {
 	if i, ok := c.index[key]; ok {
 		c.entries[i].values = append(c.entries[i].values, aVal)
 	} else {
-		c.put(key, []keyValue{aVal})
+		c.store(0, false, key, []keyValue{aVal})
 	}
 	c.totalValues++
 }
@@ -205,9 +217,13 @@ func (c *Map) Set(key string, values []string) {
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
-	dataSlice := c.lookup(key)
+	slot, ok := c.index[key]
+	var dataSlice []keyValue
+	if ok {
+		dataSlice = c.entries[slot].values
+	}
 	oldLen := len(dataSlice)
-	if dataSlice == nil || cap(dataSlice) < len(values) {
+	if !ok || cap(dataSlice) < len(values) {
 		dataSlice = make([]keyValue, len(values))
 	} else {
 		dataSlice = dataSlice[:len(values)] // Reuse existing slice with the same length
@@ -215,7 +231,7 @@ func (c *Map) Set(key string, values []string) {
 	for i, v := range values {
 		dataSlice[i] = keyValue{key: originalKey, value: v}
 	}
-	c.put(key, dataSlice)
+	c.store(slot, ok, key, dataSlice)
 	c.totalValues += len(values) - oldLen
 }
 
@@ -225,15 +241,19 @@ func (c *Map) SetIndex(key string, index int, value string) {
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
-	values := c.lookup(key)
+	slot, ok := c.index[key]
+	var values []keyValue
+	if ok {
+		values = c.entries[slot].values
+	}
 	av := keyValue{key: originalKey, value: value}
 
 	switch {
 	case len(values) == 0:
-		c.put(key, []keyValue{av})
+		c.store(slot, ok, key, []keyValue{av})
 		c.totalValues++
 	case len(values) <= index:
-		c.put(key, append(values, av))
+		c.store(slot, ok, key, append(values, av))
 		c.totalValues++
 	default:
 		values[index] = av
@@ -251,14 +271,30 @@ func (c *Map) Remove(key string) {
 	}
 	c.totalValues -= len(c.entries[i].values)
 	delete(c.index, key)
-	// Shift the later slots down to keep the order; removal only comes from
-	// setvar:!col.key, which is rare compared to reads.
-	copy(c.entries[i:], c.entries[i+1:])
-	c.entries[len(c.entries)-1] = mapEntry{}
-	c.entries = c.entries[:len(c.entries)-1]
-	for j := i; j < len(c.entries); j++ {
-		c.index[c.entries[j].key] = j
+	// Mark the slot instead of shifting the later ones down, so removing
+	// many keys (setvar:!tx.%{MATCHED_VAR_NAME} over every argument) stays
+	// linear overall.
+	c.entries[i] = mapEntry{deleted: true}
+	c.deleted++
+	if c.deleted > len(c.entries)/2 {
+		c.compact()
 	}
+}
+
+// compact drops the deleted slots, keeping the order of the others.
+func (c *Map) compact() {
+	n := 0
+	for _, e := range c.entries {
+		if e.deleted {
+			continue
+		}
+		c.entries[n] = e
+		c.index[e.key] = n
+		n++
+	}
+	clear(c.entries[n:])
+	c.entries = c.entries[:n]
+	c.deleted = 0
 }
 
 // Name returns the name of the map/collection.
@@ -273,6 +309,7 @@ func (c *Map) Reset() {
 	// request's values alive through the backing array.
 	clear(c.entries)
 	c.entries = c.entries[:0]
+	c.deleted = 0
 	c.totalValues = 0
 }
 
@@ -281,6 +318,9 @@ func (c *Map) Format(res *strings.Builder) {
 	res.WriteString(c.variable.Name())
 	res.WriteString(":\n")
 	for _, e := range c.entries {
+		if e.deleted {
+			continue
+		}
 		res.WriteString("    ")
 		res.WriteString(e.key)
 		res.WriteString(": ")
@@ -305,7 +345,7 @@ func (c *Map) String() string {
 // values (via repeated Add calls) is counted once -- use TotalValues to count
 // every individual value instead.
 func (c *Map) Len() int {
-	return len(c.entries)
+	return len(c.index)
 }
 
 // TotalValues returns the total number of individual values across every key

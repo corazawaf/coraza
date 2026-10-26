@@ -56,13 +56,16 @@ func (c *NamedCollection) Remove(key string) {
 }
 
 func (c *NamedCollection) Len() int {
-	return len(c.entries)
+	return len(c.index)
 }
 
 // Data is an internal method used for serializing to JSON
 func (c *NamedCollection) Data() map[string][]string {
-	result := make(map[string][]string, len(c.entries))
+	result := make(map[string][]string, len(c.index))
 	for _, e := range c.entries {
+		if e.deleted {
+			continue
+		}
 		values := make([]string, len(e.values))
 		for i, a := range e.values {
 			values[i] = a.value
@@ -106,7 +109,7 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
 	var matched [][]keyValue
 	for _, e := range c.collection.entries {
-		if key.MatchString(e.key) {
+		if !e.deleted && key.MatchString(e.key) {
 			n += len(e.values)
 			matched = append(matched, e.values)
 		}

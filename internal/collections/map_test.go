@@ -16,6 +16,7 @@ package collections
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -48,14 +49,30 @@ func TestMap(t *testing.T) {
 `
 
 	if have := fmt.Sprint(c); have != wantStr {
-		// Map order is not guaranteed, not pretty but checking twice is the simplest for now.
-		wantStr = `REQUEST_HEADERS:
+		t.Errorf("String() = %q, want %q", have, wantStr)
+	}
+
+	// A removed key that comes back goes after the keys still present, and
+	// removing keys keeps the order of the rest (#1815).
+	c.Remove("user")
+	c.Add("User", "back")
+	c.Add("accept", "value4")
+	wantStr = `REQUEST_HEADERS:
     user-agent: value2,value3
-    user: value
+    user: back
+    accept: value4
 `
-		if have != wantStr {
-			t.Errorf("String() = %q, want %q", have, wantStr)
-		}
+	if have := fmt.Sprint(c); have != wantStr {
+		t.Errorf("String() after Remove = %q, want %q", have, wantStr)
+	}
+	c.Remove("user-agent")
+	c.Remove("missing")
+	var keys []string
+	for _, m := range c.FindAll() {
+		keys = append(keys, m.Key())
+	}
+	if want := []string{"User", "accept"}; !slices.Equal(keys, want) {
+		t.Errorf("FindAll() keys after Remove = %q, want %q", keys, want)
 	}
 
 	if c.Len() != len(c.index) {
@@ -189,14 +206,7 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 `
 
 	if have := fmt.Sprint(c); have != wantStr {
-		// Map order is not guaranteed, not pretty but checking twice is the simplest for now.
-		wantStr = `ARGS_POST:
-    key2: value2,value3
-    key: value
-`
-		if have != wantStr {
-			t.Errorf("String() = %q, want %q", have, wantStr)
-		}
+		t.Errorf("String() = %q, want %q", have, wantStr)
 	}
 
 	if c.Len() != len(c.index) {

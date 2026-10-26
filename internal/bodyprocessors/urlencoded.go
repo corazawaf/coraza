@@ -23,9 +23,9 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 	}
 
 	b := buf.String()
-	// ParseQuery itself stops once options.ArgumentLimit total pairs have
+	// ParseQueryOrdered itself stops once options.ArgumentLimit total pairs have
 	// been parsed (see GHSA-3ww9-vw83-9w5x): the copy below never needs to
-	// re-enforce the cap, since values can never hold more than the limit.
+	// re-enforce the cap, since pairs can never hold more than the limit.
 	//
 	// The ordered variant keeps ARGS_POST in body order, so rules see the
 	// arguments in the same order on every evaluation (corazawaf/coraza#1815).
