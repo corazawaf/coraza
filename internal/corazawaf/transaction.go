@@ -1604,7 +1604,15 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			if al.Transaction_.Response_ == nil {
 				al.Transaction_.Response_ = &auditlog.TransactionResponse{}
 			}
+			// When the transaction was interrupted with a status, that status
+			// replaces the backend's: RESPONSE_STATUS is never set for a
+			// request-phase interruption, and holds the backend's status for
+			// a response-phase one. ProcessLogging uses the same status to
+			// decide relevance.
 			status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
+			if tx.interruption != nil && tx.interruption.Status != 0 {
+				status = tx.interruption.Status
+			}
 			al.Transaction_.Response_.Status_ = status
 			al.Transaction_.Response_.Headers_ = tx.variables.responseHeaders.Data()
 		case types.AuditLogPartAuditLogTrailer:

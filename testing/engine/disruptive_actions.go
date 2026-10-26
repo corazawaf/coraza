@@ -18,6 +18,17 @@ var _ = profile.RegisterProfile(profile.Profile{
 		{
 			Title: "disruptive_actions",
 			Stages: []profile.Stage{
+				// Without an interruption the audit log keeps the backend's status.
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/pass",
+						},
+						Output: profile.ExpectedOutput{
+							AuditLogStatus: 200,
+						},
+					},
+				},
 				// Phase 1
 				{
 					Stage: profile.SubStage{
@@ -42,6 +53,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{2},
+							AuditLogStatus: 403,
 							Interruption: &profile.ExpectedInterruption{
 								Status: 403,
 								Data:   "",
@@ -254,6 +266,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{42},
+							AuditLogStatus: 500,
 							Interruption: &profile.ExpectedInterruption{
 								Status: 500,
 								Data:   "",

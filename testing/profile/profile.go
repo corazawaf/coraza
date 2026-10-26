@@ -66,6 +66,9 @@ type ExpectedOutput struct {
 	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
 	Status            any                   `yaml:"status,omitempty"`
 	Interruption      *ExpectedInterruption `yaml:"interruption,omitempty"`
+	// AuditLogStatus is the response status recorded in the audit log
+	// (part F). Zero means it is not checked.
+	AuditLogStatus int `yaml:"audit_log_status,omitempty"`
 }
 
 // ExpectedInterruption contains the expected interruption results for a test

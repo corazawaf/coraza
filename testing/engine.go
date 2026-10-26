@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 	"github.com/corazawaf/coraza/v3/types"
 )
@@ -241,6 +242,14 @@ func (t *Test) OutputErrors() []string {
 	if lc := t.ExpectedOutput.NoLogContains; lc != "" {
 		if t.LogContains(lc) {
 			errors = append(errors, fmt.Sprintf("Expected log to not contain '%s'", lc))
+		}
+	}
+	if want := t.ExpectedOutput.AuditLogStatus; want != 0 {
+		tx, ok := t.transaction.(interface{ AuditLog() *auditlog.Log })
+		if !ok {
+			errors = append(errors, "AuditLogStatus: transaction does not expose its audit log")
+		} else if got := tx.AuditLog().Transaction().Response().Status(); got != want {
+			errors = append(errors, fmt.Sprintf("AuditLogStatus: expected: '%d', got: '%d'", want, got))
 		}
 	}
 	/*
