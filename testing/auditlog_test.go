@@ -71,6 +71,10 @@ func TestAuditLogMessages(t *testing.T) {
 }
 
 func TestAuditLogRelevantOnly(t *testing.T) {
+	// A rule with log (which implies auditlog) marks the transaction for audit
+	// logging, so it is written even though the status (200) does not match
+	// SecAuditLogRelevantStatus: the two conditions are alternatives.
+	// Regression test for https://github.com/corazawaf/coraza/issues/1809
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
@@ -101,9 +105,8 @@ func TestAuditLogRelevantOnly(t *testing.T) {
 	}
 	tx.ProcessLogging()
 	var al2 auditlog.Log
-	// this should fail, there should be no log
-	if err := json.NewDecoder(file).Decode(&al2); err == nil {
-		t.Error(err)
+	if err := json.NewDecoder(file).Decode(&al2); err != nil {
+		t.Errorf("expected audit log for a transaction marked by a log rule, got error: %v", err)
 	}
 }
 

@@ -1061,63 +1061,11 @@ func TestResetCapture(t *testing.T) {
 }
 
 func TestRelevantAuditLogging(t *testing.T) {
-	tests := []struct {
-		name         string
-		status       string
-		interruption *types.Interruption
-		relevantLog  bool
-	}{
-		{
-			name:         "TestRelevantAuditLogging",
-			status:       "403",
-			interruption: nil,
-			relevantLog:  true,
-		},
-		{
-			name:         "TestNotRelevantAuditLogging",
-			status:       "200",
-			interruption: nil,
-			relevantLog:  false,
-		},
-		{
-			name: "TestRelevantAuditLoggingWithInterruption",
-			interruption: &types.Interruption{
-				Status: 403,
-				Action: "deny",
-			},
-			relevantLog: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tx := makeTransaction(t)
-			debugLog := bytes.Buffer{}
-			tx.debugLogger = debuglog.Default().WithLevel(debuglog.LevelDebug).WithOutput(&debugLog)
-			tx.WAF.AuditLogRelevantStatus = regexp.MustCompile(`(403)`)
-			tx.variables.responseStatus.Set(tt.status)
-			tx.interruption = tt.interruption
-			tx.AuditEngine = types.AuditEngineRelevantOnly
-			tx.audit = true // Mimics that there is something to audit
-			tx.ProcessLogging()
-			// TODO how do we check if the log was written?
-			if err := tx.Close(); err != nil {
-				t.Error(err)
-			}
-			if tt.relevantLog && strings.Contains(debugLog.String(), "Transaction status not marked for audit logging") {
-				t.Errorf("unexpected debug log: %q. Transaction status should be marked for audit logging", debugLog.String())
-			}
-			if !tt.relevantLog && !strings.Contains(debugLog.String(), "Transaction status not marked for audit logging") {
-				t.Errorf("missing debug log. Transaction status should be not marked for audit logging not being relevant")
-			}
-		})
-	}
-}
-
-func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
-	// Regression test for https://github.com/corazawaf/coraza/issues/1576
-	// When tx.audit is false (no rule with auditlog action matched),
-	// SecAuditLogRelevantStatus should still cause logging if the status matches.
+	// With SecAuditEngine RelevantOnly a transaction is audit logged if a rule
+	// marked it for audit logging (tx.audit) OR its status matches
+	// SecAuditLogRelevantStatus.
+	// Regression test for https://github.com/corazawaf/coraza/issues/1576 and
+	// https://github.com/corazawaf/coraza/issues/1809
 	tests := []struct {
 		name         string
 		status       string
@@ -1153,10 +1101,10 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 			shouldLog: true,
 		},
 		{
-			name:      "audit=true, non-relevant status → should not log",
+			name:      "audit=true, non-relevant status → should log",
 			status:    "200",
 			audit:     true,
-			shouldLog: false,
+			shouldLog: true,
 		},
 	}
 
