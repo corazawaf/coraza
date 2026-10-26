@@ -817,6 +817,9 @@ func TestAuditLogFields(t *testing.T) {
 	rule.Log = true
 	rule.Audit = true
 	rule.Severity_ = types.RuleSeverityNotice
+	if have := tx.AuditLog().Transaction().HighestSeverity(); have != "" {
+		t.Errorf("unexpected highest severity in audit log before any match, want \"\", have %q", have)
+	}
 	tx.MatchRule(rule, []types.MatchData{
 		&corazarules.MatchData{
 			Variable_: variables.UniqueID,

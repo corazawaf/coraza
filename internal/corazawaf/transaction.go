@@ -1555,6 +1555,13 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			Msg("Error converting request length to integer")
 	}
 
+	// HIGHEST_SEVERITY keeps its default of 255 when no matched rule declared a
+	// severity. That is not a severity, so the record leaves the field empty.
+	highestSeverity := tx.variables.highestSeverity.Get()
+	if highestSeverity == strconv.Itoa(defaultHighestSeverity) {
+		highestSeverity = ""
+	}
+
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction_ = auditlog.Transaction{
@@ -1574,7 +1581,7 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			Args_:        tx.variables.args,
 			Length_:      int32(requestLength),
 		},
-		HighestSeverity_: tx.variables.highestSeverity.Get(),
+		HighestSeverity_: highestSeverity,
 		IsInterrupted_:   tx.IsInterrupted(),
 	}
 

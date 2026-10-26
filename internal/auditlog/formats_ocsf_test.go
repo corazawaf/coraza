@@ -65,8 +65,8 @@ func TestOCSFFormatter(t *testing.T) {
 			}
 		}
 
-		// validate severity: HIGHEST_SEVERITY is 255 when no matched rule set a
-		// severity, which must not be reported as "emergency"
+		// validate severity: an empty or unparsable highest severity (no matched
+		// rule set one) must not be reported as "emergency"
 		wantSeverity := map[string]string{"2": "critical"}[al.Transaction().HighestSeverity()]
 		if wra.Severity != wantSeverity {
 			t.Errorf("failed to match audit log Severity for highest severity %q, \ngot: %q\nexpected: %q", al.Transaction().HighestSeverity(), wra.Severity, wantSeverity)
