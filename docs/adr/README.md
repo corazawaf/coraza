@@ -130,6 +130,6 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0059](0059-secresponsebodyjsondepthlimit.md) | GHSA-3c6w-j9xm-8h2h | 2026-09-26 | unreleased | F | `SecResponseBodyJsonDepthLimit` directive |
 | [0060](0060-json-bounded-recursion-prescan.md) | GHSA-6gcq-wc29-5xf2 | 2026-09-30 | unreleased | P | Iterative depth pre-scan before `gjson.Valid` in the JSON body processor |
 | [0061](0061-transformation-cache-value-identity.md) | [#1682](https://github.com/corazawaf/coraza/pull/1682) | 2026-10-15 | unreleased | ⚡ | Transformation cache keyed by value identity |
-| [0062](0062-secruleupdatetargetbymsg.md) | [#PRNUM](https://github.com/corazawaf/coraza/pull/PRNUM) | 2026-10-27 (expected) | unreleased | P | `SecRuleUpdateTargetByMsg` matches the message by string equality |
+| [0062](0062-secruleupdatetargetbymsg.md) | [#1831](https://github.com/corazawaf/coraza/pull/1831) | 2026-10-27 (expected) | unreleased | P | `SecRuleUpdateTargetByMsg` matches the message by string equality |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor

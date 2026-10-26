@@ -3,7 +3,7 @@
 - **Status:** proposed
 - **Date:** 2026-10-27 (expected; update before merge)
 - **Version:** unreleased (post-v3.8.1)
-- **PR:** [#PRNUM](https://github.com/corazawaf/coraza/pull/PRNUM)
+- **PR:** [#1831](https://github.com/corazawaf/coraza/pull/1831)
 - **Issue(s):** [#1818](https://github.com/corazawaf/coraza/issues/1818)
 - **Deciders:** @fzipi
 - **Category:** Parity (ModSecurity v3)
@@ -71,7 +71,7 @@ comments. Update this section with quotes if review produces discussion.
 
 ## References
 
-- PR: https://github.com/corazawaf/coraza/pull/PRNUM
+- PR: https://github.com/corazawaf/coraza/pull/1831
 - Issue: https://github.com/corazawaf/coraza/issues/1818
 - Related ADRs: ADR-0012 (`SecRuleUpdateTargetByTag`), ADR-0020
   (`SecRuleUpdateActionById`)
