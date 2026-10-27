@@ -148,9 +148,9 @@ const (
 	// **Note**: Your policies must have a rule to check for request body processor errors at the very beginning of phase 2. Failure to do so will leave the door open for impedance mismatch attacks. It is possible, for example, that a payload that cannot be parsed by Coraza can be successfully parsed by more tolerant parser operating in the application. If your policy dictates blocking, then you should reject the request if error is detected. When operating in detection-only mode, your rule should alert with high severity when request body processing fails.
 	ReqbodyError
 	// Description: If there's been an error during request body parsing, the variable will
-	// contain the error message, prefixed with the processor name when a body processor is
-	// active. A body that both exceeds SecArgumentsLimit and fails to parse lists both
-	// reasons, separated by "; ".
+	// contain the reasons, each prefixed with the body processor active when it was
+	// recorded, if any. A body that both exceeds SecArgumentsLimit and fails to parse lists
+	// both reasons, separated by "; ".
 	// ---
 	// ```seclang
 	// SecRule REQBODY_ERROR_MSG "failed to parse" "id:40"

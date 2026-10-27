@@ -36,21 +36,42 @@ func GetBodyProcessor(name string) (plugintypes.BodyProcessor, error) {
 const ArgumentsLimitExceededMsg = "SecArgumentsLimit exceeded"
 
 // RecordRequestBodyError sets REQBODY_ERROR and adds reason to REQBODY_ERROR_MSG.
-// The first reason is prefixed with the active body processor, as in
-// "JSON: invalid JSON"; later reasons are joined with "; ". A reason already
-// contained in the message is not repeated. It lives here so processors and the
-// transaction share it.
+// Reasons are joined with "; ", each prefixed with the active body processor, as
+// in "JSON: invalid JSON". A reason already recorded is not repeated. It lives
+// here so processors and the transaction share it.
 func RecordRequestBodyError(v plugintypes.TransactionVariables, reason string) {
 	v.RequestBodyError().(*collections.Single).Set("1")
 	errMsg := v.RequestBodyErrorMsg().(*collections.Single)
-	if current := errMsg.Get(); current == "" {
-		if processor := v.RequestBodyProcessor().Get(); processor != "" {
-			reason = processor + ": " + reason
-		}
-		errMsg.Set(reason)
-	} else if !strings.Contains(current, reason) {
-		errMsg.Set(current + "; " + reason)
+	current := errMsg.Get()
+	processor := v.RequestBodyProcessor().Get()
+	if hasReason(current, reason, processor) {
+		return
 	}
+	if processor != "" {
+		reason = processor + ": " + reason
+	}
+	if current != "" {
+		reason = current + "; " + reason
+	}
+	errMsg.Set(reason)
+}
+
+// hasReason reports whether msg, a "; "-separated list of reasons, already holds
+// reason as a whole entry, bare or prefixed with processor.
+func hasReason(msg, reason, processor string) bool {
+	for msg != "" {
+		part, rest, _ := strings.Cut(msg, "; ")
+		if part == reason {
+			return true
+		}
+		if processor != "" && strings.HasPrefix(part, processor) {
+			if bare, ok := strings.CutPrefix(part[len(processor):], ": "); ok && bare == reason {
+				return true
+			}
+		}
+		msg = rest
+	}
+	return false
 }
 
 // setRequestArgumentsLimitReached records request-body truncation in

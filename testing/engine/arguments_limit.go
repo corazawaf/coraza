@@ -84,7 +84,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{2, 200002},
-							LogContains:    `[data "JSON: SecArgumentsLimit exceeded; invalid JSON"]`,
+							LogContains:    `[data "JSON: SecArgumentsLimit exceeded; JSON: invalid JSON"]`,
 							Interruption: &profile.ExpectedInterruption{
 								RuleID: 200002,
 								Action: "deny",

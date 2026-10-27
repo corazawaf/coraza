@@ -57,8 +57,8 @@ const (
 	// for request body parsing, 0 means no error, 1 means error. It is also 1
 	// when a request body argument was dropped because of SecArgumentsLimit.
 	ReqbodyError = variables.ReqbodyError
-	// ReqbodyErrorMsg contains the request body error reasons, normally prefixed
-	// with the processor name and joined with "; " when there is more than one
+	// ReqbodyErrorMsg contains the request body error reasons, each prefixed with
+	// the processor name when one is set and joined with "; " when there is more than one
 	ReqbodyErrorMsg = variables.ReqbodyErrorMsg
 	// ReqbodyProcessorError is 1 when the request body processor failed; unlike
 	// ReqbodyError, it is not set by an argument dropped because of SecArgumentsLimit

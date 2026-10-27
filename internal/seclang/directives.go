@@ -1770,9 +1770,9 @@ func directiveSecDataset(options *DirectiveOptions) error {
 // is set to 1, so a rule can reject the request (see rules 200004 and 200005 in
 // coraza.conf-recommended). A dropped request body argument also sets REQBODY_ERROR
 // to 1 and adds "SecArgumentsLimit exceeded" to REQBODY_ERROR_MSG, prefixed with the
-// processor name when a body processor dropped it ("JSON: SecArgumentsLimit exceeded"),
-// so rule 200002 can reject the request in configurations that predate rules
-// 200004/200005. The value must be greater than 0.
+// active body processor, if any ("JSON: SecArgumentsLimit exceeded"), so rule 200002
+// can reject the request in configurations that predate rules 200004/200005. The
+// value must be greater than 0.
 //
 // Note: ModSecurity v2 sets REQBODY_ERROR for every request-argument origin. Coraza
 // sets it for request-body arguments only; query and path overflows set only
