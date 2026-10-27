@@ -32,8 +32,10 @@ type AuditLogTransaction interface {
 	Response() AuditLogTransactionResponse
 	HasResponse() bool
 	Producer() AuditLogTransactionProducer
-	HighestSeverity() string // The highest severity of the matched rules for the transaction
-	IsInterrupted() bool     // True if the transaction was interrupted
+	// HighestSeverity returns the highest severity of the matched rules, or an
+	// empty string when no matched rule declares one.
+	HighestSeverity() string
+	IsInterrupted() bool // True if the transaction was interrupted
 }
 
 // AuditLogTransactionResponse contains response specific information
