@@ -28,9 +28,11 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{
 								1,
+								3,
 							},
 							NonTriggeredRules: []int{
 								2,
+								4,
 							},
 						},
 					},
@@ -159,6 +161,9 @@ SecDefaultAction "phase:1,log,pass"
 
 SecRule REQUEST_URI "/allow_me" "id:1,phase:1,allow,log,msg:'ALLOWED'"
 SecRule REQUEST_URI "/allow_me" "id:2,phase:1,deny,log,msg:'DENIED'"
+# A plain allow skips the remaining request and response phases (rule 4), but the logging phase always runs (rule 3).
+SecRule REQUEST_URI "/allow_me" "id:3,phase:5,pass,log,msg:'Logging phase still runs'"
+SecRule REQUEST_URI "/allow_me" "id:4,phase:3,pass,log,msg:'Response phase skipped'"
 
 # Rule 11 allows phase 1, so rule 12 and 13, being both phase 1, are not triggered. Rule 22 is then triggered in phase 2.
 SecRule REQUEST_URI "/partial_allow" "id:11,phase:1,allow:phase,msg:'Allowed in this phase only'"
