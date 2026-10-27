@@ -947,10 +947,13 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 
 func setAndReturnBodyLimitInterruption(tx *Transaction, status int) (*types.Interruption, int, error) {
 	tx.debugLogger.Warn().Msg("Disrupting transaction with body size above the configured limit (Action Reject)")
-	tx.interruption = &types.Interruption{
+	// Interrupt honours the transaction's engine mode: under DetectionOnly (for
+	// example after ctl:ruleEngine=DetectionOnly) the interruption is only
+	// recorded and nil is returned, exactly as for a rule's disruptive action.
+	tx.Interrupt(&types.Interruption{
 		Status: status,
 		Action: "deny",
-	}
+	})
 	return tx.interruption, 0, nil
 }
 
