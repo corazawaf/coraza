@@ -137,7 +137,8 @@ const (
 	// Description: Contains the status of the request body processor used for request body
 	// parsing. The values can be 0 (no error) or 1 (error). This variable will be set by
 	// request body processors (typically the multipart/request-data parser, JSON or the XML
-	// parser) when they fail to do their work.
+	// parser) when they fail to do their work. Unless SecRuleEngine is Off, Coraza warns at
+	// startup when no loaded rule reads it.
 	// ---
 	// ```seclang
 	// SecRule REQBODY_ERROR "@eq 1" "phase:2,id:39,deny,log,msg:'Request Body Processor Error Detected'"
@@ -753,5 +754,6 @@ const (
 	URIParseError
 	// ArgumentsLimitReached is set to 1 when the number of arguments
 	// exceeds the configured SecArgumentsLimit and arguments were dropped.
+	// Unless SecRuleEngine is Off, Coraza warns at startup when no loaded rule reads it.
 	ArgumentsLimitReached
 )

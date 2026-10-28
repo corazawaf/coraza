@@ -1768,7 +1768,8 @@ func directiveSecDataset(options *DirectiveOptions) error {
 // bodies (ARGS_POST) are each counted separately; JSON response bodies (RESPONSE_ARGS)
 // use the same limit. Arguments beyond the limit are dropped and ARGUMENTS_LIMIT_REACHED
 // is set to 1, so a rule can reject the request (see rules 200004 and 200005 in
-// coraza.conf-recommended). The value must be greater than 0.
+// coraza.conf-recommended); unless SecRuleEngine is Off, Coraza warns at startup when
+// no loaded rule reads that variable. The value must be greater than 0.
 //
 // Example:
 // ```seclang
