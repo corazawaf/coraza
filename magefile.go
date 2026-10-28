@@ -221,13 +221,29 @@ func Fuzz() error {
 	for _, pkgTests := range tests {
 		for _, test := range pkgTests.tests {
 			fmt.Println("Running", test)
-			if err := sh.RunV("go", "test", "-fuzz="+test, "-fuzztime=3m", pkgTests.pkg); err != nil {
+			var out strings.Builder
+			w := io.MultiWriter(os.Stdout, &out)
+			if _, err := sh.Exec(nil, w, w, "go", "test", "-fuzz="+test, "-fuzztime=3m", pkgTests.pkg); err != nil {
+				if isFuzzDeadlineFlake(out.String()) {
+					fmt.Println("Ignoring spurious 'context deadline exceeded' at the end of fuzzing (https://github.com/golang/go/issues/75804)")
+					continue
+				}
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+// isFuzzDeadlineFlake reports whether a failed fuzz run only hit the Go toolchain
+// bug where -fuzztime expiry is reported as "context deadline exceeded"
+// (https://github.com/golang/go/issues/75804). A real finding always writes a
+// failing input to testdata. Remove once CI runs a Go release with the fix
+// (1.27, or the 1.26 backport tracked in https://github.com/golang/go/issues/82362).
+func isFuzzDeadlineFlake(output string) bool {
+	return strings.Contains(output, "context deadline exceeded") &&
+		!strings.Contains(output, "Failing input written to")
 }
 
 // Doc runs godoc, access at http://localhost:6060.
