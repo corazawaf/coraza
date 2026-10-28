@@ -97,6 +97,9 @@ const (
 //  4. Option `forceRequestBodyVariable“ allows you to configure the `REQUEST_BODY` variable to be set when there is no request body processor configured.
 //     This allows for inspection of request bodies of unknown types.
 //
+//  5. Options `requestBodyLimit` and `responseBodyLimit` accept a value from 1 to 1073741824 (1GiB), and can
+//     raise the limit above `SecRequestBodyLimit` / `SecResponseBodyLimit`. Other values are logged and ignored.
+//
 // Example:
 // ```seclang
 // # Parse requests with Content-Type "text/xml" as XML
@@ -132,6 +135,25 @@ func (a *ctlFn) Init(m plugintypes.RuleMetadata, data string) error {
 	var err error
 	a.action, a.value, a.collection, a.colKey, a.colKeyRx, err = parseCtl(data, memoizer)
 	return err
+}
+
+// maxBodyLimit is the hard cap on a body limit, the same one WAF.Validate
+// applies to SecRequestBodyLimit and SecResponseBodyLimit.
+const maxBodyLimit = 1 << 30 // 1GiB
+
+// parseBodyLimit parses the value of ctl:requestBodyLimit and
+// ctl:responseBodyLimit. Like ModSecurity, it rejects values that are not
+// positive or that exceed the hard cap: the body buffers enforce this limit,
+// so it bounds what a transaction can write to memory and disk.
+func parseBodyLimit(s string) (int64, error) {
+	limit, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	if limit <= 0 || limit > maxBodyLimit {
+		return 0, fmt.Errorf("limit must be between 1 and %d", maxBodyLimit)
+	}
+	return limit, nil
 }
 
 // parseOnOff turns a string value into a boolean equivalent on/off into true/false
@@ -234,7 +256,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 		}
 	case ctlRequestBodyLimit:
 		if tx.LastPhase() <= types.PhaseRequestHeaders {
-			limit, err := strconv.ParseInt(a.value, 10, 64)
+			limit, err := parseBodyLimit(a.value)
 			if err != nil {
 				tx.DebugLogger().Error().
 					Str("ctl", "RequestBodyLimit").
@@ -328,7 +350,7 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 
 	case ctlResponseBodyLimit:
 		if tx.LastPhase() <= types.PhaseResponseHeaders {
-			limit, err := strconv.ParseInt(a.value, 10, 64)
+			limit, err := parseBodyLimit(a.value)
 			if err != nil {
 				tx.DebugLogger().Error().
 					Str("ctl", "ResponseBodyLimit").
