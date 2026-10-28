@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -406,9 +408,8 @@ func directiveSecRuleEngine(options *DirectiveOptions) error {
 // existing configurations continue to load.
 // Syntax: SecTmpDir /path/to/dir
 // ---
-// **Note:** This handler backs `SecArgumentSeparator`, `SecCookieFormat`,
-// `SecRuleUpdateTargetByMsg`, `SecRuleScript`, `SecRulePerfTime`, `SecUnicodeMap` and
-// `SecTmpDir`. All are accepted and ignored.
+// **Note:** This handler backs `SecArgumentSeparator`, `SecCookieFormat`, `SecRuleScript`,
+// `SecRulePerfTime`, `SecUnicodeMap` and `SecTmpDir`. All are accepted and ignored.
 //
 // Example:
 // ```seclang
@@ -1723,6 +1724,107 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 		}
 	}
 	return nil
+}
+
+// Description: Updates the target (variable) list of the specified rule(s) by message.
+// Syntax: SecRuleUpdateTargetByMsg MESSAGE TARGET1[|TARGET2|TARGET3]
+// ---
+// As an alternative to `SecRuleUpdateTargetById`, this directive will append variables to every rule
+// whose `msg` equals the first parameter, with the targets provided in the second parameter.
+// Matching is by case-sensitive string equality against the rule's unexpanded message, as in
+// `SecRuleRemoveByMsg` and ModSecurity v3; ModSecurity v2 treats the message as a regular expression.
+// Quote the message with ' or " when it contains spaces; a quote inside it is escaped with a
+// backslash. The targets are separated by a pipe character.
+//
+// Example:
+// ```seclang
+// SecRuleUpdateTargetByMsg "SQL Injection Attack" "!ARGS:query"
+// ```
+func directiveSecRuleUpdateTargetByMsg(options *DirectiveOptions) error {
+	// Parser.evaluateLine strips the outer double quotes of options that start and end with
+	// one, so `"my msg" "ARGS"` arrives here as `my msg" "ARGS`.
+	stripped := options.Opts != "" && strings.HasSuffix(options.Raw, `"`+options.Opts+`"`)
+	msg, inputVars, ok := splitMsgAndTargets(options.Opts, stripped)
+	if !ok {
+		return errors.New("syntax error: SecRuleUpdateTargetByMsg \"MESSAGE\" \"VARIABLES\"")
+	}
+
+	// Indexed, not ranged: see the note in directiveSecRuleUpdateTargetByID.
+	rules := options.WAF.Rules.GetRules()
+	for i := range rules {
+		if rules[i].Msg == nil || rules[i].Msg.String() != msg {
+			continue
+		}
+		rp := RuleParser{
+			rule: &rules[i],
+			options: RuleOptions{
+				WAF: options.WAF,
+			},
+			defaultActions: map[types.RulePhase][]ruleAction{},
+		}
+		if err := rp.ParseVariables(inputVars); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// splitMsgAndTargets splits `MESSAGE TARGETS` into its two arguments. An argument is either
+// quoted with ' or ", in which case it may contain spaces and quotes escaped with a backslash,
+// or a run of non-space characters. outerQuotesStripped restores the pair of double quotes
+// that the parser removed from around opts.
+func splitMsgAndTargets(opts string, outerQuotesStripped bool) (msg string, targets string, ok bool) {
+	if outerQuotesStripped {
+		opts = `"` + opts + `"`
+	}
+	return splitTwoArgs(opts)
+}
+
+// splitTwoArgs returns the two arguments of s, failing if there are more or fewer.
+func splitTwoArgs(s string) (first string, second string, ok bool) {
+	first, rest, ok := cutArg(s)
+	if !ok {
+		return "", "", false
+	}
+	second, rest, ok = cutArg(rest)
+	if !ok || strings.TrimSpace(rest) != "" {
+		return "", "", false
+	}
+	return first, second, true
+}
+
+// cutArg returns the first non-empty argument of s, unquoted, and the text after it.
+func cutArg(s string) (arg string, rest string, ok bool) {
+	s = strings.TrimLeftFunc(s, unicode.IsSpace)
+	if s == "" {
+		return "", "", false
+	}
+	q := s[0]
+	if q != '"' && q != '\'' {
+		if end := strings.IndexFunc(s, unicode.IsSpace); end != -1 {
+			return s[:end], s[end:], true
+		}
+		return s, "", true
+	}
+	escaped := false
+	for i := 1; i < len(s); i++ {
+		switch {
+		case escaped:
+			escaped = false
+		case s[i] == '\\':
+			escaped = true
+		case s[i] == q:
+			arg, rest = s[1:i], s[i+1:]
+			// The closing quote must end the argument.
+			if r, _ := utf8.DecodeRuneInString(rest); rest != "" && !unicode.IsSpace(r) {
+				return "", "", false
+			}
+			arg = strings.ReplaceAll(arg, `\`+string(q), string(q))
+			return arg, rest, arg != ""
+		}
+	}
+	// Unterminated quote.
+	return "", "", false
 }
 
 // Description: Continues loading a rule set when a rule fails to compile, instead of aborting.

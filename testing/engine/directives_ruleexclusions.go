@@ -35,6 +35,8 @@ var _ = profile.RegisterProfile(profile.Profile{
 								50,
 								62,
 								51,
+								71,
+								72,
 							},
 							NonTriggeredRules: []int{
 								10,
@@ -43,6 +45,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								40,
 								60,
 								61,
+								70,
 							},
 						},
 					},
@@ -89,6 +92,16 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRule ARGS:t1|REQUEST_COOKIES "@rx aaa" "id:62,phase:1,log,tag:tag-2"
 	# The tag might also be wrapped in double quotes
 	SecRuleUpdateTargetByTag "tag-2" "!ARGS:t1|!ARGS:t2"
+
+	# ARGS:t1 is removed by SecRuleUpdateTargetByMsg, rule 70 should not be triggered.
+	# Matching is case sensitive, so rule 71 should still be triggered.
+	SecRule ARGS:t1 "@rx aaa" "id:70,phase:1,log,msg:'Update Me'"
+	SecRule ARGS:t1 "@rx aaa" "id:71,phase:1,log,msg:'update me'"
+	SecRuleUpdateTargetByMsg "Update Me" "!ARGS:t1"
+
+	# ARGS:t1 is added by SecRuleUpdateTargetByMsg, it should trigger rule 72
+	SecRule REQUEST_BODY "@rx aaa" "id:72,phase:1,log,msg:'Add Me'"
+	SecRuleUpdateTargetByMsg "Add Me" "ARGS:t1"
 
 	`,
 })
