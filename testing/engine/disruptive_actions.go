@@ -59,7 +59,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{3},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 3,
 								Action: "drop",
@@ -173,7 +173,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{23},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 500,
 								Data:   "",
 								RuleID: 23,
 								Action: "drop",
@@ -222,7 +222,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{33},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 33,
 								Action: "drop",
@@ -271,7 +271,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{43},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 43,
 								Action: "drop",
@@ -320,7 +320,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						Output: profile.ExpectedOutput{
 							TriggeredRules: []int{53},
 							Interruption: &profile.ExpectedInterruption{
-								Status: 0,
+								Status: 403,
 								Data:   "",
 								RuleID: 53,
 								Action: "drop",
@@ -350,13 +350,13 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 SecRule REQUEST_URI "/redirect1$" "phase:1,id:1,log,status:302,redirect:https://www.example.com"
-# deny action defaults to status 403
+# deny and drop actions default to status 403
 SecRule REQUEST_URI "/deny1$" "phase:1,id:2,log,deny"
 SecRule REQUEST_URI "/drop1$" "phase:1,id:3,log,drop"
 
 SecRule REQUEST_URI "/redirect2$" "phase:2,id:21,log,status:302,redirect:https://www.example.com"
 SecRule REQUEST_URI "/deny2$" "phase:2,id:22,log,status:500,deny"
-SecRule REQUEST_URI "/drop2$" "phase:2,id:23,log,drop"
+SecRule REQUEST_URI "/drop2$" "phase:2,id:23,log,status:500,drop"
 
 SecRule REQUEST_URI "/redirect3$" "phase:3,id:31,log,status:302,redirect:https://www.example.com"
 SecRule REQUEST_URI "/deny3$" "phase:3,id:32,log,status:500,deny"
