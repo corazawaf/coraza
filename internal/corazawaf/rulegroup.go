@@ -89,12 +89,20 @@ func (rg *RuleGroup) FindByID(id int) *Rule {
 	return nil
 }
 
-// DiscardPendingChain removes the last rule from the group when it is an open
-// chain starter (HasChain=true). Called when a chain-member parse fails so the
-// partial chain is not left in the rule graph.
+// DiscardPendingChain removes the last rule from the group when its chain is
+// still open, that is when the last link has HasChain set but no Chain yet.
+// Called when a chain-member parse fails so the partial chain is not left in
+// the rule graph. A complete chain is left untouched.
 func (rg *RuleGroup) DiscardPendingChain() {
 	last := len(rg.rules) - 1
-	if last >= 0 && rg.rules[last].HasChain {
+	if last < 0 {
+		return
+	}
+	tail := &rg.rules[last]
+	for tail.Chain != nil {
+		tail = tail.Chain
+	}
+	if tail.HasChain {
 		rg.rules = rg.rules[:last]
 	}
 }
