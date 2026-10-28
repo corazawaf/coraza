@@ -70,43 +70,6 @@ func TestAuditLogMessages(t *testing.T) {
 	}
 }
 
-func TestAuditLogRelevantOnly(t *testing.T) {
-	waf := corazawaf.NewWAF()
-	parser := seclang.NewParser(waf)
-	if err := parser.FromString(`
-		SecRuleEngine DetectionOnly
-		SecAuditEngine RelevantOnly
-		SecAuditLogFormat json
-		SecAuditLogType serial
-		SecAuditLogRelevantStatus 401
-		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,log,msg:'unconditional match'"
-	`); err != nil {
-		t.Fatal(err)
-	}
-
-	file, err := os.CreateTemp(t.TempDir(), "tmp.log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-	if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
-		t.Fatal(err)
-	}
-	tx := waf.NewTransaction()
-	tx.AddGetRequestArgument("test", "test")
-	tx.ProcessRequestHeaders()
-	// now we read file
-	if _, err := file.Seek(0, 0); err != nil {
-		t.Error(err)
-	}
-	tx.ProcessLogging()
-	var al2 auditlog.Log
-	// this should fail, there should be no log
-	if err := json.NewDecoder(file).Decode(&al2); err == nil {
-		t.Error(err)
-	}
-}
-
 func TestAuditLogRelevantOnlyOk(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
@@ -512,6 +475,9 @@ func TestAuditLogWithKFlagWithoutHFlag(t *testing.T) {
 	}
 }
 func TestAuditLogRelevantOnlyDetectionOnly(t *testing.T) {
+	// noauditlog leaves the transaction unmarked, so only the detection-only
+	// interruption status (403) can make it relevant.
+	// Regression test for https://github.com/corazawaf/coraza/issues/1333
 	waf := corazawaf.NewWAF()
 	parser := seclang.NewParser(waf)
 	if err := parser.FromString(`
@@ -520,7 +486,7 @@ func TestAuditLogRelevantOnlyDetectionOnly(t *testing.T) {
 		SecAuditLogFormat json
 		SecAuditLogType serial
 		SecAuditLogRelevantStatus "403"
-		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,deny,log,auditlog,msg:'expected rule message'"
+		SecRule ARGS "@unconditionalMatch" "id:1,phase:1,deny,log,noauditlog,msg:'detection only deny'"
 	`); err != nil {
 		t.Fatal(err)
 	}
@@ -542,18 +508,6 @@ func TestAuditLogRelevantOnlyDetectionOnly(t *testing.T) {
 	tx.ProcessLogging()
 	var al auditlog.Log
 	if err = json.NewDecoder(file).Decode(&al); err != nil {
-		t.Fatal(err)
-	}
-	if len(al.Messages()) != 1 {
-		t.Fatalf("Expected 1 message, got %d", len(al.Messages()))
-	}
-	type auditLogWithErrMesg interface{ ErrorMessage() string }
-	alWithErrMsg, ok := al.Messages()[0].(auditLogWithErrMesg)
-	if !ok {
-		t.Fatalf("Expected message to be of type auditLogWithErrMesg")
-	}
-	expected := "expected rule message"
-	if !strings.Contains(alWithErrMsg.ErrorMessage(), expected) {
-		t.Errorf("Expected audit log to contain %q, got %q", expected, alWithErrMsg.ErrorMessage())
+		t.Fatalf("expected audit log for a detection-only 403 matching SecAuditLogRelevantStatus, got error: %v", err)
 	}
 }

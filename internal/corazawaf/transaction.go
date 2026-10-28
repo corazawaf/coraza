@@ -1442,7 +1442,13 @@ func (tx *Transaction) ProcessLogging() {
 		return
 	}
 
-	if tx.AuditEngine == types.AuditEngineRelevantOnly {
+	// With RelevantOnly, a transaction is logged if a matched rule marked it
+	// for audit logging (auditlog, or log which implies it) OR its status
+	// matches SecAuditLogRelevantStatus. The two conditions are alternatives,
+	// as in ModSecurity.
+	// Fixes https://github.com/corazawaf/coraza/issues/1576 and
+	// https://github.com/corazawaf/coraza/issues/1809
+	if tx.AuditEngine == types.AuditEngineRelevantOnly && !tx.audit {
 		re := tx.WAF.AuditLogRelevantStatus
 		status := tx.variables.responseStatus.Get()
 		if tx.IsInterrupted() {
@@ -1453,20 +1459,10 @@ func (tx *Transaction) ProcessLogging() {
 			status = strconv.Itoa(tx.detectionOnlyInterruption.Status)
 		}
 
-		if tx.audit {
-			// A rule triggered auditlog — still filter by relevant status if regex is set.
-			if re != nil && !re.Match([]byte(status)) {
-				tx.debugLogger.Debug().Msg("Transaction status not marked for audit logging")
-				return
-			}
-		} else {
-			// No rule triggered auditlog — only log if status matches SecAuditLogRelevantStatus.
-			// Fixes https://github.com/corazawaf/coraza/issues/1576
-			if re == nil || !re.Match([]byte(status)) {
-				tx.debugLogger.Debug().
-					Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and status is not relevant")
-				return
-			}
+		if re == nil || !re.MatchString(status) {
+			tx.debugLogger.Debug().
+				Msg("Transaction not marked for audit logging, AuditEngine is RelevantOnly and status is not relevant")
+			return
 		}
 	}
 
