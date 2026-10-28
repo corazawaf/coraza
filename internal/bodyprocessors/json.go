@@ -31,7 +31,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	ss := s.String()
 	// Process with recursion limit
 	col := v.ArgsPost()
-	data, truncated, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
+	args, truncated, err := readJSON(ss, bpo.RequestBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload.
 	//
 	// Add, not SetIndex: col is case-insensitive by default (and RESPONSE_ARGS
@@ -42,10 +42,11 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 	// neither call knows about the other key. Add always appends, so both
 	// values survive under the collision exactly like a same-case collision
 	// already does. See GHSA-5gj4-9gm7-2fx2.
-	for key, values := range data {
-		for _, value := range values {
-			col.Add(key, value)
-		}
+	//
+	// args is in document order, so rules see the arguments in the same order
+	// on every evaluation (corazawaf/coraza#1815).
+	for _, a := range args {
+		col.Add(a.key, a.value)
 	}
 	if truncated {
 		v.ArgumentsLimitReached().(*collections.Single).Set("1")
@@ -73,14 +74,12 @@ func (js *jsonBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Tra
 	ss := s.String()
 	// Process with recursion limit
 	col := v.ResponseArgs()
-	data, truncated, err := readJSON(ss, bpo.ResponseBodyRecursionLimit, bpo.ArgumentLimit)
+	args, truncated, err := readJSON(ss, bpo.ResponseBodyRecursionLimit, bpo.ArgumentLimit)
 	// The collection is populated before checking the error to still perform a best effort inspection of the payload.
 	// See the comment in ProcessRequest: Add rather than SetIndex avoids a
 	// case-insensitive collision silently overwriting one value (GHSA-5gj4-9gm7-2fx2).
-	for key, values := range data {
-		for _, value := range values {
-			col.Add(key, value)
-		}
+	for _, a := range args {
+		col.Add(a.key, a.value)
 	}
 	if truncated {
 		v.ArgumentsLimitReached().(*collections.Single).Set("1")
@@ -119,18 +118,17 @@ const flattenBytesFloor = 4096
 // errFlattenBudget stops the walk once the flattened form outgrows its budget.
 var errFlattenBudget = errors.New("flattened json exceeds its byte budget")
 
-// readJSON flattens s into a map[string][]string, stopping once argumentLimit
-// values have been collected (argumentLimit <= 0 means no limit). Without
-// this, a small body decoding to a wide flat structure (e.g. a JSON array of
-// millions of scalars) grows this map -- and, through it, ARGS_POST/
-// RESPONSE_ARGS -- without bound regardless of SecArgumentsLimit, exhausting
-// memory on a single request. See GHSA-3ww9-vw83-9w5x.
+// readJSON flattens s into key, value pairs in document order, stopping once
+// argumentLimit values have been collected (argumentLimit <= 0 means no
+// limit). Without this, a small body decoding to a wide flat structure (e.g.
+// a JSON array of millions of scalars) grows the result -- and, through it,
+// ARGS_POST/RESPONSE_ARGS -- without bound regardless of SecArgumentsLimit,
+// exhausting memory on a single request. See GHSA-3ww9-vw83-9w5x.
 //
 // Array-length entries have their own cap of argumentLimit. truncated reports
 // either cap; outgrowing the byte budget is an error, since raising
 // SecArgumentsLimit does not help with it.
-func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]string, truncated bool, err error) {
-	res = make(map[string][]string)
+func readJSON(s string, maxRecursion int, argumentLimit int) (res []jsonArg, truncated bool, err error) {
 	key := []byte("json")
 
 	byteBudget := max(len(s)*flattenBytesFactor, flattenBytesFloor)
@@ -143,15 +141,15 @@ func readJSON(s string, maxRecursion int, argumentLimit int) (res map[string][]s
 	// rejected -- byteBudget is what keeps that walk short.
 	json := gjson.Parse(s)
 	usedBytes := 0
-	// argCount tracks the total number of values collected, not len(res):
-	// a key collision (see GHSA-5gj4-9gm7-2fx2) appends more than one value
+	// argCount tracks the total number of values collected, not distinct
+	// keys: a key collision (see GHSA-5gj4-9gm7-2fx2) appends more than one value
 	// under the same flattened key, so counting distinct keys would let
 	// SecArgumentsLimit undercount and admit more values than configured.
 	argCount := 0
 	// lenCount counts array-length entries apart from argCount, so they do
 	// not use up SecArgumentsLimit.
 	lenCount := 0
-	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, &lenCount, res)
+	truncated, err = readItems(json, key, maxRecursion, argumentLimit, byteBudget, &usedBytes, &argCount, &lenCount, &res)
 	if errors.Is(err, errFlattenBudget) {
 		return res, truncated, fmt.Errorf("flattened form exceeds the %d byte budget for a %d byte body", byteBudget, len(s))
 	}
@@ -232,7 +230,7 @@ func jsonNestingExceedsLimit(s string, limit int) bool {
 // Java class names used in deserialization attacks) as a substring of the
 // generated key, and escaping would break that detection for the common,
 // non-colliding case.
-func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, lenCount *int, res map[string][]string) (truncated bool, err error) {
+func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit int, byteBudget int, usedBytes *int, argCount *int, lenCount *int, res *[]jsonArg) (truncated bool, err error) {
 	if argumentLimit > 0 && *argCount >= argumentLimit {
 		// Already at the configured SecArgumentsLimit: every recursive call
 		// rechecks this up front, so once the limit is hit no further level
@@ -293,8 +291,7 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 			return false
 		}
 
-		k := string(objKey)
-		res[k] = append(res[k], val)
+		*res = append(*res, jsonArg{key: string(objKey), value: val})
 		*usedBytes += len(objKey) + len(val)
 		*argCount++
 		objKey = objKey[:prevParentLength]
@@ -316,14 +313,19 @@ func readItems(json gjson.Result, objKey []byte, maxRecursion int, argumentLimit
 			if byteBudget > 0 && *usedBytes+len(objKey)+len(lenStr) > byteBudget {
 				iterationError = errFlattenBudget
 			} else {
-				k := string(objKey)
-				res[k] = append(res[k], lenStr)
+				*res = append(*res, jsonArg{key: string(objKey), value: lenStr})
 				*usedBytes += len(objKey) + len(lenStr)
 				*lenCount++
 			}
 		}
 	}
 	return iterationTruncated, iterationError
+}
+
+// jsonArg is one flattened key, value pair of a JSON document.
+type jsonArg struct {
+	key   string
+	value string
 }
 
 func init() {

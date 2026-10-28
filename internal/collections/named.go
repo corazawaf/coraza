@@ -56,17 +56,21 @@ func (c *NamedCollection) Remove(key string) {
 }
 
 func (c *NamedCollection) Len() int {
-	return len(c.data)
+	return len(c.index)
 }
 
 // Data is an internal method used for serializing to JSON
 func (c *NamedCollection) Data() map[string][]string {
-	result := make(map[string][]string, len(c.data))
-	for k, v := range c.data {
-		result[k] = make([]string, len(v))
-		for i, a := range v {
-			result[k][i] = a.value
+	result := make(map[string][]string, len(c.index))
+	for _, e := range c.entries {
+		if e.deleted {
+			continue
 		}
+		values := make([]string, len(e.values))
+		for i, a := range e.values {
+			values[i] = a.value
+		}
+		result[e.key] = values
 	}
 	return result
 }
@@ -104,10 +108,10 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	n := 0
 	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
 	var matched [][]keyValue
-	for k, data := range c.collection.data {
-		if key.MatchString(k) {
-			n += len(data)
-			matched = append(matched, data)
+	for _, e := range c.collection.entries {
+		if !e.deleted && key.MatchString(e.key) {
+			n += len(e.values)
+			matched = append(matched, e.values)
 		}
 	}
 	if n == 0 {
@@ -131,8 +135,8 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 }
 
 func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
-	data, ok := c.collection.data[key]
-	if !ok || len(data) == 0 {
+	data := c.collection.lookup(key)
+	if len(data) == 0 {
 		return nil
 	}
 	buf := make([]corazarules.MatchData, len(data))
@@ -154,8 +158,8 @@ func (c *NamedCollectionNames) Get(key string) []string {
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	n := 0
-	for _, data := range c.collection.data {
-		n += len(data)
+	for _, e := range c.collection.entries {
+		n += len(e.values)
 	}
 	if n == 0 {
 		return nil
@@ -163,8 +167,8 @@ func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	buf := make([]corazarules.MatchData, n)
 	res := make([]types.MatchData, n)
 	i := 0
-	for _, data := range c.collection.data {
-		for _, d := range data {
+	for _, e := range c.collection.entries {
+		for _, d := range e.values {
 			buf[i] = corazarules.MatchData{
 				Variable_: c.variable,
 				Key_:      d.key,
@@ -186,8 +190,8 @@ func (c *NamedCollectionNames) String() string {
 	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
 	firstOccurrence := true
-	for _, data := range c.collection.data {
-		for _, d := range data {
+	for _, e := range c.collection.entries {
+		for _, d := range e.values {
 			if !firstOccurrence {
 				res.WriteString(",")
 			}

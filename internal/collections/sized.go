@@ -71,8 +71,8 @@ func (c *SizeCollection) size() int {
 	i := 0
 	for _, d := range c.data {
 		// we iterate over d
-		for _, data := range d.data {
-			for _, v := range data {
+		for _, e := range d.entries {
+			for _, v := range e.values {
 				i += len(v.key) + len(v.value)
 			}
 		}
