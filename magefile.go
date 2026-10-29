@@ -221,10 +221,12 @@ func Fuzz() error {
 	for _, pkgTests := range tests {
 		for _, test := range pkgTests.tests {
 			fmt.Println("Running", test)
+			corpusDir := filepath.Join(pkgTests.pkg, "testdata", "fuzz", strings.TrimSuffix(test, "$"))
+			corpusBefore := countFiles(corpusDir)
 			var out strings.Builder
 			w := io.MultiWriter(os.Stdout, &out)
 			if _, err := sh.Exec(nil, w, w, "go", "test", "-fuzz="+test, "-fuzztime=3m", pkgTests.pkg); err != nil {
-				if isFuzzDeadlineFlake(out.String()) {
+				if isFuzzDeadlineFlake(out.String()) && countFiles(corpusDir) == corpusBefore {
 					fmt.Println("Ignoring spurious 'context deadline exceeded' at the end of fuzzing (https://github.com/golang/go/issues/75804)")
 					continue
 				}
@@ -236,14 +238,25 @@ func Fuzz() error {
 	return nil
 }
 
-// isFuzzDeadlineFlake reports whether a failed fuzz run only hit the Go toolchain
-// bug where -fuzztime expiry is reported as "context deadline exceeded"
-// (https://github.com/golang/go/issues/75804). A real finding always writes a
-// failing input to testdata. Remove once CI runs a Go release with the fix
-// (1.27, or the 1.26 backport tracked in https://github.com/golang/go/issues/82362).
+// isFuzzDeadlineFlake reports whether a failed fuzz run's output looks like the
+// Go toolchain bug where -fuzztime expiry is reported as "context deadline exceeded"
+// (https://github.com/golang/go/issues/75804). Output alone is not enough: a crasher
+// still being minimized when the deadline hits is written to testdata without the
+// "Failing input written to" line, so Fuzz also checks that no corpus file appeared.
+// Remove once CI runs a Go release with the fix (1.27, or the 1.26 backport tracked
+// in https://github.com/golang/go/issues/82362).
 func isFuzzDeadlineFlake(output string) bool {
 	return strings.Contains(output, "context deadline exceeded") &&
 		!strings.Contains(output, "Failing input written to")
+}
+
+// countFiles returns the number of entries in dir, or 0 if it does not exist.
+func countFiles(dir string) int {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+	return len(entries)
 }
 
 // Doc runs godoc, access at http://localhost:6060.
