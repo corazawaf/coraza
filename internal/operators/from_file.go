@@ -8,17 +8,29 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
+
+	"github.com/corazawaf/coraza/v3/internal/io"
 )
 
 var errEmptyDirs = errors.New("empty dirs")
 
-func loadFromFile(filepath string, dirs []string, root fs.FS) ([]byte, error) {
-	if path.IsAbs(filepath) {
-		return fs.ReadFile(root, filepath)
+func loadFromFile(name string, dirs []string, root fs.FS) ([]byte, error) {
+	// io.OSFS takes OS paths, so on Windows a name such as C:\rules\data.txt
+	// is absolute too and dirs are joined with OS separators. Every other
+	// fs.FS takes slash-separated names. A leading slash stays absolute.
+	_, osRoot := root.(io.OSFS)
+	if path.IsAbs(name) || (osRoot && filepath.IsAbs(name)) {
+		return fs.ReadFile(root, name)
 	}
 
 	if len(dirs) == 0 {
 		return nil, errEmptyDirs
+	}
+
+	join := path.Join
+	if osRoot {
+		join = filepath.Join
 	}
 
 	// handling files by operators is hard because we must know the paths where we can
@@ -30,7 +42,7 @@ func loadFromFile(filepath string, dirs []string, root fs.FS) ([]byte, error) {
 	)
 
 	for _, p := range dirs {
-		absFilepath := path.Join(p, filepath)
+		absFilepath := join(p, name)
 		content, err = fs.ReadFile(root, absFilepath)
 		if err != nil {
 			if os.IsNotExist(err) {
