@@ -6,6 +6,7 @@
 package operators
 
 import (
+	"fmt"
 	"strings"
 
 	ahocorasick "github.com/petar-dambovaliev/aho-corasick"
@@ -19,7 +20,9 @@ import (
 //
 // Arguments:
 // Space-separated keywords or patterns to match. Supports Snort data syntax like "A|42|C|44|F"
-// for hex notation. All patterns are converted to lowercase for case-insensitive matching.
+// for hex notation. Literal segments outside hex blocks are converted to lowercase. Hex blocks
+// |...| decode byte-for-byte; spaces inside hex blocks are ignored, and literal pipes must be
+// encoded as |7C|.
 //
 // Returns:
 // true if any of the patterns are found in the input, false otherwise
@@ -41,11 +44,111 @@ type pm struct {
 
 var _ plugintypes.Operator = (*pm)(nil)
 
-func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	data := options.Arguments
+func hexVal(b byte) (byte, bool) {
+	switch {
+	case b >= '0' && b <= '9':
+		return b - '0', true
+	case b >= 'a' && b <= 'f':
+		return b - 'a' + 10, true
+	case b >= 'A' && b <= 'F':
+		return b - 'A' + 10, true
+	default:
+		return 0, false
+	}
+}
 
-	data = strings.ToLower(data)
-	dict := strings.Split(data, " ")
+func parsePMPhrases(data string) ([]string, error) {
+	var dict []string
+	var current strings.Builder
+	litStart := -1
+	inHex := false
+	blockStart := -1
+	digitsInBlock := 0
+	hasNibble := false
+	var firstNibble byte
+
+	for i := 0; i < len(data); i++ {
+		b := data[i]
+		if inHex {
+			switch b {
+			case '|':
+				if digitsInBlock == 0 {
+					return nil, fmt.Errorf("@pm: empty hex block at offset %d (use |7C| for literal pipe)", blockStart)
+				}
+				if hasNibble {
+					return nil, fmt.Errorf("@pm: odd number of hex digits in block at offset %d", blockStart)
+				}
+				inHex = false
+			case ' ':
+				// Spaces inside hex blocks are ignored.
+				continue
+			default:
+				val, ok := hexVal(b)
+				if !ok {
+					return nil, fmt.Errorf("@pm: invalid hex character %q at offset %d", b, i)
+				}
+				digitsInBlock++
+				if !hasNibble {
+					firstNibble = val
+					hasNibble = true
+				} else {
+					current.WriteByte((firstNibble << 4) | val)
+					hasNibble = false
+				}
+			}
+		} else {
+			switch b {
+			case '|':
+				if litStart != -1 {
+					current.WriteString(strings.ToLower(data[litStart:i]))
+					litStart = -1
+				}
+				inHex = true
+				blockStart = i
+				digitsInBlock = 0
+				hasNibble = false
+			case ' ':
+				if litStart != -1 {
+					current.WriteString(strings.ToLower(data[litStart:i]))
+					litStart = -1
+				}
+				if current.Len() > 0 {
+					dict = append(dict, current.String())
+					current.Reset()
+				}
+			default:
+				if litStart == -1 {
+					litStart = i
+				}
+			}
+		}
+	}
+
+	if inHex {
+		return nil, fmt.Errorf("@pm: unclosed hex block at offset %d (use |7C| for literal pipe)", blockStart)
+	}
+
+	if litStart != -1 {
+		current.WriteString(strings.ToLower(data[litStart:]))
+	}
+
+	if current.Len() > 0 {
+		dict = append(dict, current.String())
+	}
+
+	if len(dict) == 0 {
+		return nil, fmt.Errorf("@pm: empty operator pattern")
+	}
+
+	return dict, nil
+}
+
+func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+	dict, err := parsePMPhrases(options.Arguments)
+	if err != nil {
+		return nil, err
+	}
+
 	builder := ahocorasick.NewAhoCorasickBuilder(ahocorasick.Opts{
 		AsciiCaseInsensitive: true,
 		MatchOnlyWholeWords:  false,
@@ -53,8 +156,13 @@ func newPM(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		DFA:                  true,
 	})
 
-	m, _ := memoizeDo(options.Memoizer, memoizeKey("pm", dict...), func() (any, error) { return builder.Build(dict), nil })
-	// TODO this operator is supposed to support snort data syntax: "@pm A|42|C|44|F"
+	m, err := memoizeDo(options.Memoizer, memoizeKey("pm", dict...), func() (any, error) {
+		return builder.Build(dict), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(dict)}, nil
 }
 
