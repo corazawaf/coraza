@@ -256,4 +256,7 @@ type ParserConfig struct {
 	ConfigDir                   string
 	Root                        fs.FS
 	WorkingDir                  string
+	// skipChainLinks is set while the links of a chain dropped for an ignored
+	// compilation error are being read, see skipBrokenChainLink.
+	skipChainLinks bool
 }
