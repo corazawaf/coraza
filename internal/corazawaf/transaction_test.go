@@ -21,6 +21,7 @@ import (
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/environment"
@@ -2271,6 +2272,16 @@ func TestAddArgsRepeatedKeyOverlimit(t *testing.T) {
 			}
 			if total > limit {
 				t.Fatalf("expected at most %d total values under a repeated key, got %d", limit, total)
+			}
+			// Only a dropped request-body argument is a request body error; after many drops the reason is recorded once.
+			wantBodyError := name == "post"
+			if got := tx.variables.reqbodyError.Get() == "1"; got != wantBodyError {
+				t.Fatalf("REQBODY_ERROR set: got %v, want %v", got, wantBodyError)
+			}
+			if wantBodyError {
+				if got := tx.variables.reqbodyErrorMsg.Get(); got != bodyprocessors.ArgumentsLimitExceededMsg {
+					t.Fatalf("REQBODY_ERROR_MSG: got %q, want %q", got, bodyprocessors.ArgumentsLimitExceededMsg)
+				}
 			}
 
 			if err := tx.Close(); err != nil {
