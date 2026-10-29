@@ -100,7 +100,11 @@ have compatibility guarantees across minor versions - use with care.
 * `coraza.disabled_operators.*` - excludes the specified operator from compilation. Particularly useful if overriding
 the operator with `plugins.RegisterOperator` to reduce binary size / startup overhead.
 * `coraza.rule.multiphase_evaluation` - enables evaluation of rule variables in the phases that they are ready, not
-only the phase the rule is defined for.
+only the phase the rule is defined for. **Limitation:** flow actions (`skip`, `skipAfter`) and `allow` actions behave
+differently under multiphase evaluation. For unchained rules, a variable evaluated in an earlier phase is not
+evaluated again in the rule's declared phase, so a skip or allow in the earlier phase can mean the variable is
+never inspected. Chained rules re-evaluate variables across phases to give each chain part a chance to match.
+Rules relying on `skip`/`skipAfter` for control flow should be tested carefully under this tag.
 * `coraza.no_memoize` - disables the default memoization of regex and aho-corasick builders.
 Memoization is enabled by default and uses a global cache to reuse compiled patterns across WAF
 instances, reducing memory consumption and startup overhead. In long-lived processes that perform
