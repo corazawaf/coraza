@@ -12,7 +12,6 @@ import (
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
-	"github.com/corazawaf/coraza/v3/types"
 )
 
 func TestInvalidRule(t *testing.T) {
@@ -546,21 +545,21 @@ func TestParseActions(t *testing.T) {
 			expectError:     false,
 			expectedLogLine: "[WARN] unclosed quotes",
 		},
+		{
+			name:            "missing phase",
+			inputActions:    "id:1,log,deny",
+			expectError:     false,
+			expectedLogLine: "[WARN] rule has no phase, defaulting to phase 2",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rp := &RuleParser{
-				rule:           corazawaf.NewRule(),
-				defaultActions: map[types.RulePhase][]ruleAction{},
-				options: RuleOptions{
-					WAF: corazawaf.NewWAF(),
-				},
-			}
+			waf := corazawaf.NewWAF()
 			logsBuf := &bytes.Buffer{}
-			rp.options.WAF.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
+			waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 
-			err := rp.ParseActions(tt.inputActions)
+			_, err := ParseRule(RuleOptions{WAF: waf, Data: tt.inputActions})
 			if tt.expectError && err == nil {
 				t.Errorf("expected error")
 			} else if !tt.expectError && err != nil {

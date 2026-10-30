@@ -6,6 +6,7 @@ package seclang
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -453,6 +454,11 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 	} else {
 		// we only want Raw for the parent
 		rule.Raw_ = options.Raw
+		// The implicit phase 2 is kept for ModSecurity compatibility, but it is easy to miss.
+		parsed, _ := parseActions(nil, rawActions)
+		if !slices.ContainsFunc(parsed, func(a ruleAction) bool { return a.Key == "phase" }) {
+			options.WAF.Logger.Warn().Int("rule_id", rule.ID_).Str("file", rule.File_).Int("line", rule.Line_).Msg("rule has no phase, defaulting to phase 2")
+		}
 	}
 	return rule, nil
 }
