@@ -28,6 +28,9 @@ func TestNewTransaction(t *testing.T) {
 	if tx.RequestBodyLimit != 1044 {
 		t.Error("Request body limit not set")
 	}
+	if want, have := types.AuditLogParts("ABCFHZ"), tx.AuditLogParts; string(have) != string(want) {
+		t.Errorf("unexpected default audit log parts: want %q, have %q", want, have)
+	}
 	if tx.id != "test" {
 		t.Error("ID not set")
 	}
