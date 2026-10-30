@@ -322,6 +322,12 @@ func TestDirectives(t *testing.T) {
 			{"On", func(w *corazawaf.WAF) bool { return w.RuleEngine == types.RuleEngineOn }},
 			{"Off", func(w *corazawaf.WAF) bool { return w.RuleEngine == types.RuleEngineOff }},
 		},
+		"SecRuleEvalDepthFirst": {
+			{"", expectErrorOnDirective},
+			{"What?", expectErrorOnDirective},
+			{"On", func(w *corazawaf.WAF) bool { return w.RuleEvalDepthFirst }},
+			{"Off", func(w *corazawaf.WAF) bool { return !w.RuleEvalDepthFirst }},
+		},
 		"SecAction": {
 			{"", expectErrorOnDirective},
 			{`"id:1,tag:test"`, func(w *corazawaf.WAF) bool { return w.Rules.Count() == 1 }},

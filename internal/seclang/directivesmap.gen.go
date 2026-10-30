@@ -16,6 +16,7 @@ var (
 	_ directive = directiveSecRequestBodyJsonDepthLimit
 	_ directive = directiveSecResponseBodyJsonDepthLimit
 	_ directive = directiveSecRuleEngine
+	_ directive = directiveSecRuleEvalDepthFirst
 	_ directive = directiveSecWebAppID
 	_ directive = directiveSecServerSignature
 	_ directive = directiveSecRuleRemoveByTag
@@ -81,6 +82,7 @@ var directivesMap = map[string]directive{
 	"secrequestbodyjsondepthlimit":   directiveSecRequestBodyJsonDepthLimit,
 	"secresponsebodyjsondepthlimit":  directiveSecResponseBodyJsonDepthLimit,
 	"secruleengine":                  directiveSecRuleEngine,
+	"secruleevaldepthfirst":          directiveSecRuleEvalDepthFirst,
 	"secwebappid":                    directiveSecWebAppID,
 	"secserversignature":             directiveSecServerSignature,
 	"secruleremovebytag":             directiveSecRuleRemoveByTag,
