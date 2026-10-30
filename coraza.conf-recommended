@@ -63,9 +63,16 @@ SecRequestBodyJsonDepthLimit 1024
 # urlencoded or JSON request bodies (ARGS_POST). JSON response bodies
 # (RESPONSE_ARGS) use the same limit.
 # Arguments beyond it are dropped and ARGUMENTS_LIMIT_REACHED is set.
-# Rules 200004 and 200005 are enforcing this limit, rejecting requests that exceed it.
-# If legitimate requests send more values, raise this value rather than removing those rules.
+# If legitimate requests send more values, raise this limit; removing rules
+# 200004 and 200005 below does not disable the Reject fallback.
 SecArgumentsLimit 1000
+
+# What to do when SecArgumentsLimit drops request arguments and no rule
+# interruption takes precedence. Reject (the default) returns 400 after phase 1
+# for query and path arguments, and after phase 2 for body arguments. Rules
+# 200004 and 200005 run first; ProcessPartial disables only this fallback.
+# DetectionOnly records but does not enforce the interruption.
+SecArgumentsLimitAction Reject
 
 # Maximum request body size (bytes) Coraza will accept for buffering. When
 # supporting file uploads, this value has to be as large as the largest
@@ -121,10 +128,12 @@ SecRule MULTIPART_STRICT_ERROR "!@eq 0" \
     logdata:'MULTIPART_DUPLICATE_PART_HEADER=%{MULTIPART_DUPLICATE_PART_HEADER}, \
     MULTIPART_INVALID_QUOTING=%{MULTIPART_INVALID_QUOTING}'"
 
-# Rejects requests when the argument limit has been reached and arguments
-# were silently dropped. Without this rule, an attacker can flood a request
-# with filler parameters to push a malicious payload past the limit,
-# causing it to be invisible to all ARGS-targeted rules.
+# Reject requests whose arguments were truncated, preventing filler parameters
+# from hiding a payload. These rules run before the Reject fallback, so logs
+# include a rule id and message; under ProcessPartial they are the only
+# enforcement. Reject is engine-level, so allow or ctl:ruleRemoveById alone does
+# not bypass it. A preceding ctl:ruleEngine=DetectionOnly does, but disables all
+# blocking.
 #
 SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" \
     "id:'200004',phase:1,t:none,log,deny,status:400, \

@@ -233,7 +233,9 @@ const (
 	TimeYear = variables.TimeYear
 	// URIParseError is set to 1 when the request URI could not be parsed
 	URIParseError = variables.URIParseError
-	// ArgumentsLimitReached is set to 1 when arguments were dropped due to SecArgumentsLimit
+	// ArgumentsLimitReached is set to 1 when arguments were dropped due to SecArgumentsLimit.
+	// With arguments added in the normal order, it is visible from the phase that owns the
+	// dropped source (1 for ARGS_GET and ARGS_PATH, 2 for ARGS_POST, 4 for RESPONSE_ARGS)
 	ArgumentsLimitReached = variables.ArgumentsLimitReached
 )
 

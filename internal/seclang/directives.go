@@ -1795,8 +1795,9 @@ func directiveSecDataset(options *DirectiveOptions) error {
 // The query string (ARGS_GET), the path (ARGS_PATH), and urlencoded or JSON request
 // bodies (ARGS_POST) are each counted separately; JSON response bodies (RESPONSE_ARGS)
 // use the same limit. Arguments beyond the limit are dropped and ARGUMENTS_LIMIT_REACHED
-// is set to 1, so a rule can reject the request (see rules 200004 and 200005 in
-// coraza.conf-recommended). The value must be greater than 0.
+// is set to 1, visible from the phase that owns the source (1, 2 or 4) when arguments
+// arrive in the normal order. For request arguments, SecArgumentsLimitAction decides
+// what happens next (by default, a rejection). The value must be greater than 0.
 //
 // Example:
 // ```seclang
@@ -1811,6 +1812,48 @@ func directiveSecArgumentsLimit(options *DirectiveOptions) error {
 		return errors.New("argument limit should be bigger than 0")
 	}
 	options.WAF.ArgumentLimit = limit
+	return nil
+}
+
+// Description: Controls what happens once a request argument is dropped because
+// SecArgumentsLimit was reached.
+// Syntax: SecArgumentsLimitAction Reject|ProcessPartial
+// Default: Reject
+// ---
+// Dropped arguments go uninspected, so a request could hide a payload behind filler
+// arguments. With Reject, Coraza interrupts with status 400 after the rules of the
+// phase that owns the truncated source: phase 1 for ARGS_GET and ARGS_PATH, phase 2
+// for ARGS_POST. Arguments added with the Add*RequestArgument methods count too;
+// query or path arguments added between phases 1 and 2 are checked in phase 2.
+//
+// Rules act first: if a rule of that phase interrupts, for example rule 200004 or
+// 200005 of coraza.conf-recommended, its interruption stands with its rule id and
+// message. Reject is the fallback, and its interruption has no rule id.
+//
+// With ProcessPartial, the request continues with the arguments that fit, and
+// ARGUMENTS_LIMIT_REACHED is left for rules to act on. Whatever the setting,
+// SecArgumentsLimitAction never rejects response arguments (RESPONSE_ARGS).
+//
+// ModSecurity has no equivalent; it relies on a rule such as `SecRule &ARGS "@ge 1000"`.
+//
+// Note: In DetectionOnly, set globally or by a rule with ctl:ruleEngine before the
+// check, Reject only records the interruption, as a rule's deny does. Like the body
+// limit actions, Reject is not skipped by allow; to exempt routes through rules, use
+// ProcessPartial and enforce ARGUMENTS_LIMIT_REACHED with rules.
+//
+// Example:
+// ```seclang
+// SecArgumentsLimitAction Reject
+// ```
+func directiveSecArgumentsLimitAction(options *DirectiveOptions) error {
+	switch strings.ToLower(options.Opts) {
+	case "reject":
+		options.WAF.ArgumentLimitAction = corazawaf.ArgumentLimitActionReject
+	case "processpartial":
+		options.WAF.ArgumentLimitAction = corazawaf.ArgumentLimitActionProcessPartial
+	default:
+		return errors.New("syntax error: SecArgumentsLimitAction [Reject/ProcessPartial]")
+	}
 	return nil
 }
 

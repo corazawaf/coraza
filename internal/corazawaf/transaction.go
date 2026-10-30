@@ -61,6 +61,14 @@ type Transaction struct {
 	// caused an interruption if the engine was On).
 	detectionOnlyInterruption *types.Interruption
 
+	// Which sources SecArgumentsLimit truncated; the shared ARGUMENTS_LIMIT_REACHED
+	// cannot tell. The request flags drive SecArgumentsLimitAction in phases 1 and 2;
+	// the body and response flags also hold ARGUMENTS_LIMIT_REACHED back until their
+	// phase starts (publishArgumentLimitReached).
+	uriArgumentLimitReached      bool // ARGS_GET, ARGS_PATH
+	bodyArgumentLimitReached     bool // ARGS_POST
+	responseArgumentLimitReached bool // RESPONSE_ARGS
+
 	// This is used to store log messages
 	// Deprecated since Coraza 3.0.5: this variable is not used, logdata values are stored in the matched rules
 	Logdata string
@@ -796,6 +804,7 @@ func (tx *Transaction) ExtractGetArguments(uri string) {
 	}
 	if truncated {
 		tx.variables.argumentsLimitReached.Set("1")
+		tx.uriArgumentLimitReached = true
 	}
 }
 
@@ -803,6 +812,7 @@ func (tx *Transaction) ExtractGetArguments(uri string) {
 func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsGet) {
 		tx.variables.argumentsLimitReached.Set("1")
+		tx.uriArgumentLimitReached = true
 		tx.debugLogger.Warn().Msg("skipping get request argument, over limit")
 		return
 	}
@@ -812,7 +822,7 @@ func (tx *Transaction) AddGetRequestArgument(key string, value string) {
 // AddPostRequestArgument
 func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsPost) {
-		tx.variables.argumentsLimitReached.Set("1")
+		tx.bodyArgumentLimitReached = true
 		tx.debugLogger.Warn().Msg("skipping post request argument, over limit")
 		return
 	}
@@ -823,6 +833,7 @@ func (tx *Transaction) AddPostRequestArgument(key string, value string) {
 func (tx *Transaction) AddPathRequestArgument(key string, value string) {
 	if tx.checkArgumentLimit(tx.variables.argsPath) {
 		tx.variables.argumentsLimitReached.Set("1")
+		tx.uriArgumentLimitReached = true
 		tx.debugLogger.Warn().Msg("skipping path request argument, over limit")
 		return
 	}
@@ -839,10 +850,39 @@ func (tx *Transaction) checkArgumentLimit(c *collections.NamedCollection) bool {
 	return c.TotalValues() >= tx.WAF.ArgumentLimit
 }
 
+// interruptOnArgumentLimit applies SecArgumentsLimitAction Reject after a request
+// phase's rules. A rule's interruption takes precedence; one recorded in DetectionOnly
+// does so only while the engine is still DetectionOnly, so that a ctl:ruleEngine=On
+// switch enforces as it does for a rule's deny. Like the body limits, allow does not
+// suppress it.
+func (tx *Transaction) interruptOnArgumentLimit(reached bool) {
+	if !reached || tx.WAF.ArgumentLimitAction != ArgumentLimitActionReject || tx.IsRuleEngineOff() {
+		return
+	}
+	if tx.IsInterrupted() || (tx.RuleEngine == types.RuleEngineDetectionOnly && tx.IsDetectionOnlyInterrupted()) {
+		return
+	}
+	tx.debugLogger.Warn().Msg("Arguments over the configured limit were dropped (SecArgumentsLimitAction Reject)")
+	tx.Interrupt(&types.Interruption{
+		Status: 400,
+		Action: "deny",
+	})
+}
+
+// publishArgumentLimitReached sets ARGUMENTS_LIMIT_REACHED for body and response
+// truncation once phase is at or past the one that owns it. Until then a rule
+// cannot see it, and it cannot hide a request body processor's own truncation.
+func (tx *Transaction) publishArgumentLimitReached(phase types.RulePhase) {
+	if (tx.bodyArgumentLimitReached && phase >= types.PhaseRequestBody) ||
+		(tx.responseArgumentLimitReached && phase >= types.PhaseResponseBody) {
+		tx.variables.argumentsLimitReached.Set("1")
+	}
+}
+
 // AddResponseArgument
 func (tx *Transaction) AddResponseArgument(key string, value string) {
 	if tx.variables.responseArgs.TotalValues() >= tx.WAF.ArgumentLimit {
-		tx.variables.argumentsLimitReached.Set("1")
+		tx.responseArgumentLimitReached = true
 		tx.debugLogger.Warn().Msg("skipping response argument, over limit")
 		return
 	}
@@ -942,6 +982,7 @@ func (tx *Transaction) ProcessRequestHeaders() *types.Interruption {
 	}
 
 	tx.WAF.Rules.Eval(types.PhaseRequestHeaders, tx)
+	tx.interruptOnArgumentLimit(tx.uriArgumentLimitReached)
 	return tx.interruption
 }
 
@@ -1126,8 +1167,7 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 
 	// we won't process empty request bodies or disabled RequestBodyAccess
 	if !tx.RequestBodyAccess || tx.requestBodyBuffer.length == 0 {
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
+		return tx.evaluateRequestBodyPhase(), nil
 	}
 	mimeType := ""
 	if m := tx.variables.requestHeaders.Get("content-type"); len(m) > 0 {
@@ -1157,34 +1197,77 @@ func (tx *Transaction) ProcessRequestBody() (*types.Interruption, error) {
 	rbp = strings.ToLower(rbp)
 	if rbp == "" {
 		// so there is no bodyprocessor, we don't want to generate an error
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
+		return tx.evaluateRequestBodyPhase(), nil
 	}
 	bodyprocessor, err := bodyprocessors.GetBodyProcessor(rbp)
 	if err != nil {
 		tx.generateRequestBodyError(errors.New("invalid body processor"))
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
+		return tx.evaluateRequestBodyPhase(), nil
 	}
 
 	tx.debugLogger.Debug().
 		Str("body_processor", rbp).
 		Msg("Attempting to process request body")
 
-	if err := bodyprocessor.ProcessRequest(reader, tx.Variables(), plugintypes.BodyProcessorOptions{
+	// Body processors report truncation only by setting ArgumentsLimitReached(), so an
+	// unset -> 1 change across the call marks ARGS_POST. A query or path overflow that
+	// phase 1 did not reject leaves the shared flag set, so the processor then gets a
+	// scoped flag to detect an independent body overflow.
+	vars := tx.Variables()
+	limitReached := tx.variables.argumentsLimitReached
+	if limitReached.Get() == "1" {
+		scoped := &argumentLimitScopedVariables{
+			TransactionVariables:  vars,
+			argumentsLimitReached: collections.NewSingle(variables.ArgumentsLimitReached),
+		}
+		vars, limitReached = scoped, scoped.argumentsLimitReached
+	}
+	err = bodyprocessor.ProcessRequest(reader, vars, plugintypes.BodyProcessorOptions{
 		Mime:                      mimeType,
 		StoragePath:               tx.WAF.UploadDir,
 		RequestBodyRecursionLimit: tx.WAF.RequestBodyJsonDepthLimit,
 		ArgumentLimit:             tx.WAF.ArgumentLimit,
-	}); err != nil {
+	})
+	if limitReached.Get() == "1" {
+		tx.bodyArgumentLimitReached = true
+	}
+	if err != nil {
 		tx.debugLogger.Error().Err(err).Msg("Failed to process request body")
 		tx.generateRequestBodyError(err)
-		tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-		return tx.interruption, nil
 	}
 
+	return tx.evaluateRequestBodyPhase(), nil
+}
+
+// argumentLimitScopedVariables gives a body processor its own ARGUMENTS_LIMIT_REACHED,
+// through the accessor and through All, and forwards every other variable to the
+// transaction.
+type argumentLimitScopedVariables struct {
+	plugintypes.TransactionVariables
+	argumentsLimitReached *collections.Single
+}
+
+func (v *argumentLimitScopedVariables) ArgumentsLimitReached() collection.Single {
+	return v.argumentsLimitReached
+}
+
+func (v *argumentLimitScopedVariables) All(f func(variables.RuleVariable, collection.Collection) bool) {
+	v.TransactionVariables.All(func(variable variables.RuleVariable, col collection.Collection) bool {
+		if variable == variables.ArgumentsLimitReached {
+			col = v.argumentsLimitReached
+		}
+		return f(variable, col)
+	})
+}
+
+// evaluateRequestBodyPhase publishes body truncation, evaluates the phase 2 rules,
+// then applies SecArgumentsLimitAction to every request source. Every exit of
+// ProcessRequestBody that evaluates phase 2 goes through it.
+func (tx *Transaction) evaluateRequestBodyPhase() *types.Interruption {
+	tx.publishArgumentLimitReached(types.PhaseRequestBody)
 	tx.WAF.Rules.Eval(types.PhaseRequestBody, tx)
-	return tx.interruption, nil
+	tx.interruptOnArgumentLimit(tx.uriArgumentLimitReached || tx.bodyArgumentLimitReached)
+	return tx.interruption
 }
 
 // ProcessResponseHeaders performs the analysis on the response headers.
@@ -1387,7 +1470,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		tx.debugLogger.Debug().
 			Bool("response_body_access", tx.ResponseBodyAccess).
 			Msg("Skipping response body processing")
-		tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+		tx.evaluateResponseBodyPhase()
 		return tx.interruption, nil
 	}
 
@@ -1400,7 +1483,7 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		b, err := bodyprocessors.GetBodyProcessor(bp)
 		if err != nil {
 			tx.generateResponseBodyError(errors.New("invalid body processor"))
-			tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+			tx.evaluateResponseBodyPhase()
 			return tx.interruption, err
 		}
 
@@ -1421,14 +1504,25 @@ func (tx *Transaction) ProcessResponseBody() (*types.Interruption, error) {
 		tx.variables.responseContentLength.Set(strconv.FormatInt(length, 10))
 		tx.variables.responseBody.Set(buf.String())
 	}
-	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
+	tx.evaluateResponseBodyPhase()
 	return tx.interruption, nil
+}
+
+// evaluateResponseBodyPhase publishes response argument truncation, then evaluates
+// the phase 4 rules.
+func (tx *Transaction) evaluateResponseBodyPhase() {
+	tx.publishArgumentLimitReached(types.PhaseResponseBody)
+	tx.WAF.Rules.Eval(types.PhaseResponseBody, tx)
 }
 
 // ProcessLogging logs all information relative to this transaction.
 // At this point there is not need to hold the connection, the response can be
 // delivered prior to the execution of this method.
 func (tx *Transaction) ProcessLogging() {
+	// Publish truncation whose phase never ran, so logging rules and the audit log
+	// see it even with the rule engine off.
+	tx.publishArgumentLimitReached(types.PhaseLogging)
+
 	// If Rule engine is disabled, Log phase rules are not going to be evaluated.
 	// This avoids trying to rely on variables not set by previous rules that
 	// have not been executed
