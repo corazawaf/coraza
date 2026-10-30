@@ -244,13 +244,13 @@ SecRule TX:counter "@eq 3" "id:2, phase:2, t:none, pass, log"
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "adilalperenciftci",
-		Description: "evalDepth runs the rest of the chain once per match with that match's MATCHED_VAR and captures",
+		Description: "SecRuleEvalDepthFirst runs the rest of each chain once per match with that match's MATCHED_VAR and captures",
 		Enabled:     true,
-		Name:        "chains_eval_depth.yaml",
+		Name:        "chains_depth_first.yaml",
 	},
 	Tests: []profile.Test{
 		{
-			Title: "chains_eval_depth",
+			Title: "chains_depth_first",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -340,26 +340,28 @@ var _ = profile.RegisterProfile(profile.Profile{
 		},
 	},
 	Rules: `
-SecRule ARGS "@rx ^(attack\d+)$" "id:101,phase:1,log,capture,chain,evalDepth,logdata:'depth %{TX.1}'"
+SecRuleEvalDepthFirst On
+
+SecRule ARGS "@rx ^(attack\d+)$" "id:101,phase:1,log,capture,chain,logdata:'depth %{TX.1}'"
   SecRule TX:1 "@streq attack1" ""
 
-SecRule ARGS "@rx ^(\w+)-(\d+)$" "id:102,phase:1,log,capture,chain,evalDepth,logdata:'user %{TX.1} over %{TX.2}'"
+SecRule ARGS "@rx ^(\w+)-(\d+)$" "id:102,phase:1,log,capture,chain,logdata:'user %{TX.1} over %{TX.2}'"
   SecRule TX:2 "@gt 10" "chain"
     SecRule TX:1 "@streq admin" ""
 
-SecRule ARGS_GET "@rx ^(k\d)$" "id:103,phase:1,log,capture,chain,evalDepth,logdata:'pair %{TX.1}'"
+SecRule ARGS_GET "@rx ^(k\d)$" "id:103,phase:1,log,capture,chain,logdata:'pair %{TX.1}'"
   SecRule REQUEST_HEADERS:/^x-/ "@rx ^k" "chain"
     SecRule MATCHED_VAR "@streq %{tx.1}" ""
 
-SecRule ARGS "@rx ^(attack\d+)$" "id:104,phase:1,log,capture,chain,evalDepth"
+SecRule ARGS "@rx ^(attack\d+)$" "id:104,phase:1,log,capture,chain"
   SecRule TX:1 "@streq nothing" ""
 
 # Non-disruptive actions on chain links run for every attempted parent context,
 # including failed paths. The A attempt adds 5 before it fails, then B adds 5.
-SecRule ARGS_GET:a|ARGS_GET:b "@rx ^(A|B)$" "id:105,phase:1,log,capture,chain,evalDepth"
-  SecRule REQUEST_METHOD "@streq GET" "setvar:'tx.eval_depth_score=+5',chain"
+SecRule ARGS_GET:a|ARGS_GET:b "@rx ^(A|B)$" "id:105,phase:1,log,capture,chain"
+  SecRule REQUEST_METHOD "@streq GET" "setvar:'tx.depth_first_score=+5',chain"
     SecRule TX:1 "@streq B" ""
-SecRule TX:eval_depth_score "@eq 10" "id:106,phase:1,pass,log"
+SecRule TX:depth_first_score "@eq 10" "id:106,phase:1,pass,log"
 `,
 })
 

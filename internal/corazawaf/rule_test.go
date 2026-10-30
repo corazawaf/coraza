@@ -1031,7 +1031,7 @@ func (o *countingOperator) Evaluate(plugintypes.TransactionState, string) bool {
 
 // Reaching the limit takes more chained evaluations than a profile can assert
 // on deterministically, so operator calls are counted directly.
-func TestEvalDepthEvaluationLimit(t *testing.T) {
+func TestDepthFirstEvaluationLimit(t *testing.T) {
 	tests := []struct {
 		name string
 		args int
@@ -1054,12 +1054,14 @@ func TestEvalDepthEvaluationLimit(t *testing.T) {
 			middle := &countingOperator{result: true}
 			last := &countingOperator{}
 			r := newRule(first, noID)
-			r.ID_, r.LogID_, r.HasChain, r.EvalDepth = 1, "1", true, true
+			r.ID_, r.LogID_, r.HasChain = 1, "1", true
 			r.Chain = newRule(middle, 1)
 			r.Chain.HasChain = true
 			r.Chain.Chain = newRule(last, 1)
 
-			tx := NewWAF().NewTransaction()
+			waf := NewWAF()
+			waf.RuleEvalDepthFirst = true
+			tx := waf.NewTransaction()
 			for i := 0; i < tt.args; i++ {
 				tx.AddGetRequestArgument(fmt.Sprintf("a%d", i), "x")
 			}

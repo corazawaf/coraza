@@ -7,6 +7,13 @@
 #
 SecRuleEngine DetectionOnly
 
+# Evaluate every rule chain once per match of its parent while preserving the
+# MATCHED_VAR and capture state of that match. This Coraza extension changes
+# chain semantics globally, so it remains disabled unless the loaded ruleset
+# requires per-match correlation.
+#
+SecRuleEvalDepthFirst Off
+
 # -- Performance optimizations -----------------------------------------------
 
 # Toggles literal pre-filtering for the @rx operator.

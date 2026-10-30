@@ -402,6 +402,27 @@ func directiveSecRuleEngine(options *DirectiveOptions) error {
 	return err
 }
 
+// Description: Configures whether all rule chains are evaluated depth first.
+// Syntax: SecRuleEvalDepthFirst On|Off
+// Default: Off
+// ---
+// When enabled, each chained rule is evaluated once per match of its parent,
+// with the MATCHED_VAR, MATCHED_VAR_NAME and TX:0-TX:9 state produced by that
+// match. This is a Coraza extension; ModSecurity evaluates chains breadth first.
+//
+// Example:
+// ```seclang
+// SecRuleEvalDepthFirst On
+// ```
+func directiveSecRuleEvalDepthFirst(options *DirectiveOptions) error {
+	enabled, err := parseBoolean(options.Opts)
+	if err != nil {
+		return err
+	}
+	options.WAF.RuleEvalDepthFirst = enabled
+	return nil
+}
+
 // Description: Shared handler for ModSecurity directives that Coraza parses and discards, so
 // existing configurations continue to load.
 // Syntax: SecTmpDir /path/to/dir

@@ -82,6 +82,10 @@ type WAF struct {
 	// Defines if rules are going to be evaluated
 	RuleEngine types.RuleEngineStatus
 
+	// RuleEvalDepthFirst makes every rule chain evaluate once per parent match,
+	// preserving that match's context while evaluating the remaining links.
+	RuleEvalDepthFirst bool
+
 	// Responses will only be loaded if mime is listed here
 	ResponseBodyMimeTypes []string
 
@@ -220,6 +224,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.ResponseBodyAccess = w.ResponseBodyAccess
 	tx.ResponseBodyLimit = w.ResponseBodyLimit
 	tx.RuleEngine = w.RuleEngine
+	tx.RuleEvalDepthFirst = w.RuleEvalDepthFirst
 	tx.HashEngine = false
 	tx.HashEnforcement = false
 	tx.lastPhase = 0

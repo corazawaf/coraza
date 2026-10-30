@@ -85,6 +85,7 @@ type Transaction struct {
 	ResponseBodyAccess        bool
 	ResponseBodyLimit         int64
 	RuleEngine                types.RuleEngineStatus
+	RuleEvalDepthFirst        bool
 	HashEngine                bool
 	HashEnforcement           bool
 

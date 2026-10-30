@@ -138,11 +138,6 @@ type Rule struct {
 
 	HasChain bool
 
-	// EvalDepth makes a chain starter evaluate the rest of the chain once per
-	// match, each time with the MATCHED_VAR, MATCHED_VAR_NAME and TX:0-9 values
-	// left by that match, instead of once with the values of the last match.
-	EvalDepth bool
-
 	// inferredPhases is the inferred phases the rule is relevant for
 	// based on the processed variables.
 	// Multiphase specific field
@@ -205,7 +200,7 @@ func (r *Rule) evaluate(logger debuglog.Logger, phase types.RulePhase, tx *Trans
 
 	var matchedValues []types.MatchData
 	var depthContexts []chainContext
-	depthFirst := r.EvalDepth && r.Chain != nil && r.ParentID_ == noID
+	depthFirst := tx.RuleEvalDepthFirst && r.Chain != nil && r.ParentID_ == noID
 	if depthFirst {
 		contexts = &depthContexts
 	}
@@ -454,13 +449,12 @@ func (r *Rule) evaluate(logger debuglog.Logger, phase types.RulePhase, tx *Trans
 	return matchedValues
 }
 
-// depthFirstEvaluationLimit is a soft bound on the operator evaluations
-// evalDepth spends on the chained rules of one chain starter. Every parent
-// match multiplies the work of the rules below it, so a request with many
-// arguments would otherwise make a three link chain cubic. The budget is
-// checked between parent contexts, so one rule evaluation may overshoot the
-// limit. Once exhaustion is observed, the rest of the chain is evaluated once,
-// breadth first, as it would be without evalDepth.
+// depthFirstEvaluationLimit is a soft bound on the operator evaluations spent
+// on the chained rules of one chain starter. Every parent match multiplies the
+// work of the rules below it, so a request with many arguments would otherwise
+// make a three link chain cubic. The budget is checked between parent contexts,
+// so one rule evaluation may overshoot the limit. Once exhaustion is observed,
+// the rest of the chain is evaluated once, breadth first.
 const depthFirstEvaluationLimit = 10000
 
 // evaluateDepthFirst evaluates r, and the rules chained after it, once for
@@ -479,7 +473,7 @@ func (r *Rule) evaluateDepthFirst(logger debuglog.Logger, phase types.RulePhase,
 		if *budget <= 0 {
 			logger.Warn().
 				Int("limit", depthFirstEvaluationLimit).
-				Msg("evalDepth evaluation limit reached, evaluating the rest of the chain breadth first")
+				Msg("depth first chain evaluation limit reached, evaluating the rest of the chain breadth first")
 			last := parents[len(parents)-1]
 			return r.evaluateBreadthFirst(logger, phase, tx, branchMatches(ancestors, last), chainLevel, cache, last)
 		}

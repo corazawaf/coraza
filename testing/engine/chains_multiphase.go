@@ -439,13 +439,13 @@ SecAction "id:12, phase:2, t:none, pass, log"
 var _ = profile.RegisterProfile(profile.Profile{
 	Meta: profile.Meta{
 		Author:      "adilalperenciftci",
-		Description: "evalDepth keeps the multiphase double evaluation check per branch",
+		Description: "depth first chain evaluation keeps the multiphase double evaluation check per branch",
 		Enabled:     true,
-		Name:        "chains_eval_depth_multiphase.yaml",
+		Name:        "chains_depth_first_multiphase.yaml",
 	},
 	Tests: []profile.Test{
 		{
-			Title: "chains_eval_depth_multiphase",
+			Title: "chains_depth_first_multiphase",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -465,15 +465,16 @@ var _ = profile.RegisterProfile(profile.Profile{
 	},
 	Rules: `
 SecRequestBodyAccess On
+SecRuleEvalDepthFirst On
 
 # Phase 1 matches a=A, y, POST. Phase 2 adds b=B: the A branch is a double
 # evaluation and is skipped, the B branch is new and counts.
-SecRule ARGS "@rx ^(A|B)$" "id:110,phase:2,pass,log,capture,chain,evalDepth"
+SecRule ARGS "@rx ^(A|B)$" "id:110,phase:2,pass,log,capture,chain"
   SecRule ARGS_GET:y "@rx ^y$" "chain"
-    SecRule REQUEST_METHOD "@streq POST" "setvar:'tx.eval_depth_paths=+1',setvar:'tx.eval_depth_last=%{tx.1}'"
+    SecRule REQUEST_METHOD "@streq POST" "setvar:'tx.depth_first_paths=+1',setvar:'tx.depth_first_last=%{tx.1}'"
 
-SecRule TX:eval_depth_paths "@eq 2" "id:111,phase:5,pass,log,chain"
-  SecRule TX:eval_depth_last "@streq B" ""
+SecRule TX:depth_first_paths "@eq 2" "id:111,phase:5,pass,log,chain"
+  SecRule TX:depth_first_last "@streq B" ""
 `,
 })
 
