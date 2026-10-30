@@ -548,9 +548,29 @@ const unset = -1
 // Action arguments are allowed to wrap values between colons(”)
 func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) {
 	var res []ruleAction
-	var err error
 	disruptiveActionIndex := unset
+	unclosedQuotes, err := splitActions(actions, func(key, val string) error {
+		var err error
+		res, disruptiveActionIndex, err = appendRuleAction(res, key, val, disruptiveActionIndex)
+		return err
+	})
+	if unclosedQuotes {
+		// TODO(4.x): evaluate returning an error. It currently is a warning in order to don't make it a breaking change
+		if logger != nil {
+			logger.Warn().Str("actions", actions).Msg("unclosed quotes in action line")
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
 
+// splitActions splits an action list on commas, honouring quotes and escapes,
+// and calls fn with the raw key and value of each action. It stops at the first
+// error returned by fn. unclosedQuotes reports a quote left open at the end of
+// the list; it is only set once every action but the last has been handled.
+func splitActions(actions string, fn func(key, val string) error) (unclosedQuotes bool, err error) {
 	beforeKey := -1 // index before first char of key
 	afterKey := -1  // index after last char of key and before first char of value
 
@@ -585,18 +605,11 @@ func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) 
 			} else {
 				val = actions[afterKey+1 : i]
 			}
-			res, disruptiveActionIndex, err = appendRuleAction(res, actions[beforeKey+1:afterKey], val, disruptiveActionIndex)
-			if err != nil {
-				return nil, err
+			if err := fn(actions[beforeKey+1:afterKey], val); err != nil {
+				return false, err
 			}
 			beforeKey = i
 			afterKey = -1
-		}
-	}
-	if inQuotes {
-		// TODO(4.x): evaluate returning an error. It currently is a warning in order to don't make it a breaking change
-		if logger != nil {
-			logger.Warn().Str("actions", actions).Msg("unclosed quotes in action line")
 		}
 	}
 	var val string
@@ -606,11 +619,59 @@ func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) 
 	} else {
 		val = actions[afterKey+1:]
 	}
-	res, _, err = appendRuleAction(res, actions[beforeKey+1:afterKey], val, disruptiveActionIndex)
-	if err != nil {
-		return nil, err
+	return inQuotes, fn(actions[beforeKey+1:afterKey], val)
+}
+
+// trailingQuoted returns the content of the double-quoted string that ends
+// data, or "" when data does not end with one.
+func trailingQuoted(data string) string {
+	data = strings.TrimRight(data, " ")
+	if len(data) < 2 || data[len(data)-1] != '"' {
+		return ""
 	}
-	return res, nil
+	for i := len(data) - 2; i >= 0; i-- {
+		if data[i] != '"' {
+			continue
+		}
+		backslashes := 0
+		for j := i - 1; j >= 0 && data[j] == '\\'; j-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			return data[i+1 : len(data)-1]
+		}
+	}
+	return ""
+}
+
+// declaresChain reports whether the actions of a SecRule (withOperator) or
+// SecAction directive include chain. It only splits the action list, so it
+// works for a rule that fails to compile, unknown actions included.
+func declaresChain(data string, withOperator bool) bool {
+	actions := utils.MaybeRemoveQuotes(data)
+	if withOperator {
+		_, _, acts, err := parseActionOperator(data)
+		if err != nil {
+			// The rule is malformed; fall back to its last quoted argument,
+			// or to its last token when the actions are not quoted.
+			acts = trailingQuoted(data)
+			if acts == "" {
+				trimmed := strings.TrimRight(data, " ")
+				if i := strings.LastIndexByte(trimmed, ' '); i >= 0 {
+					acts = trimmed[i+1:]
+				}
+			}
+		}
+		actions = acts
+	}
+	found := false
+	_, _ = splitActions(actions, func(key, _ string) error {
+		if strings.EqualFold(strings.TrimSpace(key), "chain") {
+			found = true
+		}
+		return nil
+	})
+	return found
 }
 
 func appendRuleAction(res []ruleAction, key string, val string, disruptiveActionIndex int) ([]ruleAction, int, error) {

@@ -94,19 +94,25 @@ func (a *setvarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 		a.key = macro
 	}
 
-	if valOk {
-		macro, err := macro.NewMacro(val)
-		if err != nil {
-			return err
+	if !valOk {
+		if a.isRemove {
+			// Removing a variable takes no value
+			return nil
 		}
-		a.value = macro
+		// Without a value the variable is set to 1 (usually used for setting flags),
+		// as ModSecurity does
+		val = "1"
 	}
-	return nil
+	a.value, err = macro.NewMacro(val)
+	return err
 }
 
 func (a *setvarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	key := a.key.Expand(tx)
-	value := a.value.Expand(tx)
+	value := ""
+	if a.value != nil {
+		value = a.value.Expand(tx)
+	}
 	tx.DebugLogger().Debug().
 		Str("var_key", key).
 		Str("var_value", value).

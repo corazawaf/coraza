@@ -17,6 +17,7 @@ import (
 // This action is extremely useful when responding to both Brute Force and Denial of Service attacks,
 // which you may want to minimize the network bandwidth and the data returned to the client.
 // This action causes error message to appear in the log `(9)Bad file descriptor: core_output_filter: writing data to the network`
+// If status action is not used, the interruption status defaults to 403, as with deny.
 //
 // Example:
 // ```seclang
@@ -41,7 +42,7 @@ func (a *dropFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transaction
 		rid = r.ParentID()
 	}
 	tx.Interrupt(&types.Interruption{
-		Status: r.Status(),
+		Status: statusOrForbidden(r),
 		RuleID: rid,
 		Action: "drop",
 	})
