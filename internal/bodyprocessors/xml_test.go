@@ -5,6 +5,7 @@ package bodyprocessors
 
 import (
 	"bytes"
+	"slices"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/internal/strings"
@@ -118,5 +119,48 @@ func TestXMLUnexpectedEOF(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestXMLDeclaredEncoding(t *testing.T) {
+	decl := func(enc string) string { return `<?xml version="1.0" encoding="` + enc + `"?>` }
+	tests := []struct {
+		name      string
+		body      string
+		wantAttrs []string
+		wantText  []string
+		wantErr   bool
+	}{
+		{name: "UTF-8", body: decl("UTF-8") + `<a b="x">Renée</a>`, wantAttrs: []string{"x"}, wantText: []string{"Renée"}},
+		{name: "ISO-8859-1 with ASCII content", body: decl("ISO-8859-1") + `<a b="x">Renee</a>`, wantAttrs: []string{"x"}, wantText: []string{"Renee"}},
+		{name: "ISO-8859-1 with Latin-1 content", body: decl("ISO-8859-1") + "<a b=\"K\xf8benhavn\">Ren\xe9e</a>", wantAttrs: []string{"København"}, wantText: []string{"Renée"}},
+		{name: "ISO-8859-1 maps 0x80-0x9F to C1 controls", body: decl("ISO-8859-1") + "<a>\x80\x9f</a>", wantText: []string{"\u0080\u009f"}},
+		{name: "alias latin1, any case", body: decl("Latin1") + "<a>\xe9</a>", wantText: []string{"é"}},
+		{name: "alias iso-ir-100", body: decl("iso-ir-100") + "<a>\xe9</a>", wantText: []string{"é"}},
+		{name: "US-ASCII", body: decl("US-ASCII") + `<a b="x">Renee</a>`, wantAttrs: []string{"x"}, wantText: []string{"Renee"}},
+		{name: "alias ANSI_X3.4-1986", body: decl("ANSI_X3.4-1986") + "<a>Renee</a>", wantText: []string{"Renee"}},
+		{name: "US-ASCII with a non-ASCII byte", body: decl("US-ASCII") + "<a>Ren\xe9e</a>", wantErr: true},
+		{name: "unsupported encoding", body: decl("Shift_JIS") + "<a>x</a>", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attrs, text, err := readXML(bytes.NewReader([]byte(tt.body)))
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !slices.Equal(attrs, tt.wantAttrs) || !slices.Equal(text, tt.wantText) {
+				t.Errorf("got attrs %q text %q, want %q %q", attrs, text, tt.wantAttrs, tt.wantText)
+			}
+		})
+	}
+}
+
+// TestXMLCharsetReaderLabels covers registry names that are not valid XML
+// encoding names (EncName has no ':'), so they are tested on the reader directly.
+func TestXMLCharsetReaderLabels(t *testing.T) {
+	for _, label := range []string{"ISO_8859-1:1987", "ISO_646.irv:1991"} {
+		if _, err := xmlCharsetReader(label, bytes.NewReader(nil)); err != nil {
+			t.Errorf("xmlCharsetReader(%q): %v", label, err)
+		}
 	}
 }
