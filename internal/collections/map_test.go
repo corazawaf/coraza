@@ -30,6 +30,12 @@ func TestMap(t *testing.T) {
 	if c.Get("user")[0] != "value" {
 		t.Error("Error setting index")
 	}
+	if v, ok := c.First("USER"); !ok || v != "value" {
+		t.Errorf("First(USER) = %q, %v; want value, true", v, ok)
+	}
+	if _, ok := c.First("missing"); ok {
+		t.Error("First(missing) should not be found")
+	}
 	if len(c.FindAll()) == 0 {
 		t.Error("Error finding all")
 	}

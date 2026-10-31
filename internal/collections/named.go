@@ -113,12 +113,12 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 	if n == 0 {
 		return nil
 	}
-	buf := make([]corazarules.MatchData, n)
+	buf := make([]corazarules.VariableMatch, n)
 	res := make([]types.MatchData, n)
 	i := 0
 	for _, data := range matched {
 		for _, d := range data {
-			buf[i] = corazarules.MatchData{
+			buf[i] = corazarules.VariableMatch{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,
@@ -135,10 +135,10 @@ func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 	if !ok || len(data) == 0 {
 		return nil
 	}
-	buf := make([]corazarules.MatchData, len(data))
+	buf := make([]corazarules.VariableMatch, len(data))
 	res := make([]types.MatchData, len(data))
 	for i, d := range data {
-		buf[i] = corazarules.MatchData{
+		buf[i] = corazarules.VariableMatch{
 			Variable_: c.variable,
 			Key_:      d.key,
 			Value_:    d.key,
@@ -152,6 +152,10 @@ func (c *NamedCollectionNames) Get(key string) []string {
 	return c.collection.Get(key)
 }
 
+func (c *NamedCollectionNames) First(key string) (string, bool) {
+	return c.collection.First(key)
+}
+
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	n := 0
 	for _, data := range c.collection.data {
@@ -160,12 +164,12 @@ func (c *NamedCollectionNames) FindAll() []types.MatchData {
 	if n == 0 {
 		return nil
 	}
-	buf := make([]corazarules.MatchData, n)
+	buf := make([]corazarules.VariableMatch, n)
 	res := make([]types.MatchData, n)
 	i := 0
 	for _, data := range c.collection.data {
 		for _, d := range data {
-			buf[i] = corazarules.MatchData{
+			buf[i] = corazarules.VariableMatch{
 				Variable_: c.variable,
 				Key_:      d.key,
 				Value_:    d.key,

@@ -16,6 +16,9 @@ import (
 type Single struct {
 	data     string
 	variable variables.RuleVariable
+	// match is the element FindAll hands out; rewritten on every call so the
+	// hundreds of rules reading REQUEST_URI & co. do not each allocate one.
+	match corazarules.VariableMatch
 }
 
 var _ collection.Single = &Single{}
@@ -27,13 +30,11 @@ func NewSingle(variable variables.RuleVariable) *Single {
 	}
 }
 
+// FindAll returns the value as a one-element slice. The element is owned by the
+// Single and rewritten by the next FindAll: callers must not retain it.
 func (c *Single) FindAll() []types.MatchData {
-	return []types.MatchData{
-		&corazarules.MatchData{
-			Variable_: c.variable,
-			Value_:    c.data,
-		},
-	}
+	c.match = corazarules.VariableMatch{Variable_: c.variable, Value_: c.data}
+	return []types.MatchData{&c.match}
 }
 
 func (c *Single) Get() string {
