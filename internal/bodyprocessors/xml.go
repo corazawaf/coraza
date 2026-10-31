@@ -4,10 +4,13 @@
 package bodyprocessors
 
 import (
+	"bufio"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -37,6 +40,7 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 	dec.Strict = false
 	dec.AutoClose = xml.HTMLAutoClose
 	dec.Entity = xml.HTMLEntity
+	dec.CharsetReader = xmlCharsetReader
 	for {
 		token, err := dec.Token()
 		if err != nil && err != io.EOF && !isUnexpectedEOFXMLSyntaxError(err) {
@@ -64,8 +68,67 @@ func isUnexpectedEOFXMLSyntaxError(err error) bool {
 	return errors.As(err, &serr) && serr.Msg == "unexpected EOF"
 }
 
+// xmlCharsetReader decodes bodies that declare ISO-8859-1 or US-ASCII (all IANA
+// names and aliases, plus "ascii"). Both map each byte to the code point of the
+// same value.
+// Any other encoding returns an error, so the body still sets REQBODY_ERROR.
+func xmlCharsetReader(label string, input io.Reader) (io.Reader, error) {
+	ascii := false
+	switch strings.ToLower(label) {
+	case "iso_8859-1:1987", "iso-ir-100", "iso_8859-1", "iso-8859-1", "latin1", "l1", "ibm819", "cp819", "csisolatin1":
+	case "us-ascii", "iso-ir-6", "ansi_x3.4-1968", "ansi_x3.4-1986", "iso_646.irv:1991", "iso646-us", "us", "ibm367", "cp367", "csascii", "ascii":
+		ascii = true
+	default:
+		return nil, fmt.Errorf("unsupported XML encoding %q", label)
+	}
+	br, ok := input.(io.ByteReader)
+	if !ok {
+		br = bufio.NewReader(input)
+	}
+	return &latin1Reader{r: br, ascii: ascii}, nil
+}
+
+// latin1Reader converts ISO-8859-1 to UTF-8 one byte at a time. It implements
+// io.ByteReader, so encoding/xml reads from it directly without another buffer.
+// In US-ASCII mode a byte above 0x7F is an error, as the XML spec requires for
+// content that does not match the declared encoding.
+type latin1Reader struct {
+	r     io.ByteReader
+	ascii bool
+	next  byte // pending second byte of a two-byte UTF-8 sequence, 0 if none
+}
+
+func (l *latin1Reader) ReadByte() (byte, error) {
+	if l.next != 0 {
+		b := l.next
+		l.next = 0
+		return b, nil
+	}
+	b, err := l.r.ReadByte()
+	if err != nil || b < utf8.RuneSelf {
+		return b, err
+	}
+	if l.ascii {
+		return 0, fmt.Errorf("byte 0x%02x is not US-ASCII", b)
+	}
+	l.next = 0x80 | b&0x3f
+	return 0xc0 | b>>6, nil
+}
+
+func (l *latin1Reader) Read(p []byte) (int, error) {
+	for i := range p {
+		b, err := l.ReadByte()
+		if err != nil {
+			return i, err
+		}
+		p[i] = b
+	}
+	return len(p), nil
+}
+
 var (
 	_ plugintypes.BodyProcessor = &xmlBodyProcessor{}
+	_ io.ByteReader             = (*latin1Reader)(nil)
 )
 
 func init() {
