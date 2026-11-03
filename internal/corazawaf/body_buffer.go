@@ -94,6 +94,15 @@ func (br *BodyBuffer) Write(data []byte) (n int, err error) {
 	return br.buffer.Write(data)
 }
 
+// setLimit updates the overall limit enforced by Write. The transaction calls it
+// before every write so the buffer enforces the transaction's current limit,
+// which ctl:requestBodyLimit and ctl:responseBodyLimit can set above the
+// WAF-wide value the buffer was created with. MemoryLimit is not changed: bytes
+// above it still go to a temporary file, or are refused without FS access.
+func (br *BodyBuffer) setLimit(limit int64) {
+	br.options.Limit = limit
+}
+
 type bodyBufferReader struct {
 	pos int
 	br  *BodyBuffer

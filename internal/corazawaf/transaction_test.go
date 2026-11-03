@@ -194,6 +194,7 @@ func TestWriteRequestBody(t *testing.T) {
 		requestBodyLimit                int
 		requestBodyLimitAction          types.BodyLimitAction
 		avoidRequestBodyLimitActionInit bool
+		txRequestBodyLimit              int // if set, overrides the limit on the transaction, as ctl:requestBodyLimit does
 		shouldInterrupt                 bool
 		limitReached                    bool // If the limit is reached, INBOUND_DATA_ERROR should be set
 	}{
@@ -225,6 +226,21 @@ func TestWriteRequestBody(t *testing.T) {
 			requestBodyLimitAction: types.BodyLimitActionProcessPartial,
 			limitReached:           true,
 		},
+		{
+			name:                   "LimitRaisedOnTransactionNotReached",
+			requestBodyLimit:       urlencodedBodyLen - 10,
+			requestBodyLimitAction: types.BodyLimitActionReject,
+			txRequestBodyLimit:     urlencodedBodyLen + 2,
+			limitReached:           false,
+		},
+		{
+			name:                   "LimitRaisedOnTransactionAndRejects",
+			requestBodyLimit:       urlencodedBodyLen - 10,
+			requestBodyLimitAction: types.BodyLimitActionReject,
+			txRequestBodyLimit:     urlencodedBodyLen - 3,
+			shouldInterrupt:        true,
+			limitReached:           true,
+		},
 	}
 
 	urlencodedBodyLenThird := urlencodedBodyLen / 3
@@ -235,6 +251,9 @@ func TestWriteRequestBody(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.txRequestBodyLimit > testCase.requestBodyLimit && !environment.HasAccessToFS {
+				t.Skip("a raised limit spills past the memory limit, which needs filesystem access")
+			}
 			for name, writeRequestBody := range requestBodyWriters {
 				t.Run(name, func(t *testing.T) {
 					for name, chunks := range bodyChunks {
@@ -247,6 +266,9 @@ func TestWriteRequestBody(t *testing.T) {
 								waf.RequestBodyLimitAction = testCase.requestBodyLimitAction
 							}
 							tx := waf.NewTransaction()
+							if testCase.txRequestBodyLimit != 0 {
+								tx.RequestBodyLimit = int64(testCase.txRequestBodyLimit)
+							}
 							tx.AddRequestHeader("content-type", "application/x-www-form-urlencoded")
 
 							it := tx.ProcessRequestHeaders()
@@ -598,6 +620,7 @@ func TestWriteResponseBody(t *testing.T) {
 		name                    string
 		responseBodyLimit       int
 		responseBodyLimitAction types.BodyLimitAction
+		txResponseBodyLimit     int // if set, overrides the limit on the transaction, as ctl:responseBodyLimit does
 		shouldInterrupt         bool
 		limitReached            bool // If the limit is reached, OUTBOUND_DATA_ERROR should be set
 	}{
@@ -627,6 +650,13 @@ func TestWriteResponseBody(t *testing.T) {
 			// responseBodyLimitAction: types.BodyLimitActionProcessPartial,
 			limitReached: true,
 		},
+		{
+			name:                    "LimitRaisedOnTransactionNotReached",
+			responseBodyLimit:       urlencodedBodyLen - 10,
+			responseBodyLimitAction: types.BodyLimitActionReject,
+			txResponseBodyLimit:     urlencodedBodyLen + 2,
+			limitReached:            false,
+		},
 	}
 
 	urlencodedBodyLenThird := urlencodedBodyLen / 3
@@ -637,6 +667,9 @@ func TestWriteResponseBody(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.txResponseBodyLimit > testCase.responseBodyLimit && !environment.HasAccessToFS {
+				t.Skip("a raised limit spills past the memory limit, which needs filesystem access")
+			}
 			for name, writeResponseBody := range responseBodyWriters {
 				t.Run(name, func(t *testing.T) {
 					for name, chunks := range bodyChunks {
@@ -653,6 +686,9 @@ func TestWriteResponseBody(t *testing.T) {
 							}
 
 							tx := waf.NewTransaction()
+							if testCase.txResponseBodyLimit != 0 {
+								tx.ResponseBodyLimit = int64(testCase.txResponseBodyLimit)
+							}
 							tx.AddResponseHeader("content-type", "text/plain")
 
 							it := tx.ProcessResponseHeaders(200, "HTTP/1")

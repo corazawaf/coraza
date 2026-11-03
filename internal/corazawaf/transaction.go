@@ -1002,6 +1002,7 @@ func (tx *Transaction) WriteRequestBody(b []byte) (*types.Interruption, int, err
 		}
 	}
 
+	tx.requestBodyBuffer.setLimit(tx.RequestBodyLimit)
 	w, err := tx.requestBodyBuffer.Write(b[:writingBytes])
 	if err != nil {
 		return nil, 0, err
@@ -1070,6 +1071,7 @@ func (tx *Transaction) ReadRequestBodyFrom(r io.Reader) (*types.Interruption, in
 		writingBytes = tx.RequestBodyLimit - tx.requestBodyBuffer.length
 	}
 
+	tx.requestBodyBuffer.setLimit(tx.RequestBodyLimit)
 	w, err := io.CopyN(tx.requestBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
 		return nil, int(w), err
@@ -1272,6 +1274,7 @@ func (tx *Transaction) WriteResponseBody(b []byte) (*types.Interruption, int, er
 			runProcessResponseBody = true
 		}
 	}
+	tx.responseBodyBuffer.setLimit(tx.ResponseBodyLimit)
 	w, err := tx.responseBodyBuffer.Write(b[:writingBytes])
 	if err != nil {
 		return nil, 0, err
@@ -1326,6 +1329,7 @@ func (tx *Transaction) ReadResponseBodyFrom(r io.Reader) (*types.Interruption, i
 		writingBytes = tx.ResponseBodyLimit - tx.responseBodyBuffer.length
 	}
 
+	tx.responseBodyBuffer.setLimit(tx.ResponseBodyLimit)
 	w, err := io.CopyN(tx.responseBodyBuffer, r, writingBytes)
 	if err != nil && err != io.EOF {
 		return nil, int(w), err

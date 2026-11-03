@@ -252,7 +252,9 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 
 		tx.responseBodyBuffer = NewBodyBuffer(types.BodyBufferOptions{
 			TmpPath: w.TmpDir,
-			// the response body is just buffered in memory. Therefore, Limit and MemoryLimit are equal.
+			// the response body is buffered in memory up to the WAF-wide limit. The transaction
+			// syncs Limit before each write, so a body limit raised with ctl:responseBodyLimit
+			// spills the bytes above MemoryLimit to a temporary file, as the request body does.
 			MemoryLimit: w.ResponseBodyLimit,
 			Limit:       w.ResponseBodyLimit,
 		})
