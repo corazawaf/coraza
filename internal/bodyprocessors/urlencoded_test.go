@@ -10,6 +10,7 @@ import (
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 )
 
@@ -83,6 +84,24 @@ func TestURLEncodeArgumentLimit(t *testing.T) {
 	}
 	if v.ArgumentsLimitReached().Get() != "1" {
 		t.Error("expected ARGUMENTS_LIMIT_REACHED to be set")
+	}
+}
+
+func TestURLEncodeSetsURLencodedErrorForMalformedEncoding(t *testing.T) {
+	bp, err := bodyprocessors.GetBodyProcessor("urlencoded")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := corazawaf.NewTransactionVariables()
+	v.UrlencodedError().(*collections.Single).Set("0")
+	if err := bp.ProcessRequest(strings.NewReader("a=%ZZ"), v, plugintypes.BodyProcessorOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := v.UrlencodedError().Get(); got != "1" {
+		t.Fatalf("expected URLENCODED_ERROR to be 1, got %q", got)
+	}
+	if got := v.ArgsPost().Get("a"); len(got) != 1 || got[0] != "%ZZ" {
+		t.Fatalf("expected non-strict decoded value to be preserved, got %q", got)
 	}
 }
 
