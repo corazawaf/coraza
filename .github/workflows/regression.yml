@@ -96,6 +96,23 @@ jobs:
           flags: tinygo,${{ matrix.build-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  # normalisePath and normalisePathWin must emit "/" on every host. On Linux path.Clean and
+  # filepath.Clean agree, so only a Windows run can observe a regression there (#1140, #1742).
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: 1.25.x
+          cache: true
+      - name: Transformations tests
+        run: go test ./internal/transformations/...
+
   # Runs the suite in FIPS 140-3 mode
   fips:
     strategy:
