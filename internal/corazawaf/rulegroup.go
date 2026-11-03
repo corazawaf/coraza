@@ -312,10 +312,11 @@ type transformationKey struct {
 	// collections hold their values throughout the phase.
 	//
 	// The identity is the value itself (data pointer + length), not the argument's key
-	// and position: collections backed by a map return FindAll() results in Go map
-	// iteration order, so an argument's position is not stable from one rule to the
-	// next within a phase. Variables that get a fresh string on every lookup would only
-	// leave entries behind, see transformationCacheable.
+	// and position: an argument's position is not stable from one rule to the next
+	// within a phase, since reading the same collection through a key, a regex or an
+	// exception yields a different subset, and setvar can add or remove keys in
+	// between. Variables that get a fresh string on every lookup would only leave
+	// entries behind, see transformationCacheable.
 	argValue          *byte
 	argValueLen       int
 	transformationsID int

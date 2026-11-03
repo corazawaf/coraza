@@ -7,17 +7,24 @@ import (
 	"strings"
 )
 
-// ParseCookies parses cookies and splits in name, value pairs. Won't check for valid names nor values.
-// If there are multiple cookies with the same name, it will append to the list with the same name key.
-// Loosely based in the stdlib src/net/http/cookie.go
-func ParseCookies(rawCookies string) map[string][]string {
-	cookies := make(map[string][]string)
+// Cookie is one name, value pair of a Cookie header.
+type Cookie struct {
+	Name  string
+	Value string
+}
 
+// ParseCookies parses cookies and splits in name, value pairs. Won't check for valid names nor values.
+// The pairs are returned in the order they appear in the header, repeated names included, so
+// REQUEST_COOKIES holds them in request order (see corazawaf/coraza#1815).
+// Loosely based in the stdlib src/net/http/cookie.go
+func ParseCookies(rawCookies string) []Cookie {
 	rawCookies = trimCTLAndSpace(rawCookies)
 
 	if rawCookies == "" {
-		return cookies
+		return nil
 	}
+
+	var cookies []Cookie
 
 	var part string
 	for len(rawCookies) > 0 { // continue since we have rest
@@ -38,7 +45,7 @@ func ParseCookies(rawCookies string) map[string][]string {
 		if name == "" && val == "" {
 			continue
 		}
-		cookies[name] = append(cookies[name], val)
+		cookies = append(cookies, Cookie{Name: name, Value: val})
 	}
 	return cookies
 }

@@ -204,7 +204,7 @@ var jsonTests = []struct {
 // properties to the backend. Both values must survive under the same key.
 func TestReadJSONKeyCollisionPreservesBothValues(t *testing.T) {
 	json := `{"account":{"role":"ATTACK"},"account.role":"SAFE"}`
-	got, _, err := readJSON(json, maxRecursion, 0)
+	got, _, err := readJSONMap(json, maxRecursion, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestReadJSON(t *testing.T) {
 	for _, tc := range jsonTests {
 		tt := tc
 		t.Run(tt.name, func(t *testing.T) {
-			jsonMap, _, err := readJSON(tt.json, maxRecursion, 0)
+			jsonMap, _, err := readJSONMap(tt.json, maxRecursion, 0)
 
 			// Special case for nested_empty - just check that the function doesn't error
 			if tt.name == "nested_empty" {
@@ -271,7 +271,7 @@ func mapKeys(m map[string][]string) []string {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	_, _, err := readJSON(`{invalid json`, maxRecursion, 0)
+	_, _, err := readJSONMap(`{invalid json`, maxRecursion, 0)
 	if err == nil {
 		// We expect an error for invalid JSON since we now validate
 		t.Error("Expected error for invalid JSON, got nil")
@@ -281,7 +281,7 @@ func TestInvalidJSON(t *testing.T) {
 // Not a jsonTests row: maxRecursion is shared across all rows in that table,
 // so a negative-limit case can't be expressed as one.
 func TestReadJSONNegativeRecursionLimit(t *testing.T) {
-	_, _, err := readJSON(`{"a": 1}`, -1, 0)
+	_, _, err := readJSONMap(`{"a": 1}`, -1, 0)
 	want := "max recursion reached while reading json object"
 	if err == nil || err.Error() != want {
 		t.Errorf("want error %q, got %v", want, err)
@@ -302,13 +302,24 @@ func BenchmarkReadJSON(b *testing.B) {
 	}
 }
 
+// readJSONMap is readJSON with the values grouped by key, the form most
+// assertions here read them in.
+func readJSONMap(s string, maxRecursion int, argumentLimit int) (map[string][]string, bool, error) {
+	args, truncated, err := readJSON(s, maxRecursion, argumentLimit)
+	res := make(map[string][]string, len(args))
+	for _, a := range args {
+		res[a.key] = append(res[a.key], a.value)
+	}
+	return res, truncated, err
+}
+
 // readJSONNoValidation is readJSON without the gjson.Valid pre-check.
 // Used only in benchmarks to measure the overhead of validation.
-func readJSONNoValidation(s string, maxRecursion int) (map[string][]string, error) {
+func readJSONNoValidation(s string, maxRecursion int) ([]jsonArg, error) {
 	json := gjson.Parse(s)
-	res := make(map[string][]string)
+	var res []jsonArg
 	key := []byte("json")
-	_, err := readItems(json, key, maxRecursion, 0, 0, new(int), new(int), new(int), res)
+	_, err := readItems(json, key, maxRecursion, 0, 0, new(int), new(int), new(int), &res)
 	return res, err
 }
 
@@ -385,7 +396,7 @@ func TestReadJSONArgumentLimit(t *testing.T) {
 	}
 	sb.WriteString("]")
 
-	res, truncated, err := readJSON(sb.String(), maxRecursion, 1000)
+	res, truncated, err := readJSONMap(sb.String(), maxRecursion, 1000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +422,7 @@ func TestReadJSONArgumentLimitNested(t *testing.T) {
 	}
 	sb.WriteString(`]}}`)
 
-	res, truncated, err := readJSON(sb.String(), maxRecursion, 1000)
+	res, truncated, err := readJSONMap(sb.String(), maxRecursion, 1000)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,7 +453,7 @@ func TestReadJSONArgumentLimitCountsCollidedValues(t *testing.T) {
 	}
 	sb.WriteString("}")
 
-	res, truncated, err := readJSON(sb.String(), maxRecursion, limit)
+	res, truncated, err := readJSONMap(sb.String(), maxRecursion, limit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +522,7 @@ func TestReadJSONArgumentLimitTruncationEnforcesRecursionLimit(t *testing.T) {
 	sb.WriteString(strings.Repeat("]", depth))
 	sb.WriteString("]")
 
-	_, truncated, err := readJSON(sb.String(), limit, limit)
+	_, truncated, err := readJSONMap(sb.String(), limit, limit)
 	if !truncated {
 		t.Error("expected truncated to be true")
 	}
@@ -522,7 +533,7 @@ func TestReadJSONArgumentLimitTruncationEnforcesRecursionLimit(t *testing.T) {
 }
 
 func TestReadJSONNoArgumentLimit(t *testing.T) {
-	res, truncated, err := readJSON(`{"a":1,"b":2,"c":3}`, maxRecursion, 0)
+	res, truncated, err := readJSONMap(`{"a":1,"b":2,"c":3}`, maxRecursion, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -621,7 +632,7 @@ func TestReadJSONArrayLengthRespectsArgumentLimit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, truncated, err := readJSON(tt.body, 10000, limit)
+			res, truncated, err := readJSONMap(tt.body, 10000, limit)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -682,7 +693,7 @@ func TestReadJSONBoundsFlattenedBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, truncated, err := readJSON(tt.body, 10000, limit)
+			res, truncated, err := readJSONMap(tt.body, 10000, limit)
 			if err == nil || !strings.Contains(err.Error(), "flattened form exceeds") {
 				t.Fatalf("expected the byte budget error, got %v", err)
 			}
@@ -725,7 +736,7 @@ func TestReadJSONLeavesOrdinaryPayloadsIntact(t *testing.T) {
 	}
 	sb.WriteString(`]}`)
 
-	res, truncated, err := readJSON(sb.String(), 10000, 1000)
+	res, truncated, err := readJSONMap(sb.String(), 10000, 1000)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

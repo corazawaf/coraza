@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -22,6 +23,18 @@ import (
 // Most implementations of Coraza will probably use http.Request objects
 // so this will implement all phase 0, 1 and 2 variables
 // Note: This function will stop after an interruption
+// sortedHeaderKeys appends the names in h to buf in sorted order. net/http
+// keeps headers in a map, so the order they arrived in is lost; sorting gives
+// rules the same order on every transaction, which a chained rule reading the
+// captures of its parent's last match depends on (corazawaf/coraza#1815).
+func sortedHeaderKeys(h http.Header, buf []string) []string {
+	for k := range h {
+		buf = append(buf, k)
+	}
+	slices.Sort(buf)
+	return buf
+}
+
 // Note: Do not manually fill any request variables
 func processRequest(tx types.Transaction, req *http.Request) (*types.Interruption, error) {
 	var (
@@ -39,8 +52,9 @@ func processRequest(tx types.Transaction, req *http.Request) (*types.Interruptio
 	// There is no socket access in the request object, so we neither know the server client nor port.
 	tx.ProcessConnection(client, cport, "", 0)
 	tx.ProcessURI(req.URL.String(), req.Method, req.Proto)
-	for k, vr := range req.Header {
-		for _, v := range vr {
+	var keysBuf [32]string
+	for _, k := range sortedHeaderKeys(req.Header, keysBuf[:0]) {
+		for _, v := range req.Header[k] {
 			tx.AddRequestHeader(k, v)
 		}
 	}
