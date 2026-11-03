@@ -94,6 +94,11 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	if !opResult {
 		t.Errorf("Expected JSON with missing required field to return true, got false")
 	}
+
+	// A property of the wrong type should return true (violation detected)
+	if !op.Evaluate(nil, `{"name": "John", "age": "thirty"}`) {
+		t.Errorf("Expected JSON with a wrong-typed property to return true, got false")
+	}
 }
 
 func TestValidateSchemaInvalidFile(t *testing.T) {
