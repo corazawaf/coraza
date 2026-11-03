@@ -131,6 +131,12 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 }
 
 func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
+	// The map stores lowercased keys unless it is case-sensitive, so the
+	// lookup key must follow suit, as Map.FindString does; otherwise
+	// ARGS_NAMES:User never matches anything.
+	if !c.collection.isCaseSensitive {
+		key = strings.ToLower(key)
+	}
 	data, ok := c.collection.data[key]
 	if !ok || len(data) == 0 {
 		return nil

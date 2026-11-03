@@ -65,9 +65,28 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			// A mixed-case key on ARGS_NAMES used to match nothing at all: the
+			// rule kept the key as written while the map stored it lowercased.
+			// The value keeps the parameter's original casing, as in ModSecurity.
+			Title: "mixed-case ARGS_NAMES key",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/index.php?User=1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{510},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecRule REQBODY_PROCESSOR "" "id: 10, log"
+SecRule ARGS_NAMES:User "@streq User" "id:510,phase:1,log"
 SecRequestBodyAccess On
 SecRule ARGS:/^t1$/ "aaa" "id:1,phase:1,block,log"
 SecRule &ARGS_GET:/t.*/ "@gt 2" "id: 1234, phase:1, block, log, setenv:test=some-secret"
