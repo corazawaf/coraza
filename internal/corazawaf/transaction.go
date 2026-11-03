@@ -29,7 +29,6 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	"github.com/corazawaf/coraza/v3/internal/environment"
-	stringsutil "github.com/corazawaf/coraza/v3/internal/strings"
 	urlutil "github.com/corazawaf/coraza/v3/internal/url"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -449,10 +448,12 @@ func (tx *Transaction) AddResponseHeader(key string, value string) {
 	keyl := strings.ToLower(key)
 	tx.variables.responseHeaders.Add(key, value)
 
-	// Most headers can be managed like that
-	if keyl == "content-type" {
+	// RESPONSE_CONTENT_TYPE is the media type of the first Content-Type header,
+	// the one clients honour, without parameters. ModSecurity v2 reads it the
+	// same way (apr_table_get returns the first value).
+	if keyl == "content-type" && tx.variables.responseContentType.Get() == "" {
 		name, _, _ := strings.Cut(value, ";")
-		tx.variables.responseContentType.Set(name)
+		tx.variables.responseContentType.Set(strings.TrimSpace(name))
 	}
 }
 
@@ -1228,8 +1229,15 @@ func (tx *Transaction) IsResponseBodyProcessable() bool {
 		// we force the response body to be processed because of the ctl:forceResponseBodyVariable
 		return true
 	}
+	// Media types are case-insensitive (RFC 9110 8.3.1): "Text/HTML" must be
+	// inspected when SecResponseBodyMimeType lists text/html.
 	ct := tx.variables.responseContentType.Get()
-	return stringsutil.InSlice(ct, tx.WAF.ResponseBodyMimeTypes)
+	for _, mimeType := range tx.WAF.ResponseBodyMimeTypes {
+		if strings.EqualFold(ct, mimeType) {
+			return true
+		}
+	}
+	return false
 }
 
 // WriteResponseBody writes bytes from a slice of bytes into the response body,
