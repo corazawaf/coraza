@@ -199,42 +199,6 @@ func TestRemoveRuleTargetDoesNotWriteIntoRule(t *testing.T) {
 	}
 }
 
-func TestRemoveRuleTargetByIDsKeepsEachRulesOwnRemovals(t *testing.T) {
-	newRule := func(id int) *Rule {
-		r := NewRule()
-		r.ID_ = id
-		r.LogID_ = strconv.Itoa(id)
-		if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
-			t.Fatal(err)
-		}
-		r.SetOperator(&dummyEqOperator{}, "@eq", "0")
-		return r
-	}
-	r1, r2 := newRule(1), newRule(2)
-	tx := NewWAF().NewTransaction()
-	tx.AddGetRequestArgument("a", "0")
-	tx.AddGetRequestArgument("b", "0")
-	tx.AddGetRequestArgument("c", "0")
-	// Rules 1 and 2 share the removal of a, then each gets one of its own.
-	tx.RemoveRuleTargetByIDs([]int{1, 2}, variables.ArgsGet, "a", nil)
-	tx.RemoveRuleTargetByID(1, variables.ArgsGet, "b", nil)
-	tx.RemoveRuleTargetByID(2, variables.ArgsGet, "c", nil)
-	for _, tc := range []struct {
-		rule *Rule
-		want string
-	}{{r1, "c"}, {r2, "b"}} {
-		var matchedValues []types.MatchData
-		got := tc.rule.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
-		if len(got) != 1 || got[0].Key() != tc.want {
-			keys := make([]string, 0, len(got))
-			for _, m := range got {
-				keys = append(keys, m.Key())
-			}
-			t.Errorf("rule %d matched %v, want [%s]", tc.rule.ID_, keys, tc.want)
-		}
-	}
-}
-
 type dummyFlowAction struct{}
 
 func (*dummyFlowAction) Init(_ plugintypes.RuleMetadata, _ string) error {

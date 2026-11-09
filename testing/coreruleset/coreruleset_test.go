@@ -855,5 +855,12 @@ func ctlBenchWAF(b *testing.B, rule string) coraza.WAF {
 	if err != nil {
 		b.Fatal(err)
 	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		b.Cleanup(func() {
+			if err := closer.Close(); err != nil {
+				b.Error(err)
+			}
+		})
+	}
 	return waf
 }

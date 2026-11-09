@@ -122,22 +122,21 @@ type ctlFn struct {
 	colKeyRx   *regexp.Regexp
 	// ruleIDs caches the rules a ctl that selects them by ID range, tag or
 	// msg applies to. The selection only changes with the rule group, so the
-	// group is walked once rather than on every transaction.
+	// group is walked once per version rather than on every transaction.
 	ruleIDs atomic.Pointer[ctlRuleIDs]
 }
 
-// ctlRuleIDs is what a ctl selected in one rule group.
+// ctlRuleIDs is what a ctl selected in one version of a rule group.
 type ctlRuleIDs struct {
-	rules []corazawaf.Rule
-	ids   []int
+	version uint64
+	ids     []int
 }
 
 // selectedRuleIDs returns the IDs of the rules in the transaction's rule
 // group that the ctl applies to, or false when its ID range does not parse.
 func (a *ctlFn) selectedRuleIDs(tx *corazawaf.Transaction) ([]int, bool) {
-	rules := tx.WAF.Rules.GetRules()
-	if c := a.ruleIDs.Load(); c != nil && len(c.rules) == len(rules) &&
-		(len(rules) == 0 || &c.rules[0] == &rules[0]) {
+	version := tx.WAF.Rules.Version()
+	if c := a.ruleIDs.Load(); c != nil && c.version == version {
 		return c.ids, true
 	}
 	start, end := 0, 0
@@ -152,6 +151,7 @@ func (a *ctlFn) selectedRuleIDs(tx *corazawaf.Transaction) ([]int, bool) {
 		}
 	}
 	var ids []int
+	rules := tx.WAF.Rules.GetRules()
 	for i := range rules {
 		r := &rules[i]
 		var selected bool
@@ -167,7 +167,7 @@ func (a *ctlFn) selectedRuleIDs(tx *corazawaf.Transaction) ([]int, bool) {
 			ids = append(ids, r.ID_)
 		}
 	}
-	a.ruleIDs.Store(&ctlRuleIDs{rules: rules, ids: ids})
+	a.ruleIDs.Store(&ctlRuleIDs{version: version, ids: ids})
 	return ids, true
 }
 

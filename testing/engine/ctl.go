@@ -278,6 +278,51 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "ruleRemoveTargetByTag shared by rules with removals of their own",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/bulk?a=attack&b=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// 381 removes ARGS:b itself, 382 does not.
+							TriggeredRules:    []int{380, 382, 384},
+							NonTriggeredRules: []int{381, 383},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/api/bulk?a=attack&c=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// 382 removes ARGS:c itself, 381 does not.
+							TriggeredRules:    []int{380, 381, 384},
+							NonTriggeredRules: []int{382, 383},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "POST",
+							URI:    "/api/bulk",
+							Data:   "a=attack&b=attack",
+						},
+						Output: profile.ExpectedOutput{
+							// The removals reach ARGS_POST and ARGS_POST_NAMES under multiphase evaluation.
+							TriggeredRules:    []int{380, 382, 384},
+							NonTriggeredRules: []int{381, 383},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -367,5 +412,20 @@ SecRule REQUEST_METHOD "@rx ^GET$" "id:351,phase:1,log,tag:OWASP_CRS,chain"
 SecRule REQUEST_URI "@beginsWith /api/chain-msg" "id:360,phase:1,pass,log,ctl:ruleRemoveTargetByMsg=argument too long;ARGS_GET:json.content"
 SecRule REQUEST_METHOD "@rx ^GET$" "id:361,phase:1,log,msg:'argument too long',chain"
     SecRule ARGS_GET "@rx attack" ""
+
+# Shared and per-rule target removals:
+# Rule 380 removes ARGS:a and ARGS_NAMES:a from the rules tagged bulk-test (381, 382
+# and 383), then ARGS:b from 381 only and ARGS:c from 382 only. Each rule must keep
+# its own removals: 381 still inspects c and 382 still inspects b. Rule 384 is not
+# tagged and still inspects a.
+SecRule REQUEST_URI "@beginsWith /api/bulk" "id:380,phase:1,pass,log,\
+	ctl:ruleRemoveTargetByTag=bulk-test;ARGS:a,\
+	ctl:ruleRemoveTargetByTag=bulk-test;ARGS_NAMES:a,\
+	ctl:ruleRemoveTargetById=381;ARGS:b,\
+	ctl:ruleRemoveTargetById=382;ARGS:c"
+SecRule ARGS "@rx attack" "id:381,phase:2,log,tag:bulk-test"
+SecRule ARGS "@rx attack" "id:382,phase:2,log,tag:bulk-test"
+SecRule ARGS_NAMES "@streq a" "id:383,phase:2,log,tag:bulk-test"
+SecRule ARGS:a "@rx attack" "id:384,phase:2,log"
 `,
 })
