@@ -28,13 +28,15 @@ type RuleGroup struct {
 var ruleGroupVersions atomic.Uint64
 
 // Version returns a number that changes whenever a rule is added to or
-// removed from the group. A value derived from the rules stays valid while
-// it does not change.
+// removed from the group, or a directive edits one in place. A value derived
+// from the rules stays valid while it does not change.
 func (rg *RuleGroup) Version() uint64 {
 	return rg.version
 }
 
-func (rg *RuleGroup) changed() {
+// MarkChanged gives the group a new version. Directives that edit a rule in
+// place call it.
+func (rg *RuleGroup) MarkChanged() {
 	rg.version = ruleGroupVersions.Add(1)
 }
 
@@ -78,7 +80,7 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 	}
 
 	rg.rules = append(rg.rules, *rule)
-	rg.changed()
+	rg.MarkChanged()
 
 	if rg.observer != nil {
 		rg.observer(rule)
@@ -122,7 +124,7 @@ func (rg *RuleGroup) DiscardPendingChain() {
 	}
 	if tail.HasChain {
 		rg.rules = rg.rules[:last]
-		rg.changed()
+		rg.MarkChanged()
 	}
 }
 
@@ -131,7 +133,7 @@ func (rg *RuleGroup) DeleteByID(id int) {
 	for i, r := range rg.rules {
 		if r.ID_ == id {
 			rg.rules = append(rg.rules[:i], rg.rules[i+1:]...)
-			rg.changed()
+			rg.MarkChanged()
 			return
 		}
 	}
@@ -146,7 +148,7 @@ func (rg *RuleGroup) DeleteByRange(start, end int) {
 		}
 	}
 	rg.rules = kept
-	rg.changed()
+	rg.MarkChanged()
 }
 
 // DeleteByMsg deletes rules with the given message.
@@ -159,7 +161,7 @@ func (rg *RuleGroup) DeleteByMsg(msg string) {
 		}
 	}
 	rg.rules = kept
-	rg.changed()
+	rg.MarkChanged()
 }
 
 // DeleteByTag deletes rules with the given tag.
@@ -171,7 +173,7 @@ func (rg *RuleGroup) DeleteByTag(tag string) {
 		}
 	}
 	rg.rules = kept
-	rg.changed()
+	rg.MarkChanged()
 }
 
 // Count returns the count of rules
@@ -226,15 +228,16 @@ RulesLoop:
 			}
 		}
 
-		// we skip the rule in case it's in the excluded list
-		if _, skip := tx.ruleRemoveByID[r.ID_]; skip {
+		// we skip the rule in case it's in the excluded list.
+		// Rules without an id all share ID_ 0, so they cannot be removed by id.
+		if _, skip := tx.ruleRemoveByID[r.ID_]; skip && r.ID_ != noID {
 			tx.DebugLogger().Debug().
 				Int("rule_id", r.ID_).
 				Msg("Skipping rule")
 			continue RulesLoop
 		}
 		for _, rng := range tx.ruleRemoveByIDRanges {
-			if r.ID_ >= rng[0] && r.ID_ <= rng[1] {
+			if r.ID_ != noID && r.ID_ >= rng[0] && r.ID_ <= rng[1] {
 				tx.DebugLogger().Debug().
 					Int("rule_id", r.ID_).
 					Msg("Skipping rule")

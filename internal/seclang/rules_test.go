@@ -1382,7 +1382,8 @@ func TestRuleEvaluationDoesNotLogBuiltinTAction(t *testing.T) {
 
 // The ctl actions that select rules by ID range, tag or msg remember which
 // rules they selected. A rule added after transactions ran must be selected
-// too, also when it takes the place of a removed one. Not a profile: the rules
+// too, also when it takes the place of a removed one, and so must a rule that
+// SecRuleUpdateActionById gives the tag and msg. Not a profile: the rules
 // change between transactions.
 func TestCtlSelectionFollowsTheRuleGroup(t *testing.T) {
 	tests := []struct {
@@ -1443,6 +1444,14 @@ SecRule ARGS "@contains w" "id:12,phase:1,deny,status:403,tag:t1,msg:'m1'"
 				t.Fatal(err)
 			}
 			check("w")
+			if err := p.FromString(`SecRule ARGS "@contains v" "id:13,phase:1,deny,status:403"`); err != nil {
+				t.Fatal(err)
+			}
+			blocked("a=v")
+			if err := p.FromString(`SecRuleUpdateActionById 13 "tag:t1,msg:'m1'"`); err != nil {
+				t.Fatal(err)
+			}
+			check("v")
 		})
 	}
 }
