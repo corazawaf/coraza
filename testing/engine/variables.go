@@ -177,3 +177,47 @@ SecRule ARGS:key2[] "@contains newValue" "id:11,phase:2,pass,setvar:'tx.macro_ex
 SecRule ARGS_POST:key2[name] "@contains PaYlOaD" "id:12,phase:2,pass,log,logdata:'Message from rule 12: %{MATCHED_VAR_NAME}, macro expansion: %{ARGS_POST.key2[name]}'"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "coraza",
+		Description: "Test single-quoted plain keys select the same variable as unquoted ones",
+		Enabled:     true,
+		Name:        "variables_quoted_keys.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "variables_quoted_keys",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/login?Password=test&other=test",
+							Headers: map[string]string{
+								"X-Token": "test",
+							},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1,
+								2,
+								3,
+								4,
+							},
+							NonTriggeredRules: []int{
+								5,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRule ARGS:'Password' "@contains test" "id:1,phase:1,log,pass"
+SecRule REQUEST_HEADERS:'X-Token'|ARGS:'Password' "@contains test" "id:2,phase:1,log,pass"
+SecRule ARGS:'/^Pass/'|ARGS:'other' "@contains test" "id:3,phase:1,log,pass"
+SecRule &ARGS:'Password' "@eq 1" "id:4,phase:1,log,pass"
+SecRule ARGS|!ARGS:'Password'|!ARGS:'other' "@contains test" "id:5,phase:1,log,pass"
+`,
+})
