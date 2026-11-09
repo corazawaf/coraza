@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -119,6 +120,55 @@ type ctlFn struct {
 	collection variables.RuleVariable
 	colKey     string
 	colKeyRx   *regexp.Regexp
+	// ruleIDs caches the rules a ctl that selects them by ID range, tag or
+	// msg applies to. The selection only changes with the rule group, so the
+	// group is walked once rather than on every transaction.
+	ruleIDs atomic.Pointer[ctlRuleIDs]
+}
+
+// ctlRuleIDs is what a ctl selected in one rule group.
+type ctlRuleIDs struct {
+	rules []corazawaf.Rule
+	ids   []int
+}
+
+// selectedRuleIDs returns the IDs of the rules in the transaction's rule
+// group that the ctl applies to, or false when its ID range does not parse.
+func (a *ctlFn) selectedRuleIDs(tx *corazawaf.Transaction) ([]int, bool) {
+	rules := tx.WAF.Rules.GetRules()
+	if c := a.ruleIDs.Load(); c != nil && len(c.rules) == len(rules) &&
+		(len(rules) == 0 || &c.rules[0] == &rules[0]) {
+		return c.ids, true
+	}
+	start, end := 0, 0
+	if a.action == ctlRuleRemoveTargetByID {
+		var err error
+		if start, end, err = parseIDOrRange(a.value); err != nil {
+			tx.DebugLogger().Error().
+				Str("ctl", "RuleRemoveTargetByID").
+				Err(err).
+				Msg("Invalid range")
+			return nil, false
+		}
+	}
+	var ids []int
+	for i := range rules {
+		r := &rules[i]
+		var selected bool
+		switch a.action {
+		case ctlRuleRemoveTargetByID:
+			selected = r.ID_ >= start && r.ID_ <= end
+		case ctlRuleRemoveTargetByTag, ctlRuleRemoveByTag:
+			selected = utils.InSlice(a.value, r.Tags_)
+		case ctlRuleRemoveTargetByMsg, ctlRuleRemoveByMsg:
+			selected = r.Msg != nil && r.Msg.String() == a.value
+		}
+		if selected {
+			ids = append(ids, r.ID_)
+		}
+	}
+	a.ruleIDs.Store(&ctlRuleIDs{rules: rules, ids: ids})
+	return ids, true
 }
 
 func (a *ctlFn) Init(m plugintypes.RuleMetadata, data string) error {
@@ -150,34 +200,12 @@ func parseOnOff(s string) (bool, bool) {
 func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.TransactionState) {
 	tx := txS.(*corazawaf.Transaction)
 	switch a.action {
-	case ctlRuleRemoveTargetByID:
-		start, end, err := parseIDOrRange(a.value)
-		if err != nil {
-			tx.DebugLogger().Error().
-				Str("ctl", "RuleRemoveTargetByID").
-				Err(err).
-				Msg("Invalid range")
+	case ctlRuleRemoveTargetByID, ctlRuleRemoveTargetByTag, ctlRuleRemoveTargetByMsg:
+		ids, ok := a.selectedRuleIDs(tx)
+		if !ok {
 			return
 		}
-		for _, r := range tx.WAF.Rules.GetRules() {
-			if r.ID_ >= start && r.ID_ <= end {
-				tx.RemoveRuleTargetByID(r.ID_, a.collection, a.colKey, a.colKeyRx)
-			}
-		}
-	case ctlRuleRemoveTargetByTag:
-		rules := tx.WAF.Rules.GetRules()
-		for _, r := range rules {
-			if utils.InSlice(a.value, r.Tags_) {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
-			}
-		}
-	case ctlRuleRemoveTargetByMsg:
-		rules := tx.WAF.Rules.GetRules()
-		for _, r := range rules {
-			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleTargetByID(r.ID(), a.collection, a.colKey, a.colKeyRx)
-			}
-		}
+		tx.RemoveRuleTargetByIDs(ids, a.collection, a.colKey, a.colKeyRx)
 	case ctlAuditEngine:
 		ae, err := types.ParseAuditEngineStatus(a.value)
 		if err != nil {
@@ -293,19 +321,10 @@ func (a *ctlFn) Evaluate(_ plugintypes.RuleMetadata, txS plugintypes.Transaction
 			}
 			tx.RemoveRuleByIDRange(start, end)
 		}
-	case ctlRuleRemoveByMsg:
-		rules := tx.WAF.Rules.GetRules()
-		for _, r := range rules {
-			if r.Msg != nil && r.Msg.String() == a.value {
-				tx.RemoveRuleByID(r.ID_)
-			}
-		}
-	case ctlRuleRemoveByTag:
-		rules := tx.WAF.Rules.GetRules()
-		for _, r := range rules {
-			if utils.InSlice(a.value, r.Tags_) {
-				tx.RemoveRuleByID(r.ID_)
-			}
+	case ctlRuleRemoveByMsg, ctlRuleRemoveByTag:
+		ids, _ := a.selectedRuleIDs(tx)
+		for _, id := range ids {
+			tx.RemoveRuleByID(id)
 		}
 
 	case ctlResponseBodyAccess:
