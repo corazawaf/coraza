@@ -29,7 +29,8 @@ var ruleGroupVersions atomic.Uint64
 
 // Version returns a number that changes whenever a rule is added to or
 // removed from the group, or a directive edits one in place. A value derived
-// from the rules stays valid while it does not change.
+// from the rules stays valid while it does not change. Like the rules, it is
+// written only while directives are parsed, before transactions run.
 func (rg *RuleGroup) Version() uint64 {
 	return rg.version
 }

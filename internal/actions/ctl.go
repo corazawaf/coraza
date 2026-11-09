@@ -154,6 +154,11 @@ func (a *ctlFn) selectedRuleIDs(tx *corazawaf.Transaction) ([]int, bool) {
 	rules := tx.WAF.Rules.GetRules()
 	for i := range rules {
 		r := &rules[i]
+		if r.ID_ == noID {
+			// Rules without an id all share ID_ 0, so a removal stored under
+			// it would reach every one of them.
+			continue
+		}
 		var selected bool
 		switch a.action {
 		case ctlRuleRemoveTargetByID:

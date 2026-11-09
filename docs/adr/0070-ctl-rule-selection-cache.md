@@ -51,20 +51,21 @@ on every request.
 
 ## Decision Outcome
 
-Chosen: **a cache keyed by the rule group's version**, because it is exact for
-every change a directive makes to the group's rules and costs one load and
-one comparison per evaluation.
+Chosen: **a cache keyed by the rule group's version**, because no change a
+directive makes to the group's rules can leave a selection stale, and it costs
+one load and one comparison per evaluation. The key is conservative rather than
+minimal: some of the changes that bump it cannot change what a ctl selects.
 
 - `RuleGroup.Add`, `DiscardPendingChain`, `DeleteByID`, `DeleteByRange`,
-  `DeleteByMsg` and `DeleteByTag` set a new version, and so do
-  `SecRuleUpdateActionById`, `SecRuleUpdateTargetById` and
-  `SecRuleUpdateTargetByTag` through `RuleGroup.MarkChanged`, which edit rules
-  in place. The update directives mark the group even when they fail partway,
-  since a range update may have edited some rules by then. Versions come from one
-  package-wide atomic counter, so two groups never share a version once either
-  has changed. That matters because a ctl action can sit in two WAFs: a
-  `*Rule` passed through `WAFConfig.WithRules` is added to every WAF the config
-  builds.
+  `DeleteByMsg` and `DeleteByTag` set a new version (`DeleteByID` only when it
+  removes a rule), and so do `SecRuleUpdateActionById`,
+  `SecRuleUpdateTargetById` and `SecRuleUpdateTargetByTag` through
+  `RuleGroup.MarkChanged`, which edit rules in place. The update directives mark
+  the group even when they fail partway, since a range update may have edited
+  some rules by then. Versions come from one package-wide atomic counter, so two
+  groups never share a version once either has changed. That matters because a
+  ctl action can sit in two WAFs: a `*Rule` passed through `WAFConfig.WithRules`
+  is added to every WAF the config builds.
 - Each selecting ctl keeps an `atomic.Pointer` to the version it walked and the
   IDs it found. Two transactions that miss at the same time both walk and store
   the same result. The walk takes `&rules[i]` instead of copying each rule.
@@ -73,8 +74,10 @@ one comparison per evaluation.
 - Rules without an ID cannot be targeted by a ctl removal. They all have ID 0,
   so a removal stored under 0 applied to every one of them, and a whole-rule
   removal under 0 also skipped every `SecMarker` (markers have no ID), so
-  evaluation never resumed after `skipAfter`. `RemoveRuleTargetByIDs` ignores
-  ID 0, and `RuleGroup.Eval` never skips a rule without an ID by ID or range.
+  evaluation never resumed after `skipAfter`. The selection walk skips rules
+  without an ID, so the ctl actions never store a removal under 0, and
+  `RuleGroup.Eval` never skips a rule without an ID by ID or range
+  (`ctl:ruleRemoveById=0` or a range from 0).
   This is the ctl part of
   [#1782](https://github.com/corazawaf/coraza/pull/1782), taken with its
   `ctl_idless` profile; keying removals by rule instead of by ID would serve a
@@ -89,8 +92,8 @@ Through the public API directives only run while `NewWAF` builds the WAF,
 before any transaction, so no selection exists yet. The versions matter to
 internal callers that parse more directives after transactions ran.
 
-`BenchmarkCRSCtlRuleRemoveTarget` sends `BenchmarkCRSSimpleGET`'s request
-through CRS with no ctl, with ten `ctl:ruleRemoveTargetById`, and with one
+`BenchmarkCRSCtlRuleRemoveTarget` sends `BenchmarkCRSSimpleGET`'s request, with
+a current Firefox User-Agent, through CRS at its default paranoia level with no ctl, with ten `ctl:ruleRemoveTargetById`, and with one
 `ctl:ruleRemoveTargetByTag=OWASP_CRS`. benchstat over 10 runs each, alternating
 between main (08aa511) and this change, Go 1.26.10 on amd64:
 
@@ -135,7 +138,11 @@ behaves the same):
 > — @coderabbitai ([review](https://github.com/corazawaf/coraza/pull/1849#discussion_r4508987377))
 
 The fix follows #1782 rather than a rule-specific identity, for the reason its
-description gives.
+description gives. The review then pointed out that this changes behaviour,
+which `AGENTS.md` asks to keep: a rule without an ID that a tag or msg ctl
+used to remove now runs. It is kept as a bug fix, as in #1782. ModSecurity
+does not load such rules, and the old removal also reached every other rule
+without an ID and every `SecMarker`.
 
 ## Participants
 
@@ -150,7 +157,8 @@ description gives.
 - **Negative / follow-up:** what is left of the tag case is evaluation: each
   selected rule appends the exception to its variable's list, and `GetField`
   filters on it. Rules without an ID are no longer affected by ctl removals,
-  which is a behaviour change. #1782 carries the same `Eval` lines and profile,
+  which is a behaviour change: one that a tag or msg ctl used to remove now
+  runs, and needs an ID to be targeted. #1782 carries the same `Eval` lines and profile,
   so whichever lands second drops its copy; its other half (no `id` on chained
   rules) is not here. [#1645](https://github.com/corazawaf/coraza/pull/1645) touches
   the same `RuleGroup` methods.

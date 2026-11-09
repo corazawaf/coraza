@@ -44,7 +44,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 		{
-			Title: "a ctl selecting a rule without an id leaves SecMarkers in place",
+			Title: "ctl removals leave SecMarkers in place",
 			Stages: []profile.Stage{
 				{
 					Stage: profile.SubStage{
@@ -54,6 +54,26 @@ var _ = profile.RegisterProfile(profile.Profile{
 							// IDLESS_END. The marker has no id either; evaluation must
 							// resume there (394) after skipping 393.
 							TriggeredRules:    []int{3, 394},
+							NonTriggeredRules: []int{393},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{URI: "/skip-zero?idless=evil"},
+						Output: profile.ExpectedOutput{
+							// Rule 4 removes rule id 0, which no rule has.
+							TriggeredRules:    []int{4, 394},
+							NonTriggeredRules: []int{393},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{URI: "/skip-range?idless=evil"},
+						Output: profile.ExpectedOutput{
+							// Rule 5 removes the id range 0-2, which must not reach the marker.
+							TriggeredRules:    []int{5, 394},
 							NonTriggeredRules: []int{393},
 						},
 					},
@@ -69,6 +89,8 @@ SecRule ARGS_GET:idless "@rx evil" "phase:1,pass,nolog,setvar:'tx.idless_untagge
 SecRule TX:idless_untagged "@eq 1" "id:391,phase:1,pass,log"
 SecRule TX:idless_tagged "@eq 1" "id:392,phase:1,pass,log"
 SecRule REQUEST_URI "@beginsWith /skip-after" "id:3,phase:1,pass,log,ctl:ruleRemoveByTag=idless-t1,skipAfter:IDLESS_END"
+SecRule REQUEST_URI "@beginsWith /skip-zero" "id:4,phase:1,pass,log,ctl:ruleRemoveById=0,skipAfter:IDLESS_END"
+SecRule REQUEST_URI "@beginsWith /skip-range" "id:5,phase:1,pass,log,ctl:ruleRemoveById=0-2,skipAfter:IDLESS_END"
 SecRule ARGS_GET:idless "@rx evil" "id:393,phase:1,pass,log"
 SecMarker IDLESS_END
 SecRule ARGS_GET:idless "@rx evil" "id:394,phase:1,pass,log"

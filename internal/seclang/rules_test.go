@@ -1447,7 +1447,10 @@ SecRule ARGS "@contains w" "id:12,phase:1,deny,status:403,tag:t1,msg:'m1'"
 			if err := p.FromString(`SecRule ARGS "@contains v" "id:13,phase:1,deny,status:403"`); err != nil {
 				t.Fatal(err)
 			}
-			blocked("a=v")
+			// Rule 13 has no tag or msg yet, so only the ID range selects it.
+			if got, want := blocked("a=v"), !strings.HasPrefix(tc.ctl, "ruleRemoveTargetById"); got != want {
+				t.Errorf("a=v blocked before the update: %t, want %t", got, want)
+			}
 			if err := p.FromString(`SecRuleUpdateActionById 13 "tag:t1,msg:'m1'"`); err != nil {
 				t.Fatal(err)
 			}

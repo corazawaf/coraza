@@ -747,15 +747,10 @@ func (tx *Transaction) RemoveRuleTargetByIDs(ids []int, variable variables.RuleV
 			cs[0].Variable, cs[1].Variable = variables.ArgsGetNames, variables.ArgsPostNames
 		}
 	}
+	if tx.ruleRemoveTargetByID == nil {
+		tx.ruleRemoveTargetByID = make(map[int][]ruleVariableParams, len(ids))
+	}
 	for _, id := range ids {
-		if id == noID {
-			// Rules without an id all share ID_ 0; a removal stored there would
-			// apply to every one of them.
-			continue
-		}
-		if tx.ruleRemoveTargetByID == nil {
-			tx.ruleRemoveTargetByID = make(map[int][]ruleVariableParams, len(ids))
-		}
 		if prev := tx.ruleRemoveTargetByID[id]; len(prev) > 0 {
 			tx.ruleRemoveTargetByID[id] = append(prev, cs...)
 		} else {
