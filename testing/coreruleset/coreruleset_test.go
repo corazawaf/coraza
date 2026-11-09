@@ -788,3 +788,79 @@ SecAction "id:900005,\
 
 	return waf
 }
+
+// BenchmarkCRSCtlRuleRemoveTarget measures a plain GET through CRS when a
+// rule removes targets at runtime, as application exclusions do on every
+// request they match.
+func BenchmarkCRSCtlRuleRemoveTarget(b *testing.B) {
+	byID := `SecAction "id:1,phase:1,pass,nolog,` +
+		`ctl:ruleRemoveTargetById=920272;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=920273;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=931130;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=932236;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=942100;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=942200;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=942430;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=942431;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=942432;ARGS:parameters,` +
+		`ctl:ruleRemoveTargetById=942460;ARGS:parameters"`
+	byTag := `SecAction "id:1,phase:1,pass,nolog,ctl:ruleRemoveTargetByTag=OWASP_CRS;ARGS:parameters"`
+	for _, bc := range []struct {
+		name, rule string
+	}{
+		{"none", ""},
+		{"byId10", byID},
+		{"byTagOWASP_CRS", byTag},
+	} {
+		b.Run(bc.name, func(b *testing.B) {
+			waf := ctlBenchWAF(b, bc.rule)
+			b.ReportAllocs()
+			for b.Loop() {
+				tx := waf.NewTransaction()
+				tx.ProcessConnection("127.0.0.1", 8080, "127.0.0.1", 8080)
+				tx.ProcessURI("/some_path/with?parameters=and&other=Stuff", "GET", "HTTP/1.1")
+				tx.AddRequestHeader("Host", "localhost")
+				tx.AddRequestHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0")
+				tx.AddRequestHeader("Accept", "application/json")
+				tx.ProcessRequestHeaders()
+				if _, err := tx.ProcessRequestBody(); err != nil {
+					b.Error(err)
+				}
+				tx.AddResponseHeader("Content-Type", "application/json")
+				tx.ProcessResponseHeaders(200, "OK")
+				if _, err := tx.ProcessResponseBody(); err != nil {
+					b.Error(err)
+				}
+				tx.ProcessLogging()
+				if err := tx.Close(); err != nil {
+					b.Error(err)
+				}
+			}
+		})
+	}
+}
+
+func ctlBenchWAF(b *testing.B, rule string) coraza.WAF {
+	b.Helper()
+	rec, err := os.ReadFile(filepath.Join("..", "..", "coraza.conf-recommended"))
+	if err != nil {
+		b.Fatal(err)
+	}
+	waf, err := coraza.NewWAF(coraza.NewWAFConfig().
+		WithRootFS(coreruleset.FS).
+		WithDirectives(string(rec)).
+		WithDirectives("Include @crs-setup.conf.example").
+		WithDirectives(rule).
+		WithDirectives("Include @owasp_crs/*.conf"))
+	if err != nil {
+		b.Fatal(err)
+	}
+	if closer, ok := waf.(experimental.WAFCloser); ok {
+		b.Cleanup(func() {
+			if err := closer.Close(); err != nil {
+				b.Error(err)
+			}
+		})
+	}
+	return waf
+}

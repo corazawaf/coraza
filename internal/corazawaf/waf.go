@@ -225,7 +225,7 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.lastPhase = 0
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveByIDRanges = nil
-	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
+	tx.ruleRemoveTargetByID = nil
 	tx.Skip = 0
 	tx.AllowType = 0
 	tx.Capture = false

@@ -719,29 +719,44 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 // key for pattern-based matching (e.g. removing all ARGS matching
 // /^json\.\d+\.field$/ from a given rule).
 func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string, keyRx *regexp.Regexp) {
+	tx.RemoveRuleTargetByIDs([]int{id}, variable, key, keyRx)
+}
+
+// RemoveRuleTargetByIDs is RemoveRuleTargetByID for every rule in ids.
+func (tx *Transaction) RemoveRuleTargetByIDs(ids []int, variable variables.RuleVariable, key string, keyRx *regexp.Regexp) {
+	if len(ids) == 0 {
+		return
+	}
 	c := ruleVariableParams{
 		Variable: variable,
 		KeyStr:   key,
 		KeyRx:    keyRx,
 	}
-
-	if multiphaseEvaluation && (variable == variables.Args || variable == variables.ArgsNames) {
+	// cs is shared by every rule in ids that has no removal yet. Its length
+	// equals its capacity, so a later append for one of them copies instead
+	// of writing into the others.
+	cs := []ruleVariableParams{c}
+	if multiphaseEvaluation {
 		// ARGS and ARGS_NAMES have to be splitted into _GET and _POST
 		switch variable {
 		case variables.Args:
-			c.Variable = variables.ArgsGet
-			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
-			c.Variable = variables.ArgsPost
-			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
+			cs = []ruleVariableParams{c, c}
+			cs[0].Variable, cs[1].Variable = variables.ArgsGet, variables.ArgsPost
 		case variables.ArgsNames:
-			c.Variable = variables.ArgsGetNames
-			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
-			c.Variable = variables.ArgsPostNames
-			tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
+			cs = []ruleVariableParams{c, c}
+			cs[0].Variable, cs[1].Variable = variables.ArgsGetNames, variables.ArgsPostNames
 		}
-		return
 	}
-	tx.ruleRemoveTargetByID[id] = append(tx.ruleRemoveTargetByID[id], c)
+	if tx.ruleRemoveTargetByID == nil {
+		tx.ruleRemoveTargetByID = make(map[int][]ruleVariableParams, len(ids))
+	}
+	for _, id := range ids {
+		if prev := tx.ruleRemoveTargetByID[id]; len(prev) > 0 {
+			tx.ruleRemoveTargetByID[id] = append(prev, cs...)
+		} else {
+			tx.ruleRemoveTargetByID[id] = cs
+		}
+	}
 }
 
 // RemoveRuleByID Removes a rule from the transaction
