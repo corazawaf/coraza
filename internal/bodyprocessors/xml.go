@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"unicode/utf8"
+
+	"golang.org/x/text/encoding/charmap"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -68,14 +69,24 @@ func isUnexpectedEOFXMLSyntaxError(err error) bool {
 }
 
 // xmlCharsetReader is used by the XML decoder for bodies declaring an encoding
-// other than UTF-8. Only US-ASCII and ISO-8859-1 are supported, as both map
-// each byte to the Unicode code point of the same value. Any other encoding
-// results in an error.
+// other than UTF-8. Labels are matched case-insensitively against the IANA
+// names and aliases of the supported encodings:
+//   - ISO-8859-1 is decoded as strict Latin-1 (charmap.ISO8859_1), so 0x80-0x9F
+//     become the C1 controls U+0080-U+009F. Unlike WHATWG, which treats these
+//     labels as windows-1252, the declared encoding is honored as XML requires.
+//   - windows-1252 is decoded with charmap.Windows1252.
+//   - US-ASCII passes the input through and fails at the first non-ASCII byte.
+//
+// Any other encoding results in an error.
 func xmlCharsetReader(label string, input io.Reader) (io.Reader, error) {
-	switch strings.ToLower(label) {
-	case "iso-8859-1", "iso8859-1", "latin1":
-		return newLatin1Reader(input), nil
-	case "us-ascii", "ascii":
+	switch strings.ToLower(strings.TrimSpace(label)) {
+	case "iso-8859-1", "iso8859-1", "iso88591", "iso_8859-1", "iso_8859-1:1987",
+		"iso-ir-100", "latin1", "latin-1", "l1", "ibm819", "cp819", "csisolatin1":
+		return charmap.ISO8859_1.NewDecoder().Reader(input), nil
+	case "windows-1252", "cp1252", "x-cp1252", "cswindows1252":
+		return charmap.Windows1252.NewDecoder().Reader(input), nil
+	case "us-ascii", "ascii", "us", "iso-ir-6", "ansi_x3.4-1968", "ansi_x3.4-1986",
+		"iso_646.irv:1991", "iso646-us", "ibm367", "cp367", "csascii":
 		return &asciiReader{r: input}, nil
 	}
 	return nil, fmt.Errorf("unsupported XML encoding %q", label)
@@ -83,6 +94,8 @@ func xmlCharsetReader(label string, input io.Reader) (io.Reader, error) {
 
 // asciiReader passes US-ASCII input through unchanged and fails at the first
 // byte outside the ASCII range, returning only the valid bytes before it.
+// x/text has no strict US-ASCII decoder: ianaindex replaces such bytes with
+// U+FFFD and WHATWG decodes them as windows-1252.
 type asciiReader struct {
 	r   io.Reader
 	err error
@@ -102,48 +115,6 @@ func (a *asciiReader) Read(p []byte) (int, error) {
 		}
 	}
 	return n, err
-}
-
-// latin1Reader converts ISO-8859-1 input into UTF-8.
-type latin1Reader struct {
-	r       io.Reader
-	src     []byte
-	out     []byte
-	pending []byte
-	err     error
-}
-
-// newLatin1Reader returns a reader that decodes ISO-8859-1 from r into UTF-8.
-func newLatin1Reader(r io.Reader) *latin1Reader {
-	return &latin1Reader{r: r}
-}
-
-// Read fills p with UTF-8 decoded from the underlying ISO-8859-1 input. Output
-// left over from a previous call is returned before reading more input.
-func (l *latin1Reader) Read(p []byte) (int, error) {
-	if len(p) == 0 {
-		return 0, nil
-	}
-	for len(l.pending) == 0 {
-		if l.err != nil {
-			return 0, l.err
-		}
-		// Each input byte expands to at most two output bytes.
-		size := max(len(p)/2, 1)
-		if cap(l.src) < size {
-			l.src = make([]byte, size)
-		}
-		n, err := l.r.Read(l.src[:size])
-		l.err = err
-		l.out = l.out[:0]
-		for _, b := range l.src[:n] {
-			l.out = utf8.AppendRune(l.out, rune(b))
-		}
-		l.pending = l.out
-	}
-	n := copy(p, l.pending)
-	l.pending = l.pending[n:]
-	return n, nil
 }
 
 var (
