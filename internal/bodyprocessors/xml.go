@@ -88,6 +88,8 @@ type asciiReader struct {
 	err error
 }
 
+// Read reads from the underlying reader and returns an error once a non-ASCII
+// byte is found.
 func (a *asciiReader) Read(p []byte) (int, error) {
 	if a.err != nil {
 		return 0, a.err
@@ -111,10 +113,13 @@ type latin1Reader struct {
 	err     error
 }
 
+// newLatin1Reader returns a reader that decodes ISO-8859-1 from r into UTF-8.
 func newLatin1Reader(r io.Reader) *latin1Reader {
 	return &latin1Reader{r: r}
 }
 
+// Read fills p with UTF-8 decoded from the underlying ISO-8859-1 input. Output
+// left over from a previous call is returned before reading more input.
 func (l *latin1Reader) Read(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
