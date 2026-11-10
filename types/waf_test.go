@@ -130,6 +130,13 @@ func TestApplyAuditLogParts(t *testing.T) {
 			expectedHasError: false,
 		},
 		{
+			name:             "add part keeps mandatory A and Z",
+			base:             AuditLogParts("ABIJDEFHZ"),
+			modification:     "+E",
+			expectedParts:    AuditLogParts("ABDEFHIJZ"),
+			expectedHasError: false,
+		},
+		{
 			name:             "add all parts to empty base",
 			base:             AuditLogParts(""),
 			modification:     "+BCDEFGHIJK",
@@ -137,10 +144,10 @@ func TestApplyAuditLogParts(t *testing.T) {
 			expectedHasError: false,
 		},
 		{
-			name:             "remove all parts (A and Z remain implicit)",
-			base:             AuditLogParts("BC"),
+			name:             "remove all optional parts keeps A and Z",
+			base:             AuditLogParts("ABCZ"),
 			modification:     "-BC",
-			expectedParts:    AuditLogParts(""),
+			expectedParts:    AuditLogParts("AZ"),
 			expectedHasError: false,
 		},
 		{

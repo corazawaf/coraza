@@ -248,6 +248,16 @@ func TestInvalidRulesWithIgnoredErrors(t *testing.T) {
 	if err := p.FromString(directives); err == nil {
 		t.Error("failed to error on invalid rule")
 	}
+	// A link of a chain dropped while errors were ignored is an error once
+	// SecIgnoreRuleCompilationErrors is Off again, not a silently skipped rule.
+	waf = corazawaf.NewWAF()
+	p = NewParser(waf)
+	if err := p.FromString(`SecIgnoreRuleCompilationErrors On
+SecRule REQUEST_URI "@no_op x" "id:1,phase:1,chain"
+SecIgnoreRuleCompilationErrors Off
+SecRule ARGS "@rx a" "id:2,phase:2,deny"`); err == nil {
+		t.Error("failed to error on a link of a dropped chain")
+	}
 }
 
 func TestSecDataset(t *testing.T) {
