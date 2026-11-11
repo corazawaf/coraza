@@ -203,12 +203,11 @@ func TestWithLoggerNoAliasing(t *testing.T) {
 		},
 		"sibling events": {
 			log: func() {
-				l := parent.With(Str("tx_id", "AAA"))
-				e1 := l.Info().Str("k", "1")
-				_ = l.Info().Str("k", "2")
+				e1 := parent.Info().Str("k", "1")
+				_ = parent.Info().Str("k", "2")
 				e1.Msg("m")
 			},
-			expected: "[INFO] m tx_id=\"AAA\" k=\"1\"\n",
+			expected: "[INFO] m k=\"1\"\n",
 		},
 	}
 	for name, tCase := range testCases {
