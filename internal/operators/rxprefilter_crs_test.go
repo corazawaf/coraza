@@ -240,6 +240,7 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 
 	var stages []stage
 	var cur *stage
+	inExpectIDs := false
 	lines := strings.Split(src, "\n")
 
 	for _, rawLine := range lines {
@@ -250,6 +251,7 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 		if strings.HasPrefix(line, "- stage:") || strings.HasPrefix(line, "- input:") {
 			stages = append(stages, stage{})
 			cur = &stages[len(stages)-1]
+			inExpectIDs = false
 			continue
 		}
 		if cur == nil {
@@ -266,10 +268,25 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 			if v != "" {
 				cur.datas = append(cur.datas, v)
 			}
-		} else if (strings.HasPrefix(line, "log_contains:") || strings.HasPrefix(line, "expect_ids:")) && strings.Contains(line, ruleID) {
-			// go-ftw v1 tests use log_contains; the CRS v4 tests in
-			// coraza-coreruleset use log: expect_ids: [id].
-			cur.fires = true
+		} else if strings.HasPrefix(line, "log_contains:") {
+			// go-ftw v1 tests use log_contains.
+			inExpectIDs = false
+			if strings.Contains(line, ruleID) {
+				cur.fires = true
+			}
+		} else if strings.HasPrefix(line, "expect_ids:") {
+			// The CRS v4 tests in coraza-coreruleset use log: expect_ids,
+			// either inline ([id]) or as a block list on the next lines.
+			inExpectIDs = true
+			if strings.Contains(line, ruleID) {
+				cur.fires = true
+			}
+		} else if inExpectIDs && strings.HasPrefix(line, "- ") {
+			if strings.Contains(line, ruleID) {
+				cur.fires = true
+			}
+		} else if line != "" {
+			inExpectIDs = false
 		}
 	}
 
