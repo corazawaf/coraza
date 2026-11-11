@@ -56,7 +56,7 @@ IDs connectors already pass today. `..` alone is not refused: the ID is always
 appended to a `<timestamp>-` prefix, so it can never be a complete path element.
 
 The concurrent writer additionally refuses to write a record whose ID contains
-a separator and escapes the ID in the index line with the same `logEscaper` the
+a separator or a control character and escapes the ID in the index line with the same `logEscaper` the
 native formatter uses for Part A. These are not reachable through the public
 API after the check above, but `AuditLogWriter` is a plugin surface and can be
 handed an `AuditLog` built elsewhere.
@@ -76,10 +76,10 @@ handed an `AuditLog` built elsewhere.
 
 ## Consequences
 
-- An ID with `/`, `\` or a control character no longer appears anywhere: the
-  transaction, `UNIQUE_ID`, the audit record and the index all carry the
-  generated ID. Connectors that relied on such IDs lose correlation for those
-  requests and see a warning instead.
+- For an ID with `/`, `\` or a control character, the transaction,
+  `UNIQUE_ID`, the audit record and the index all carry the generated ID; the
+  rejected value only appears, quoted, in the warning. Connectors that relied
+  on such IDs lose correlation for those requests.
 - Every other ID is used byte for byte, as before.
 
 ## References
