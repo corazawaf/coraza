@@ -8,7 +8,12 @@ package transformations
 // typographic quotes and fullwidth ASCII to their closest single-byte ASCII
 // equivalent. It mirrors the codepage 20127 section of ModSecurity's
 // unicode.mapping, which the official CRS reference containers load by
-// default via SecUnicodeMapFile.
+// default via SecUnicodeMapFile, plus the RFC 3490 section 3.1 label
+// separators (U+002E, U+3002, U+FF0E, U+FF61 -> '.') that ModSecurity's map
+// loader seeds before reading that file. Entries read from the file override
+// the seeds; the 20127 section only overlaps them at U+FF0E, also '.'. U+3002
+// and U+FF61 come from the seeds, not the file, so keep them when
+// re-syncing this table from unicode.mapping.
 //
 // A codepoint absent from this table falls back to the raw low byte of the
 // %uXXXX escape, matching ModSecurity's behavior when no mapping is found.
@@ -297,6 +302,7 @@ var unicodeBestFitASCII = map[rune]byte{
 	0x2039: 0x3c, // U+2039 SINGLE LEFT-POINTING ANGLE QUOTATION MARK -> '<'
 	0x203a: 0x3e, // U+203A SINGLE RIGHT-POINTING ANGLE QUOTATION MARK -> '>'
 	0x2122: 0x54, // U+2122 TRADE MARK SIGN -> 'T'
+	0x3002: 0x2e, // U+3002 IDEOGRAPHIC FULL STOP -> '.' (RFC 3490, seeded by ModSecurity's loader)
 	0xff01: 0x21, // U+FF01 FULLWIDTH EXCLAMATION MARK -> '!'
 	0xff02: 0x22, // U+FF02 FULLWIDTH QUOTATION MARK -> '"'
 	0xff03: 0x23, // U+FF03 FULLWIDTH NUMBER SIGN -> '#'
@@ -390,4 +396,5 @@ var unicodeBestFitASCII = map[rune]byte{
 	0xff5c: 0x7c, // U+FF5C FULLWIDTH VERTICAL LINE -> '|'
 	0xff5d: 0x7d, // U+FF5D FULLWIDTH RIGHT CURLY BRACKET -> '}'
 	0xff5e: 0x7e, // U+FF5E FULLWIDTH TILDE -> '~'
+	0xff61: 0x2e, // U+FF61 HALFWIDTH IDEOGRAPHIC FULL STOP -> '.' (RFC 3490, seeded by ModSecurity's loader)
 }
