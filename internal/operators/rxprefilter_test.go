@@ -168,6 +168,12 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		{"(?i)s(?:elect.*into|ubstr)", "SUBSTR(x,1)", true},
 		{"(?i)s(?:elect.*into|ubstr)", "unrelated", false},
 
+		// Trie suffixes must begin at the branch boundary before they are joined
+		// to a factored prefix.
+		{`a(?:b|.cde)`, "a.cde", true},
+		{`a(?:bc|.(?:de|fg))`, "a.de", true},
+		{`a(?:bc|.xy(?:de|fg))`, "a.xyde", true},
+
 		// Regression: an end anchor does not mean the last extracted literal is
 		// adjacent to it. Here an alternation (no extractable literal) and a
 		// trailing \.* sit between ".ph" and $, so ".ph" is NOT a true suffix
