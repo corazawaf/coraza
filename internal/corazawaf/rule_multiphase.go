@@ -239,16 +239,15 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	return types.PhaseUnknown
 }
 
-// TODO(anuraaga): This is effectively lazily computing the min phase of a rule with chain the first
-// time we evaluate the rule. Instead, we should do this at parse time, but this will require a
-// large-ish refactoring of the parser, which adds parent rules to a rule group before preparing
-// the child rules. In the meantime, only evaluating this once should allow performance to be fine.
-//
-// chainMinPhase is the minimum phase among all the rules in which the chained rule may match.
-// We evaluate the min possible phase for each rule in the chain and we take the minimum in common
-// If we reached this point, it means that the parent rule already reached its min phase.
-func computeRuleChainMinPhase(r *Rule) {
-	if r.ParentID_ == 0 && r.HasChain && r.chainMinPhase == types.PhaseUnknown {
+// ComputeChainMinPhase sets chainMinPhase, the minimum phase among all the rules in which the
+// chained rule may match. We evaluate the min possible phase for each rule in the chain and we take
+// the minimum in common.
+// The parser calls it every time a rule is appended to the chain, so the value is final once the
+// chain is complete. Rules are shared by all transactions of a WAF and must not be mutated during
+// evaluation.
+func (r *Rule) ComputeChainMinPhase() {
+	if r.ParentID_ == 0 && r.HasChain {
+		r.chainMinPhase = types.PhaseUnknown
 		for c := r.Chain; c != nil; c = c.Chain {
 			singleChainedRuleMinPhase := types.PhaseUnknown
 			for _, v := range c.variables {

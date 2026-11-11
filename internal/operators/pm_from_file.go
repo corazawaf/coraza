@@ -64,7 +64,10 @@ func newPMFromFile(options plugintypes.OperatorOptions) (plugintypes.Operator, e
 		DFA:                  false,
 	})
 
-	m, _ := memoizeDo(options.Memoizer, strings.Join(options.Path, ",")+filepath, func() (any, error) { return builder.Build(lines), nil })
+	// Key by the file's content, not its path: the cache is shared by every
+	// WAF in the process, and two WAFs can load the same path from different
+	// root filesystems (GHSA-wc2q-x24m-8c5f).
+	m, _ := memoizeDo(options.Memoizer, memoizeKey("pmFromFile", lines...), func() (any, error) { return builder.Build(lines), nil })
 
 	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(lines)}, nil
 }

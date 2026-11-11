@@ -45,7 +45,10 @@ func newPMFromDataset(options plugintypes.OperatorOptions) (plugintypes.Operator
 		DFA:                  true,
 	})
 
-	m, _ := memoizeDo(options.Memoizer, data, func() (any, error) { return builder.Build(dataset), nil })
+	// Key by the dataset's content, not its name: the cache is shared by every
+	// WAF in the process, and two WAFs can define the same name with different
+	// entries (GHSA-wc2q-x24m-8c5f).
+	m, _ := memoizeDo(options.Memoizer, memoizeKey("pmFromDataset", dataset...), func() (any, error) { return builder.Build(dataset), nil })
 
 	return &pm{matcher: m.(ahocorasick.AhoCorasick), minLen: minPatternLen(dataset)}, nil
 }

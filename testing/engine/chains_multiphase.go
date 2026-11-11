@@ -435,3 +435,32 @@ SecAction "id:11, phase:1, t:none, pass, log"
 SecAction "id:12, phase:2, t:none, pass, log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "fzipi",
+		Description: "a chain is not evaluated before its chain min phase",
+		Enabled:     true,
+		Name:        "chains_multiphase_min_phase.yaml",
+	},
+	Tests: []profile.Test{{
+		Title: "chain needing REQUEST_BODY does not match in phase 1 on an empty body",
+		Stages: []profile.Stage{{Stage: profile.SubStage{
+			Input: profile.StageInput{
+				URI:     "/",
+				Method:  "POST",
+				Headers: map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+				Data:    "a=b",
+			},
+			Output: profile.ExpectedOutput{
+				NonTriggeredRules: []int{1},
+			},
+		}}},
+	}},
+	Rules: `
+SecRuleEngine On
+SecRequestBodyAccess On
+SecRule REQUEST_URI "@rx ^/" "id:1,phase:2,deny,status:403,chain"
+	SecRule REQUEST_BODY "@rx ^$"
+`,
+})

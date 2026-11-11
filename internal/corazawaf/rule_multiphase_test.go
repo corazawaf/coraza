@@ -8,6 +8,8 @@ package corazawaf
 import (
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
+	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
@@ -111,4 +113,33 @@ func TestRuleNegativeVariablesMulti(t *testing.T) {
 		t.Errorf("got %d exceptions, expected 2", len(rule.variables[0].Exceptions))
 	}
 
+}
+
+// Not a profile: it asserts on rule-internal state; the shared-rule write it guards against was a data race.
+func TestChainMinPhaseNotWrittenOnEvaluate(t *testing.T) {
+	r := NewRule()
+	r.ID_ = 1
+	r.LogID_ = "1"
+	r.operator = nil
+	r.HasChain = true
+	chainedRule := NewRule()
+	chainedRule.ParentID_ = 1
+	chainedRule.LogID_ = "1"
+	chainedRule.operator = nil
+	if err := chainedRule.AddVariable(variables.RequestHeaders, "", false); err != nil {
+		t.Fatal(err)
+	}
+	r.Chain = chainedRule
+	tx := NewWAF().NewTransaction()
+
+	var matchedValues []types.MatchData
+	r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+	if r.chainMinPhase != types.PhaseUnknown {
+		t.Fatalf("doEvaluate mutated the shared rule: chainMinPhase = %d", r.chainMinPhase)
+	}
+
+	r.ComputeChainMinPhase()
+	if r.chainMinPhase != types.PhaseRequestHeaders {
+		t.Errorf("ComputeChainMinPhase: got %d, want %d", r.chainMinPhase, types.PhaseRequestHeaders)
+	}
 }

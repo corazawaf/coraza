@@ -179,6 +179,11 @@ func TestRemoveRuleTargetDoesNotWriteIntoRule(t *testing.T) {
 	}
 	r.SetOperator(&dummyEqOperator{}, "@eq", "0")
 	exceptions := r.variables[0].Exceptions
+	// Without spare capacity append always copies and the check below passes
+	// whatever doEvaluate does.
+	if cap(exceptions) == len(exceptions) {
+		t.Fatal("rule's exception slice has no spare capacity")
+	}
 	exceptions = exceptions[:cap(exceptions)]
 	before := slices.Clone(exceptions)
 
