@@ -175,17 +175,23 @@ func prefilterFunc(pattern string) func(string) bool {
 	// avoid a second syntax.Parse + Simplify call on the same pattern.
 	mml := minLen(re)
 
-	lits := extractLiterals(re, caseInsensitive)
-	if lits == nil {
-		// No literals extractable. Fall back to a length-only prefilter when
-		// the minimum match length is large enough to actually reject inputs.
-		// Most WAF field values are > 3 bytes, so thresholds below 4 are not
-		// worth the function-call overhead.
+	// lengthOnly is the prefilter when no usable literal set exists: either
+	// extractLiterals found none, or the set it found cannot be matched
+	// safely or cheaply. It rejects inputs shorter than the minimum match
+	// length when that length is large enough to reject anything. Most WAF
+	// field values are > 3 bytes, so thresholds below 4 are not worth the
+	// function-call overhead.
+	lengthOnly := func() func(string) bool {
 		const minUsefulMML = 4
 		if mml >= minUsefulMML {
 			return func(s string) bool { return len(s) >= mml }
 		}
 		return nil
+	}
+
+	lits := extractLiterals(re, caseInsensitive)
+	if lits == nil {
+		return lengthOnly()
 	}
 
 	var pf func(string) bool
@@ -243,9 +249,13 @@ func prefilterFunc(pattern string) func(string) bool {
 		// if the match was through branch C (removed), we'd miss it. Instead, if
 		// any element is too short to be useful, abandon the prefilter entirely.
 		if anyTooShort(v, 2) {
-			return nil
+			return lengthOnly()
 		}
-		filtered := v
+		if len(v) > maxSupersetInput {
+			// Too many to reduce cheaply, and far past anyRequiredMaxN.
+			return lengthOnly()
+		}
+		filtered := dropSuperstrings(v)
 		switch {
 		case len(filtered) == 1:
 			needle := filtered[0]
@@ -274,13 +284,10 @@ func prefilterFunc(pattern string) func(string) bool {
 			pf = im.match
 		default:
 			// N > anyRequiredMaxN: too many needles for Wu-Manber to be
-			// effective (nearly every haystack byte is a candidate). In
-			// practice regexp/syntax.Simplify() factors large alternations
-			// into tries with single-byte literals at each branch, causing
-			// extractLiterals to return nil before we ever reach this branch.
-			// If we do reach it, bail out and let the full regex run —
+			// effective (nearly every haystack byte is a candidate). Keep
+			// only the length guard and let the full regex run —
 			// correctness over performance.
-			return nil
+			return lengthOnly()
 		}
 	}
 
@@ -545,61 +552,78 @@ func trieReconstruct(concat *syntax.Regexp, ci bool) anyRequired {
 	if concat.Op != syntax.OpConcat || len(concat.Sub) < 2 || rawLiteral(concat.Sub[0], ci) == "" {
 		return nil
 	}
-	suffixes := rawExtractSuffixes(concat, ci)
-	if suffixes == nil {
+	joinable, floating := rawExtractSuffixes(concat, ci)
+	if joinable == nil && floating == nil {
 		return nil
 	}
-	return anyRequired(suffixes)
+	return anyRequired(append(joinable, floating...))
 }
 
-// rawExtractSuffixes returns, one per branch, the literals a match of re can
-// begin with, for trieReconstruct to join to a factored prefix. Unlike
-// extractLiterals it keeps single-byte literals, because they are only used
-// joined to that prefix.
+// rawExtractSuffixes returns the literals trieReconstruct may use for re, in
+// two groups. Together they hold at least one literal from every branch, so
+// any match of re contains one of them; both nil means some branch has none,
+// and the caller must not build a prefilter from the other branches.
 //
-// Invariant: every returned string starts at the first byte re consumes. A
-// concat therefore contributes its leading literal extended by the suffixes
-// of the child right after it, and never a literal from further right: those
-// may be separated from the prefix by consuming nodes, and the joined string
+// joinable literals start at the first byte re consumes, so a caller may
+// prepend the literal that precedes re. Unlike extractLiterals they keep
+// single bytes, because they are only used joined to that prefix. A concat
+// contributes its leading literal extended by the joinable literals of the
+// child right after it, and never a literal from further right: those may
+// be separated from the prefix by consuming nodes, and the joined string
 // would be one that matching input need not contain ("elect.*from" must give
-// "elect", not "electfrom"). Do not route a concat through extractLiterals
-// here; it collects literals from anywhere in the concat.
+// "elect", not "electfrom"). Never join anything extractLiterals returns; it
+// collects literals from anywhere in the concat.
 //
-// A nil result means some branch has no usable leading literal, in which case
-// the caller must not build a prefilter from the other branches.
-func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
+// floating literals come from a branch that has no usable joinable literal:
+// extractLiterals' literal for that whole branch, which any match of the
+// branch contains somewhere. They are passed up unchanged and never joined.
+// Without them a single such branch, for example one byte followed by a
+// class, would cost a whole CRS alternation its prefilter.
+func rawExtractSuffixes(re *syntax.Regexp, ci bool) (joinable, floating []string) {
+	budget := maxQuestExpansions
+	return extractSuffixes(re, ci, &budget)
+}
+
+// extractSuffixes implements rawExtractSuffixes. budget is the number of
+// optional groups it may still expand; it is shared by the whole walk
+// because each expansion repeats the work for the rest of the concat.
+func extractSuffixes(re *syntax.Regexp, ci bool, budget *int) (joinable, floating []string) {
 	switch re.Op {
 	case syntax.OpLiteral:
 		s := rawLiteral(re, ci)
 		if s == "" {
-			return nil
+			return nil, nil
 		}
-		return []string{s}
+		return []string{s}, nil
 
 	case syntax.OpAlternate:
-		var result []string
 		for _, sub := range re.Sub {
-			lits := rawExtractSuffixes(sub, ci)
-			if lits == nil {
-				return nil // one branch has no extractable suffix → bail
+			j, f := extractSuffixes(sub, ci, budget)
+			if j == nil && f == nil {
+				f = branchLiterals(sub, ci)
 			}
-			result = append(result, lits...)
+			if j == nil && f == nil {
+				// Last resort: the branch's leading literal, however short.
+				// It is still a joinable literal, and a weak needle in one
+				// branch costs less than no prefilter for the alternation.
+				if run := leadRun(sub, ci); run != "" {
+					j = []string{run}
+				} else {
+					return nil, nil // one branch has no literal at all → bail
+				}
+			}
+			joinable = append(joinable, j...)
+			floating = append(floating, f...)
 		}
-		return result
+		return joinable, floating
 
 	case syntax.OpConcat:
 		if len(re.Sub) == 0 {
-			return nil
-		}
-		lead := rawLiteral(re.Sub[0], ci)
-		if lead == "" {
-			// No leading literal: the first child supplies the suffixes
-			// itself, unjoined (an alternation, or a capture of one).
-			return rawExtractSuffixes(re.Sub[0], ci)
+			return nil, nil
 		}
 		// Simplify() leaves the bytes of an expanded repeat as separate
 		// literal nodes (a{3,5} → a a a (a a?)?); take the whole run.
-		next := 1
+		lead, next := "", 0
 		for next < len(re.Sub) {
 			l := rawLiteral(re.Sub[next], ci)
 			if l == "" {
@@ -608,34 +632,113 @@ func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
 			lead += l
 			next++
 		}
+		if next < len(re.Sub) && re.Sub[next].Op == syntax.OpQuest && *budget > 0 {
+			*budget--
+			// X? is X or nothing, so a match follows one of two concats:
+			// the run, X and the rest, or the run and the rest. Take the
+			// literals of both. This keeps CO(?:MPRES)?S, Simplify()'s form
+			// of COMPRESS|COS, from being cut down to "co".
+			with := slices.Concat(re.Sub[:next], unwrapConcat(re.Sub[next].Sub[0]), re.Sub[next+1:])
+			without := slices.Concat(re.Sub[:next], re.Sub[next+1:])
+			if len(without) == 0 {
+				return nil, nil // the concat can match the empty string
+			}
+			j1, f1 := extractSuffixes(&syntax.Regexp{Op: syntax.OpConcat, Sub: with}, ci, budget)
+			j2, f2 := extractSuffixes(&syntax.Regexp{Op: syntax.OpConcat, Sub: without}, ci, budget)
+			if (j1 == nil && f1 == nil) || (j2 == nil && f2 == nil) {
+				return nil, nil
+			}
+			return append(j1, j2...), append(f1, f2...)
+		}
+		if lead == "" {
+			// No leading literal: the first child supplies the literals
+			// itself, unjoined (an alternation, or a capture of one).
+			return extractSuffixes(re.Sub[0], ci, budget)
+		}
 		if next == len(re.Sub) {
-			return []string{lead}
+			return []string{lead}, nil
 		}
 		// The child after the run starts right behind it, whatever follows
-		// that child, so its suffixes can be joined.
-		if tails := rawExtractSuffixes(re.Sub[next], ci); tails != nil {
-			result := make([]string, len(tails))
-			for i, tail := range tails {
-				result[i] = lead + tail
+		// that child, so its joinable literals can be joined. Its floating
+		// literals pass through as they are.
+		if tails, f := extractSuffixes(re.Sub[next], ci, budget); tails != nil || f != nil {
+			for _, tail := range tails {
+				joinable = append(joinable, lead+tail)
 			}
-			return result
+			return joinable, f
 		}
 		// The branch goes on with content that cannot be joined, so the run
 		// is a truncated suffix. A single byte of it is no constraint worth
 		// a matcher: joined to the outer prefix it becomes a two-byte needle
-		// ("se", "un") that nearly any input satisfies, which costs more than
-		// running the regex unfiltered.
+		// ("se", "un") that nearly any input satisfies. Report nothing, and
+		// the enclosing alternation takes a floating literal instead, or
+		// this run when the branch has no other literal.
 		if len(lead) < 2 {
-			return nil
+			return nil, nil
 		}
-		return []string{lead}
+		return []string{lead}, nil
 
 	case syntax.OpCapture:
-		return rawExtractSuffixes(re.Sub[0], ci)
+		return extractSuffixes(re.Sub[0], ci, budget)
 
 	default:
-		return nil
+		return nil, nil
 	}
+}
+
+// branchLiterals returns literals of which every match of re contains at
+// least one, for use as floating literals, or nil if extractLiterals finds
+// none. An allRequired set is represented by its longest member.
+func branchLiterals(re *syntax.Regexp, ci bool) []string {
+	switch v := extractLiterals(re, ci).(type) {
+	case allRequired:
+		return []string{longest(v)}
+	case anyRequired:
+		return []string(v)
+	case combinedRequired:
+		return []string{longest(v.all)}
+	}
+	return nil
+}
+
+// maxQuestExpansions bounds the optional groups one rawExtractSuffixes walk
+// expands. Simplify() writes (?:bc){0,n} as n nested optional groups, and
+// each expansion repeats the walk of everything after it, so without a
+// shared bound a few such repeats cost seconds of rule compilation. Past
+// the bound an optional group is treated like any other node the literals
+// cannot be joined across, which is the behaviour before expansion existed.
+// The CRS rules need at most a few dozen.
+const maxQuestExpansions = 64
+
+// unwrapConcat returns the children of a concat, or re itself, so that an
+// expanded optional concat is spliced into its parent rather than nested.
+func unwrapConcat(re *syntax.Regexp) []*syntax.Regexp {
+	if re.Op == syntax.OpConcat {
+		return re.Sub
+	}
+	return []*syntax.Regexp{re}
+}
+
+// leadRun returns the run of literal nodes re starts with, or "" if it does
+// not start with a literal. The run starts at the first byte re consumes.
+func leadRun(re *syntax.Regexp, ci bool) string {
+	switch re.Op {
+	case syntax.OpLiteral:
+		return rawLiteral(re, ci)
+	case syntax.OpCapture:
+		return leadRun(re.Sub[0], ci)
+	case syntax.OpConcat:
+		run := ""
+		for _, sub := range re.Sub {
+			l := rawLiteral(sub, ci)
+			if l == "" {
+				break
+			}
+			run += l
+		}
+		return run
+	}
+	return ""
 }
 
 // rawLiteral returns the string content of an OpLiteral node without applying
@@ -697,6 +800,23 @@ func anyTooShort(ss []string, minLen int) bool {
 	return false
 }
 
+// dropSuperstrings returns ss without duplicates and without any string
+// that contains another string of ss. Safe for anyRequired: an input that
+// contains the longer string contains the shorter one too, so the set
+// accepts exactly the same inputs with fewer needles. The input slice is
+// not modified.
+func dropSuperstrings(ss []string) []string {
+	sorted := slices.Clone(ss)
+	slices.SortStableFunc(sorted, func(a, b string) int { return len(a) - len(b) })
+	kept := sorted[:0]
+	for _, s := range sorted {
+		if !slices.ContainsFunc(kept, func(k string) bool { return strings.Contains(s, k) }) {
+			kept = append(kept, s)
+		}
+	}
+	return kept
+}
+
 // filterShort removes strings shorter than minLen bytes. Very short literals
 // (e.g. single characters) are too common across inputs to be effective filters.
 // SAFETY: Only safe for allRequired (removing a needle makes the check less strict).
@@ -722,9 +842,16 @@ func filterShort(ss []string, minLen int) []string {
 // (50-2000 byte values), because AC SIMD prefilters call bytes.IndexByte once
 // per unique start byte — O(H × K) when K (unique first bytes) is large.
 //
-// 256 covers even the largest CRS alternation sets seen in practice.
-// Raise if profiling shows Wu-Manber still wins beyond that.
-const anyRequiredMaxN = 256
+// Trie reconstruction keeps one needle per keyword, so the CRS command and
+// function lists produce sets of 250 to 700 needles (932180, 932235, 932260,
+// 933151, 933152). Measured over every CRS @rx rule, the matcher still beats
+// running those regexes unfiltered at that size, so the bound sits above the
+// largest of them. Raise it if profiling shows Wu-Manber still wins beyond.
+const anyRequiredMaxN = 1024
+
+// maxSupersetInput bounds the set dropSuperstrings reduces, which is
+// quadratic in its size.
+const maxSupersetInput = 4 * anyRequiredMaxN
 
 // indexedMatcher performs sub-linear multi-pattern substring matching using a
 // Wu-Manber style shift table. Instead of examining every byte in the haystack,
