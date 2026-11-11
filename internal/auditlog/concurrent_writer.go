@@ -6,7 +6,7 @@
 package auditlog
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"io/fs"
 	"log"
@@ -72,7 +72,7 @@ func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 	ymdhm := ymd + t.Format("-1504")
 	id := al.Transaction().ID()
 	if strings.ContainsFunc(id, func(r rune) bool { return r == '/' || r == '\\' || r < 0x20 || r == 0x7f }) {
-		return fmt.Errorf("transaction id %q cannot be used in an audit log file name", id)
+		return errors.New("transaction id cannot be used in an audit log file name")
 	}
 	filename := ymdhm + t.Format("05") + "-" + id
 

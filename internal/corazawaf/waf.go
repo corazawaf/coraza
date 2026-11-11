@@ -193,9 +193,7 @@ func (w *WAF) NewTransactionWithOptions(opts Options) *Transaction {
 	if opts.ID == "" {
 		opts.ID = stringutils.RandomString(19)
 	} else if !isValidTransactionID(opts.ID) {
-		w.Logger.Warn().
-			Str("rejected_tx_id", opts.ID).
-			Msg("Transaction ID contains a path separator or control character, generating a new one")
+		w.Logger.Warn().Msg("Transaction ID contains a path separator or control character, generating a new one")
 		opts.ID = stringutils.RandomString(19)
 	}
 
