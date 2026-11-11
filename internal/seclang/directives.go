@@ -928,7 +928,7 @@ func directiveSecHashEngine(options *DirectiveOptions) error {
 // Description: Defines the default list of actions, which will be inherited
 // by the rules in the same configuration context.
 // Default: phase:2,log,auditlog,pass
-// Syntax: SecDefaultAction "phase:2,log,auditlog,deny,status:403,tag:'SLA 24/7'"
+// Syntax: SecDefaultAction "phase:2,log,auditlog,deny,status:403"
 // ---
 // Every rule following a previous `SecDefaultAction` directive in the same configuration
 // context will inherit its settings unless more specific actions are used.
