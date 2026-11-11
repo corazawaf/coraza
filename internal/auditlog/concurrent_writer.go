@@ -6,11 +6,13 @@
 package auditlog
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -68,7 +70,11 @@ func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 
 	ymd := t.Format("20060102")
 	ymdhm := ymd + t.Format("-1504")
-	filename := ymdhm + t.Format("05") + "-" + al.Transaction().ID()
+	id := al.Transaction().ID()
+	if strings.ContainsAny(id, `/\`) {
+		return fmt.Errorf("transaction id %q cannot be used in an audit log file name", id)
+	}
+	filename := ymdhm + t.Format("05") + "-" + id
 
 	logdir := path.Join(cl.logDir, ymd, ymdhm)
 	if err := os.MkdirAll(logdir, cl.logDirMode); err != nil {
@@ -94,7 +100,7 @@ func (cl concurrentWriter) Write(al plugintypes.AuditLog) error {
 	if al.Transaction().HasResponse() {
 		cl.log.Printf(` %d`, al.Transaction().Response().Status())
 	}
-	cl.log.Printf("%s - %s\n", al.Transaction().ID(), filepath)
+	cl.log.Printf("%s - %s\n", logEscaper.Replace(id), filepath)
 
 	return nil
 }

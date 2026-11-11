@@ -89,6 +89,35 @@ func TestConcurrentWriter(t *testing.T) {
 	})
 }
 
+func TestConcurrentWriterRejectsPathInID(t *testing.T) {
+	for _, id := range []string{"../../ESCAPED", `..\..\ESCAPED`, "a/b"} {
+		t.Run(id, func(t *testing.T) {
+			base := t.TempDir()
+			dir := filepath.Join(base, "audit")
+			config := plugintypes.AuditLogConfig{
+				Target:    filepath.Join(base, "index.log"),
+				Dir:       dir,
+				FileMode:  fs.FileMode(0644),
+				DirMode:   fs.FileMode(0755),
+				Formatter: &jsonFormatter{},
+			}
+			writer := &concurrentWriter{}
+			if err := writer.Init(config); err != nil {
+				t.Fatal(err)
+			}
+			defer writer.Close()
+
+			al := &Log{Transaction_: Transaction{UnixTimestamp_: time.Now().UnixNano(), ID_: id}}
+			if err := writer.Write(al); err == nil {
+				t.Fatal("expected an error")
+			}
+			if _, err := os.Stat(filepath.Join(base, "ESCAPED")); !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("audit record escaped the storage dir: %v", err)
+			}
+		})
+	}
+}
+
 func TestConcurrentWriterSuccess(t *testing.T) {
 	dir := t.TempDir()
 	file, err := os.Create(filepath.Join(dir, "audit.log"))

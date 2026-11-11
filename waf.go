@@ -24,6 +24,11 @@ import (
 type WAF interface {
 	// NewTransaction Creates a new initialized transaction for this WAF instance
 	NewTransaction() types.Transaction
+	// NewTransactionWithID creates a transaction using id as its unique ID.
+	// The ID is written to audit logs and, with SecAuditLogType Concurrent,
+	// becomes part of the audit record file name. An ID containing a path
+	// separator ('/' or '\') or an ASCII control character is not used: a
+	// random ID is generated instead and a warning is logged.
 	NewTransactionWithID(id string) types.Transaction
 }
 
