@@ -521,71 +521,52 @@ func extractLiterals(re *syntax.Regexp, ci bool) any {
 	}
 }
 
-// trieReconstruct handles the specific pattern that regexp/syntax.Simplify()
-// emits when factoring a common prefix from an alternation:
+// trieReconstruct recovers the full words of an alternation that
+// regexp/syntax.Simplify() factored by a common prefix:
 //
 //	select|sleep|substr  →  s(?:elect|leep|ubstr)
 //	    AST: OpConcat([OpLiteral("s"), OpAlternate([...])])
 //
-// It prepends the raw prefix literal to every element returned by
-// rawExtractSuffixes, recovering the full literal words. The result is returned
-// as anyRequired so the caller knows "at least one of these must be present".
+// The leading literal is too short for extractLiterals on its own. Joined to
+// the suffixes of the alternation that follows it, it yields words that are
+// both longer and complete, returned as anyRequired so the caller knows "at
+// least one of these must be present".
 //
-// Handles arbitrary nesting depth: rawExtractSuffixes recurses back into
-// extractLiterals → trieReconstruct for inner OpConcat nodes, so patterns like
+// rawExtractSuffixes does the join and handles the nesting, so
 //
 //	select|set|sleep  →  s(?:e(?:lect|t)|leep)
 //
-// also reconstruct correctly ("select", "set", "sleep").
+// reconstructs to "select", "set", "sleep", while a branch such as
+// "elect.*from" contributes only "elect". The leading-literal check here is
+// deliberate: for a concat that does not start with a literal, extractLiterals
+// already holds the best anyRequired of its children, and that set is never
+// worse than what the first child alone would give.
 func trieReconstruct(concat *syntax.Regexp, ci bool) anyRequired {
-	// Only handle the exact 2-child pattern [short_prefix, alternation] that
-	// regexp/syntax.Simplify() emits. Longer concats (e.g. a.*b) have
-	// intervening optional/unknown nodes that we must not skip over, as doing
-	// so would produce false negatives (e.g. "ab" present without "axb" being
-	// a valid match for a.*b).
-	if concat.Op != syntax.OpConcat || len(concat.Sub) != 2 {
+	if concat.Op != syntax.OpConcat || len(concat.Sub) < 2 || rawLiteral(concat.Sub[0], ci) == "" {
 		return nil
 	}
-
-	// Extract the raw prefix literal (may be 1 byte — that's the common case).
-	prefix := rawLiteral(concat.Sub[0], ci)
-	if prefix == "" {
+	suffixes := rawExtractSuffixes(concat, ci)
+	if suffixes == nil {
 		return nil
 	}
-
-	// Collect suffix candidates from remaining children using the permissive
-	// extractor that allows short literals (they will be combined with prefix).
-	var suffixes []string
-	for _, sub := range concat.Sub[1:] {
-		lits := rawExtractSuffixes(sub, ci)
-		if lits == nil {
-			continue
-		}
-		suffixes = append(suffixes, lits...)
-	}
-	if len(suffixes) == 0 {
-		return nil
-	}
-
-	result := make(anyRequired, 0, len(suffixes))
-	for _, s := range suffixes {
-		if full := prefix + s; len(full) >= 2 {
-			result = append(result, full)
-		}
-	}
-	if len(result) == 0 {
-		return nil
-	}
-	return result
+	return anyRequired(suffixes)
 }
 
-// rawExtractSuffixes extracts literal candidates from a regex subtree for use
-// as trie-reconstruction suffixes. Unlike extractLiterals it permits short
-// literals (< 2 bytes) because they will be combined with a prefix by the
-// caller, producing a longer and more selective string.
+// rawExtractSuffixes returns, one per branch, the literals a match of re can
+// begin with, for trieReconstruct to join to a factored prefix. Unlike
+// extractLiterals it keeps single-byte literals, because they are only used
+// joined to that prefix.
 //
-// Returns nil if any branch of an alternation has no extractable literal (same
-// semantics as extractLiterals for OpAlternate: we can't safely omit a branch).
+// Invariant: every returned string starts at the first byte re consumes. A
+// concat therefore contributes its leading literal extended by the suffixes
+// of the child right after it, and never a literal from further right: those
+// may be separated from the prefix by consuming nodes, and the joined string
+// would be one that matching input need not contain ("elect.*from" must give
+// "elect", not "electfrom"). Do not route a concat through extractLiterals
+// here; it collects literals from anywhere in the concat.
+//
+// A nil result means some branch has no usable leading literal, in which case
+// the caller must not build a prefilter from the other branches.
 func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
 	switch re.Op {
 	case syntax.OpLiteral:
@@ -607,15 +588,45 @@ func rawExtractSuffixes(re *syntax.Regexp, ci bool) []string {
 		return result
 
 	case syntax.OpConcat:
-		// The caller prepends its prefix, so the suffix must start at this
-		// concat's first byte. Later literals may be separated by consuming
-		// nodes and cannot be joined safely.
-		lead := rawLiteral(re.Sub[0], ci)
-		if lead == "" {
+		if len(re.Sub) == 0 {
 			return nil
 		}
-		if reconstructed := trieReconstruct(re, ci); reconstructed != nil {
-			return []string(reconstructed)
+		lead := rawLiteral(re.Sub[0], ci)
+		if lead == "" {
+			// No leading literal: the first child supplies the suffixes
+			// itself, unjoined (an alternation, or a capture of one).
+			return rawExtractSuffixes(re.Sub[0], ci)
+		}
+		// Simplify() leaves the bytes of an expanded repeat as separate
+		// literal nodes (a{3,5} → a a a (a a?)?); take the whole run.
+		next := 1
+		for next < len(re.Sub) {
+			l := rawLiteral(re.Sub[next], ci)
+			if l == "" {
+				break
+			}
+			lead += l
+			next++
+		}
+		if next == len(re.Sub) {
+			return []string{lead}
+		}
+		// The child after the run starts right behind it, whatever follows
+		// that child, so its suffixes can be joined.
+		if tails := rawExtractSuffixes(re.Sub[next], ci); tails != nil {
+			result := make([]string, len(tails))
+			for i, tail := range tails {
+				result[i] = lead + tail
+			}
+			return result
+		}
+		// The branch goes on with content that cannot be joined, so the run
+		// is a truncated suffix. A single byte of it is no constraint worth
+		// a matcher: joined to the outer prefix it becomes a two-byte needle
+		// ("se", "un") that nearly any input satisfies, which costs more than
+		// running the regex unfiltered.
+		if len(lead) < 2 {
+			return nil
 		}
 		return []string{lead}
 

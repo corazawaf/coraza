@@ -169,10 +169,18 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		{"(?i)s(?:elect.*into|ubstr)", "unrelated", false},
 
 		// Trie suffixes must begin at the branch boundary before they are joined
-		// to a factored prefix.
+		// to a factored prefix. The first pair is the reduced reproducer from
+		// #1790; the last pair is CRS 942220 with the payload the issue reported.
+		{`2(?:x|.2250)`, "2.2250", true},
+		{`2(?:x|.2250)`, "unrelated", false},
 		{`a(?:b|.cde)`, "a.cde", true},
+		{`a(?:b|.cde)`, "unrelated", false},
 		{`a(?:bc|.(?:de|fg))`, "a.de", true},
+		{`a(?:bc|.(?:de|fg))`, "unrelated", false},
 		{`a(?:bc|.xy(?:de|fg))`, "a.xyde", true},
+		{`a(?:bc|.xy(?:de|fg))`, "unrelated", false},
+		{`(?i)^(?:json\.)?(?:429496729[56]|2(?:14748364[78]|.22507385850720(?:07|11)e-308)|-(?:214748364[89]|0000023456)|00000(?:12345|23456)|1e309)$`, "2.2250738585072011e-308", true},
+		{`(?i)^(?:json\.)?(?:429496729[56]|2(?:14748364[78]|.22507385850720(?:07|11)e-308)|-(?:214748364[89]|0000023456)|00000(?:12345|23456)|1e309)$`, "2.2250738585072011e-307", false},
 
 		// Regression: an end anchor does not mean the last extracted literal is
 		// adjacent to it. Here an alternation (no extractable literal) and a
@@ -1056,9 +1064,11 @@ func FuzzPrefilterFixedCRSPatterns(f *testing.F) {
 	f.Add("../../../etc/passwd")
 	f.Add("")
 	f.Add("UNION SELECT")
+	f.Add("2.2250738585072011e-308")
 
 	// Fixed patterns representative of real CRS rules
 	crsPatterns := []string{
+		`(?i)^(?:json\.)?(?:429496729[56]|2(?:14748364[78]|.22507385850720(?:07|11)e-308)|-(?:214748364[89]|0000023456)|00000(?:12345|23456)|1e309)$`,
 		`(?i)(?:union\s+(?:all\s+)?select)`,
 		`(?i)(?:insert\s+into|delete\s+from|update\s+\w+\s+set)`,
 		`(?i)<script[^>]*>`,
@@ -1126,7 +1136,9 @@ func TestPrefilterCodePaths(t *testing.T) {
 		// --- minMatchLength edge cases ---
 		{"mml_rune_error", "\xef\xbf\xbd", false, "", ""},
 		{"mml_rune_error_plus_literal", "(?s)\xef\xbf\xbd" + "hello", true, "\xef\xbf\xbdhello!xx", "hello"},
-		{"mml_repeat_3_5", "a{3,5}", false, "", ""},
+		// Simplify() expands a{3,5} to a a a (a a?)?; the literal run "aaa" is
+		// a trie suffix on its own, so a prefilter is built from it.
+		{"mml_repeat_3_5", "a{3,5}", true, "xaaax", "aa"},
 		{"mml_repeat_0_5", "a{0,5}", false, "", ""},
 
 		// --- allRequired paths ---
@@ -1282,6 +1294,45 @@ func TestTrieReconstructionBasic(t *testing.T) {
 			// After fix: each group reconstructed → anyRequired{all 20 keywords}
 			shouldMatch: []string{"SELECT id FROM", "UNION ALL SELECT", "benchmark(1000000,1)", "UPPER(col)"},
 			shouldMiss:  []string{"GET /api/v1/users?page=1", "Host: example.com", "Content-Type: application/json"},
+		},
+		{
+			name:    "branch_with_consuming_node",
+			pattern: "s(?:elect.*from|leep)",
+			// The first branch is a concat whose literals are separated by .*,
+			// so only its leading literal may take the prefix:
+			// anyRequired{"select","sleep"}, never "selectfrom".
+			shouldMatch: []string{"select x from users", "sleep(5)"},
+			shouldMiss:  []string{"unrelated", "GET /api"},
+		},
+		{
+			name:    "alternation_head_after_prefix",
+			pattern: "x(?:(?:ab|cd)ef|gh)",
+			// The first branch starts with an alternation, not a literal. Its
+			// own suffixes begin at the branch boundary, so they take the
+			// prefix: anyRequired{"xab","xcd","xgh"}. The raw propagation
+			// alone would settle for {"ab","cd","gh"}.
+			shouldMatch: []string{"xabef", "xcdef", "xgh"},
+			shouldMiss:  []string{"ab", "cd", "gh"},
+		},
+		{
+			name:    "three_child_concat_branch",
+			pattern: "a(?:b(?:cd|ef)g|xyz)",
+			// A branch with more than two children still joins its leading
+			// literal to the child right after it:
+			// anyRequired{"abcd","abef","axyz"}. Stopping at the bare "b"
+			// would give {"ab","axyz"}.
+			shouldMatch: []string{"abcdg", "abefg", "axyz"},
+			shouldMiss:  []string{"ab", "abg", "cdg"},
+		},
+		{
+			name:    "single_byte_truncated_lead",
+			pattern: "(?i)u(?:n.on|pdate)",
+			// "n" is followed by a consuming node, so the first branch has no
+			// joinable suffix. A single truncated byte is dropped rather than
+			// turned into the two-byte needle "un"; the raw propagation then
+			// supplies anyRequired{"on","pdate"}.
+			shouldMatch: []string{"union", "UPDATE t"},
+			shouldMiss:  []string{"un", "fun"},
 		},
 	}
 
@@ -1719,6 +1770,15 @@ func TestInternalNodeCoverage(t *testing.T) {
 		got := rawExtractSuffixes(cap, false)
 		if len(got) != 1 || got[0] != "elect" {
 			t.Errorf("rawExtractSuffixes(OpCapture(elect)) = %v, want [elect]", got)
+		}
+	})
+
+	t.Run("rawExtractSuffixes/empty_OpConcat", func(t *testing.T) {
+		// syntax.Parse never emits an empty OpConcat, but the concat case reads
+		// Sub[0]; the guard must return nil instead of panicking.
+		re := &syntax.Regexp{Op: syntax.OpConcat, Sub: []*syntax.Regexp{}}
+		if got := rawExtractSuffixes(re, false); got != nil {
+			t.Errorf("rawExtractSuffixes(empty OpConcat) = %v, want nil", got)
 		}
 	})
 
