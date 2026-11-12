@@ -365,11 +365,13 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		for nr := r.Chain; nr != nil; {
 			chainLevel++
 
-			var nrLogger debuglog.Logger
-			if nr.ID_ == noID {
-				nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
-			} else {
-				nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
+			nrLogger := logger
+			if logger.Debug().IsEnabled() {
+				if nr.ID_ == noID {
+					nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
+				} else {
+					nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
+				}
 			}
 
 			matchedChainValues := nr.doEvaluate(nrLogger, phase, tx, collectiveMatchedValues, chainLevel, cache)

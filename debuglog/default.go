@@ -88,6 +88,9 @@ func (defaultEvent) IsEnabled() bool {
 	return true
 }
 
+// defaultLogger keeps defaultFields at len == cap (see With), so appending to
+// them, in a child logger or in an event, allocates a new array instead of
+// writing into spare capacity that sibling loggers and events would share.
 type defaultLogger struct {
 	printer       Printer
 	factory       PrinterFactory
@@ -114,15 +117,18 @@ func (l defaultLogger) WithLevel(lvl Level) Logger {
 }
 
 func (l defaultLogger) With(fs ...ContextField) Logger {
-	var e Event = &defaultEvent{}
+	// Each field writes into e in place. The returned Event is ignored: a
+	// custom ContextField may return nil or a wrapper, and asserting it back to
+	// *defaultEvent would panic.
+	e := &defaultEvent{}
 	for _, f := range fs {
-		e = f(e)
+		f(e)
 	}
 	return defaultLogger{
 		printer:       l.printer,
 		factory:       l.factory,
 		level:         l.level,
-		defaultFields: append(slices.Clip(l.defaultFields), e.(*defaultEvent).fields...),
+		defaultFields: slices.Clip(append(l.defaultFields, e.fields...)),
 	}
 }
 
@@ -131,7 +137,7 @@ func (l defaultLogger) Trace() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelTrace, fields: slices.Clip(l.defaultFields)}
+	return &defaultEvent{printer: l.printer, level: LevelTrace, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Debug() Event {
@@ -139,7 +145,7 @@ func (l defaultLogger) Debug() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelDebug, fields: slices.Clip(l.defaultFields)}
+	return &defaultEvent{printer: l.printer, level: LevelDebug, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Info() Event {
@@ -147,7 +153,7 @@ func (l defaultLogger) Info() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelInfo, fields: slices.Clip(l.defaultFields)}
+	return &defaultEvent{printer: l.printer, level: LevelInfo, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Warn() Event {
@@ -155,7 +161,7 @@ func (l defaultLogger) Warn() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelWarn, fields: slices.Clip(l.defaultFields)}
+	return &defaultEvent{printer: l.printer, level: LevelWarn, fields: l.defaultFields}
 }
 
 func (l defaultLogger) Error() Event {
@@ -163,7 +169,7 @@ func (l defaultLogger) Error() Event {
 		return noopEvent{}
 	}
 
-	return &defaultEvent{printer: l.printer, level: LevelError, fields: slices.Clip(l.defaultFields)}
+	return &defaultEvent{printer: l.printer, level: LevelError, fields: l.defaultFields}
 }
 
 // Default returns a default logger that writes to stderr.
