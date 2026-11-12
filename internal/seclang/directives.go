@@ -473,11 +473,13 @@ func directiveSecServerSignature(options *DirectiveOptions) error {
 //
 // Note: OWASP CRS has a list of supported tags https://coreruleset.org/docs/rules/metadata/
 func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	opts := strings.TrimSpace(options.Opts)
+	opts = utils.MaybeRemoveQuotes(opts)
+	if len(opts) == 0 {
 		return errEmptyOptions
 	}
 
-	options.WAF.Rules.DeleteByTag(options.Opts)
+	options.WAF.Rules.DeleteByTag(opts)
 	return nil
 }
 
@@ -500,11 +502,13 @@ func directiveSecRuleRemoveByTag(options *DirectiveOptions) error {
 // SecRuleRemoveByMsg "My Custom Rule Msg"
 // ```
 func directiveSecRuleRemoveByMsg(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	opts := strings.TrimSpace(options.Opts)
+	opts = utils.MaybeRemoveQuotes(opts)
+	if len(opts) == 0 {
 		return errEmptyOptions
 	}
 
-	options.WAF.Rules.DeleteByMsg(options.Opts)
+	options.WAF.Rules.DeleteByMsg(opts)
 	return nil
 }
 
@@ -1704,10 +1708,16 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 		return errors.New("syntax error: SecRuleUpdateTargetByTag tag \"VARIABLES\"")
 	}
 
+	// evaluateLine strips outer quotes if the entire directive argument string starts and ends
+	// with double quotes (e.g. `"tag-2" "!ARGS:t1"` becomes `tag-2" "!ARGS:t1`).
+	// Trimming leftover double quotes ensures both properly quoted arguments (including single quotes)
+	// and split multi-argument quotes are handled cleanly.
+	inputTag := utils.MaybeRemoveQuotes(strings.Trim(tagAndvars[0], "\""))
+	inputVars := utils.MaybeRemoveQuotes(strings.Trim(tagAndvars[1], "\""))
+
 	// Indexed, not ranged: see the note in directiveSecRuleUpdateTargetByID.
 	rules := options.WAF.Rules.GetRules()
 	for i := range rules {
-		inputTag := strings.Trim(tagAndvars[0], "\"")
 		if utils.InSlice(inputTag, rules[i].Tags_) {
 			rp := RuleParser{
 				rule: &rules[i],
@@ -1716,7 +1726,6 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 				},
 				defaultActions: map[types.RulePhase][]ruleAction{},
 			}
-			inputVars := strings.Trim(tagAndvars[1], "\"")
 			if err := rp.ParseVariables(inputVars); err != nil {
 				return err
 			}
