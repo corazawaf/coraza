@@ -103,5 +103,110 @@
       "type" : "op",
       "ret" : 1,
       "name" : "pm"
+   },
+   {
+      "name" : "pm",
+      "param" : "A|42|C|44|F",
+      "input" : "xxabcdfxx",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "A|42|C|44|F",
+      "input" : "xxABCDFxx",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "A|42|C|44|F",
+      "input" : "xxabcexx",
+      "ret" : 0,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "|41 42|",
+      "input" : "ab",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "|41| |42|",
+      "input" : "b",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "a|20|b",
+      "input" : "a b",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "a|20|b",
+      "input" : "ab",
+      "ret" : 0,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "|00|",
+      "input" : "foo\\u0000bar",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "|ff fe|",
+      "input" : "foo\\xff\\xfebar",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "|41|",
+      "input" : "a",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "foo|7C|bar",
+      "input" : "foo|bar",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "hello world",
+      "input" : "say hello",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "a  b",
+      "input" : "xyz",
+      "ret" : 0,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "a  b",
+      "input" : "a",
+      "ret" : 1,
+      "type" : "op"
+   },
+   {
+      "name" : "pm",
+      "param" : "a  b",
+      "input" : "",
+      "ret" : 0,
+      "type" : "op"
    }
 ]
