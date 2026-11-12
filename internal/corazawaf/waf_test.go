@@ -41,6 +41,12 @@ func TestNewTransaction(t *testing.T) {
 	}
 }
 
+func TestNewWAFDefaultAuditLogParts(t *testing.T) {
+	if have := string(NewWAF().AuditLogParts); have != "ABCFHZ" {
+		t.Fatalf("unexpected default AuditLogParts: want ABCFHZ, have %s", have)
+	}
+}
+
 func TestNewTransactionResetsDetectionOnlyInterruption(t *testing.T) {
 	waf := NewWAF()
 

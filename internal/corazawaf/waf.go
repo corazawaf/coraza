@@ -349,10 +349,12 @@ func NewWAF() *WAF {
 		auditLogWriterInitialized:  false,
 		AuditLogWriterConfig:       auditlog.NewConfig(),
 		AuditLogParts: types.AuditLogParts{
+			types.AuditLogPartHeader,
 			types.AuditLogPartRequestHeaders,
 			types.AuditLogPartRequestBody,
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
+			types.AuditLogPartEndMarker,
 		},
 		AuditLogFormat:     "Native",
 		Logger:             logger,
