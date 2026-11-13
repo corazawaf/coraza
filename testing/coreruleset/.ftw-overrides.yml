@@ -106,7 +106,7 @@ test_overrides:
   - rule_id: 922130
     test_ids: [4]
     reason: |
-      Multipart parsing tests. A space caracther is not in the valid range. 0x20 character raises MULTIPART_STRICT_ERROR (see multipart_error.yaml engine test),
+      Multipart parsing tests. A space character is not in the valid range. 0x20 character raises MULTIPART_STRICT_ERROR (see multipart_error.yaml engine test),
       But 922130-4 test does not. In this case, rule 922130 is matched.
     output:
       log:
