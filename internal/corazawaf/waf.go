@@ -348,14 +348,8 @@ func NewWAF() *WAF {
 		auditLogWriter:             logWriter,
 		auditLogWriterInitialized:  false,
 		AuditLogWriterConfig:       auditlog.NewConfig(),
-		AuditLogParts: types.AuditLogParts{
-			types.AuditLogPartHeader,
-			types.AuditLogPartRequestHeaders,
-			types.AuditLogPartRequestBody,
-			types.AuditLogPartResponseHeaders,
-			types.AuditLogPartAuditLogTrailer,
-			types.AuditLogPartEndMarker,
-		},
+		// Same default as documented on SecAuditLogParts in internal/seclang/directives.go.
+		AuditLogParts:      types.AuditLogParts("ABCFHZ"),
 		AuditLogFormat:     "Native",
 		Logger:             logger,
 		ArgumentLimit:      1000,
