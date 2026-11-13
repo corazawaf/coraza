@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/internal/collections"
 )
 
 type bodyProcessorWrapper = func() plugintypes.BodyProcessor
@@ -28,4 +29,54 @@ func GetBodyProcessor(name string) (plugintypes.BodyProcessor, error) {
 		return fn(), nil
 	}
 	return nil, fmt.Errorf("invalid bodyprocessor %q", name)
+}
+
+// ArgumentsLimitExceededMsg is the request body error reason recorded when a
+// request body argument is dropped because SecArgumentsLimit was reached.
+const ArgumentsLimitExceededMsg = "SecArgumentsLimit exceeded"
+
+// RecordRequestBodyError sets REQBODY_ERROR and adds reason to REQBODY_ERROR_MSG.
+// Reasons are joined with "; ", each prefixed with the active body processor, as
+// in "JSON: invalid JSON". A reason already recorded is not repeated. It lives
+// here so processors and the transaction share it.
+func RecordRequestBodyError(v plugintypes.TransactionVariables, reason string) {
+	v.RequestBodyError().(*collections.Single).Set("1")
+	errMsg := v.RequestBodyErrorMsg().(*collections.Single)
+	current := errMsg.Get()
+	processor := v.RequestBodyProcessor().Get()
+	if hasReason(current, reason, processor) {
+		return
+	}
+	if processor != "" {
+		reason = processor + ": " + reason
+	}
+	if current != "" {
+		reason = current + "; " + reason
+	}
+	errMsg.Set(reason)
+}
+
+// hasReason reports whether msg, a "; "-separated list of reasons, already holds
+// reason as a whole entry, bare or prefixed with processor.
+func hasReason(msg, reason, processor string) bool {
+	for msg != "" {
+		part, rest, _ := strings.Cut(msg, "; ")
+		if part == reason {
+			return true
+		}
+		if processor != "" && strings.HasPrefix(part, processor) {
+			if bare, ok := strings.CutPrefix(part[len(processor):], ": "); ok && bare == reason {
+				return true
+			}
+		}
+		msg = rest
+	}
+	return false
+}
+
+// setRequestArgumentsLimitReached records request-body truncation in
+// ARGUMENTS_LIMIT_REACHED and REQBODY_ERROR. Not used for response bodies.
+func setRequestArgumentsLimitReached(v plugintypes.TransactionVariables) {
+	v.ArgumentsLimitReached().(*collections.Single).Set("1")
+	RecordRequestBodyError(v, ArgumentsLimitExceededMsg)
 }

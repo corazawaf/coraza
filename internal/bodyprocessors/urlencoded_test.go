@@ -84,6 +84,12 @@ func TestURLEncodeArgumentLimit(t *testing.T) {
 	if v.ArgumentsLimitReached().Get() != "1" {
 		t.Error("expected ARGUMENTS_LIMIT_REACHED to be set")
 	}
+	if v.RequestBodyError().Get() != "1" {
+		t.Error("expected REQBODY_ERROR to be set")
+	}
+	if got := v.RequestBodyErrorMsg().Get(); got != bodyprocessors.ArgumentsLimitExceededMsg {
+		t.Errorf("expected REQBODY_ERROR_MSG %q, got %q", bodyprocessors.ArgumentsLimitExceededMsg, got)
+	}
 }
 
 // TestURLEncodeArgumentLimitRepeatedKey is a regression test confirming the
@@ -125,6 +131,9 @@ func TestURLEncodeNoArgumentLimit(t *testing.T) {
 	}
 	if v.ArgumentsLimitReached().Get() == "1" {
 		t.Error("expected ARGUMENTS_LIMIT_REACHED to be unset when ArgumentLimit is 0 (no limit)")
+	}
+	if v.RequestBodyError().Get() == "1" {
+		t.Error("expected REQBODY_ERROR to be unset when no argument was dropped")
 	}
 	for _, k := range []string{"a", "b", "c"} {
 		if len(v.ArgsPost().Get(k)) == 0 {
