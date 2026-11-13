@@ -281,9 +281,6 @@ func (tx *Transaction) Collection(idx variables.RuleVariable) collection.Collect
 		return tx.variables.tx
 	case variables.Rule:
 		return tx.variables.rule
-	case variables.JSON:
-		// TODO(anuraaga): This collection seems to be missing.
-		return nil
 	case variables.Env:
 		return tx.variables.env
 	case variables.UrlencodedError:
