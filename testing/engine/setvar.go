@@ -25,7 +25,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{920271, 2, 4, 7},
-							NonTriggeredRules: []int{5, 8},
+							NonTriggeredRules: []int{5, 8, 10},
 						},
 					},
 				},
@@ -48,5 +48,7 @@ SecRule TX:flag "@unconditionalMatch" "id:5,log"
 SecAction "id:6,nolog,setvar:'TX.empty='"
 SecRule TX:empty "@rx ^$" "id:7,log"
 SecRule TX:empty "@rx ." "id:8,log"
+SecAction "id:9,nolog,setvar:'TX.%{tx.unset}=empty_key_marker'"
+SecRule TX "@streq empty_key_marker" "id:10,log"
 `,
 })

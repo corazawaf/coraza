@@ -105,11 +105,6 @@ func TestSetvarEvaluate(t *testing.T) {
 			init:              "TX.newvar",
 			expectNewVarValue: "1",
 		},
-		{
-			name:      "Key macro naming a missing variable - nothing is set",
-			init:      "TX.%{tx.missingvar}=1",
-			expectLog: "setvar key expanded to the empty string",
-		},
 	}
 
 	for _, tt := range tests {
