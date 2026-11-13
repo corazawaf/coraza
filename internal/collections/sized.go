@@ -44,7 +44,7 @@ func (c *SizeCollection) FindString(string) []types.MatchData {
 // FindAll returns a slice of MatchData of all matches
 func (c *SizeCollection) FindAll() []types.MatchData {
 	return []types.MatchData{
-		&corazarules.MatchData{
+		&corazarules.VariableMatch{
 			Variable_: c.variable,
 			Value_:    strconv.Itoa(c.size()),
 		},

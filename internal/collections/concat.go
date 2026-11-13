@@ -32,9 +32,20 @@ func NewConcatCollection(variable variables.RuleVariable, data ...collection.Col
 func (c *ConcatCollection) FindAll() []types.MatchData {
 	var res []types.MatchData
 	for _, d := range c.data {
-		res = append(res, replaceVariable(c.variable, d.FindAll())...)
+		res = concat(res, replaceVariable(c.variable, d.FindAll()))
 	}
 	return res
+}
+
+// concat appends more to res, adopting more as the result when nothing was
+// collected yet: a sub-collection's fresh FindAll slice is ours to keep, and
+// for the common case of a single non-empty sub-collection (ARGS on a GET
+// request) that saves re-allocating and copying every element.
+func concat(res, more []types.MatchData) []types.MatchData {
+	if res == nil {
+		return more
+	}
+	return append(res, more...)
 }
 
 // Name returns the name for the current CollectionconcatCollection
@@ -66,11 +77,28 @@ func (c *ConcatKeyed) Get(key string) []string {
 	return res
 }
 
+// First returns the first value stored under key across the collections.
+func (c *ConcatKeyed) First(key string) (string, bool) {
+	keyL := strings.ToLower(key)
+	for _, d := range c.data {
+		if f, ok := d.(interface{ First(string) (string, bool) }); ok {
+			if v, ok := f.First(keyL); ok {
+				return v, true
+			}
+			continue
+		}
+		if v := d.Get(keyL); len(v) > 0 {
+			return v[0], true
+		}
+	}
+	return "", false
+}
+
 // FindRegex returns a slice of MatchData for the regex
 func (c *ConcatKeyed) FindRegex(key *regexp.Regexp) []types.MatchData {
 	var res []types.MatchData
 	for _, d := range c.data {
-		res = append(res, replaceVariable(c.variable, d.FindRegex(key))...)
+		res = concat(res, replaceVariable(c.variable, d.FindRegex(key)))
 	}
 	return res
 }
@@ -79,7 +107,7 @@ func (c *ConcatKeyed) FindRegex(key *regexp.Regexp) []types.MatchData {
 func (c *ConcatKeyed) FindString(key string) []types.MatchData {
 	var res []types.MatchData
 	for _, d := range c.data {
-		res = append(res, replaceVariable(c.variable, d.FindString(key))...)
+		res = concat(res, replaceVariable(c.variable, d.FindString(key)))
 	}
 	return res
 }
@@ -88,7 +116,7 @@ func (c *ConcatKeyed) FindString(key string) []types.MatchData {
 func (c *ConcatKeyed) FindAll() []types.MatchData {
 	var res []types.MatchData
 	for _, d := range c.data {
-		res = append(res, replaceVariable(c.variable, d.FindAll())...)
+		res = concat(res, replaceVariable(c.variable, d.FindAll()))
 	}
 	return res
 }
@@ -102,7 +130,12 @@ func (c *ConcatKeyed) Name() string {
 // not original one.
 func replaceVariable(v variables.RuleVariable, md []types.MatchData) []types.MatchData {
 	for _, m := range md {
-		m.(*corazarules.MatchData).Variable_ = v
+		switch m := m.(type) {
+		case *corazarules.VariableMatch:
+			m.Variable_ = v
+		case *corazarules.MatchData:
+			m.Variable_ = v
+		}
 	}
 	return md
 }
