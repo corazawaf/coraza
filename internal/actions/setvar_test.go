@@ -54,65 +54,61 @@ func TestSetvarInit(t *testing.T) {
 	})
 }
 
-var invalidSyntaxAtoiError = "invalid syntax"
-var warningKeyNotFoundInCollection = "key not found in collection"
-
 func TestSetvarEvaluate(t *testing.T) {
 	tests := []struct {
-		name                     string
-		init                     string
-		init2                    string
-		expectInvalidSyntaxError bool
-		expectNewVarValue        string
+		name              string
+		init              string
+		init2             string
+		expectLog         string
+		expectNewVarValue string
 	}{
 		{
-			name:                     "Numerical operation + with existing variable",
-			init:                     "TX.var=5",
-			init2:                    "TX.newvar=+%{tx.var}",
-			expectInvalidSyntaxError: false,
-			expectNewVarValue:        "5",
+			name:              "Numerical operation + with existing variable",
+			init:              "TX.var=5",
+			init2:             "TX.newvar=+%{tx.var}",
+			expectNewVarValue: "5",
 		},
 		{
-			name:                     "Numerical operation - with existing variable",
-			init:                     "TX.var=5",
-			init2:                    "TX.newvar=-%{tx.var}",
-			expectInvalidSyntaxError: false,
-			expectNewVarValue:        "-5",
+			name:              "Numerical operation - with existing variable",
+			init:              "TX.var=5",
+			init2:             "TX.newvar=-%{tx.var}",
+			expectNewVarValue: "-5",
 		},
 		{
-			name:                     "Numerical operation - with existing negative variable",
-			init:                     "TX.newvar=-5",
-			init2:                    "TX.newvar=+5",
-			expectInvalidSyntaxError: false,
-			expectNewVarValue:        "0",
+			name:              "Numerical operation - with existing negative variable",
+			init:              "TX.newvar=-5",
+			init2:             "TX.newvar=+5",
+			expectNewVarValue: "0",
 		},
 		{
-			name:                     "Numerical operation + with missing (or non-numerical) variable",
-			init:                     "TX.newvar=+%{tx.missingvar}",
-			expectInvalidSyntaxError: true,
+			name:              "Numerical operation + with missing variable",
+			init:              "TX.newvar=+%{tx.missingvar}",
+			expectNewVarValue: "0",
 		},
 		{
-			name:                     "Numerical operation - with missing (or non-numerical) variable",
-			init:                     "TX.newvar=-%{tx.missingvar}",
-			expectInvalidSyntaxError: true,
+			name:              "Numerical operation - with missing variable",
+			init:              "TX.newvar=-%{tx.missingvar}",
+			expectNewVarValue: "0",
 		},
 		{
-			name:                     "Non Numerical Operation - If the value starts with -",
-			init:                     "TX.newvar=----expected_value",
-			expectInvalidSyntaxError: false,
-			expectNewVarValue:        "----expected_value",
+			name:              "Non Numerical Operation - If the value starts with -",
+			init:              "TX.newvar=----expected_value",
+			expectNewVarValue: "----expected_value",
 		},
 		{
-			name:                     "Non Numerical Operation - If the value starts with +",
-			init:                     "TX.newvar=+++expected_value",
-			expectInvalidSyntaxError: false,
-			expectNewVarValue:        "+++expected_value",
+			name:              "Non Numerical Operation - If the value starts with +",
+			init:              "TX.newvar=+++expected_value",
+			expectNewVarValue: "+++expected_value",
 		},
 		{
-			name:                     "No value - The variable is set to 1",
-			init:                     "TX.newvar",
-			expectInvalidSyntaxError: false,
-			expectNewVarValue:        "1",
+			name:              "No value - The variable is set to 1",
+			init:              "TX.newvar",
+			expectNewVarValue: "1",
+		},
+		{
+			name:      "Key macro naming a missing variable - nothing is set",
+			init:      "TX.%{tx.missingvar}=1",
+			expectLog: "setvar key expanded to the empty string",
 		},
 	}
 
@@ -135,18 +131,9 @@ func TestSetvarEvaluate(t *testing.T) {
 			tx := waf.NewTransaction()
 			a.Evaluate(metadata, tx)
 
-			if tt.expectInvalidSyntaxError {
-				t.Log(logsBuf.String())
-				if logsBuf.Len() == 0 {
-					t.Fatal("expected logs")
-				}
-
-				if !strings.Contains(logsBuf.String(), invalidSyntaxAtoiError) {
-					t.Errorf("expected error log containing %q, got %q", invalidSyntaxAtoiError, logsBuf.String())
-				}
-
-				if !strings.Contains(logsBuf.String(), warningKeyNotFoundInCollection) {
-					t.Errorf("expected error log containing %q, got %q", warningKeyNotFoundInCollection, logsBuf.String())
+			if tt.expectLog != "" {
+				if !strings.Contains(logsBuf.String(), tt.expectLog) {
+					t.Errorf("expected log containing %q, got %q", tt.expectLog, logsBuf.String())
 				}
 			} else if logsBuf.Len() != 0 {
 				t.Fatalf("unexpected error: %s", logsBuf.String())
@@ -157,7 +144,7 @@ func TestSetvarEvaluate(t *testing.T) {
 					t.Fatal("unexpected error during setvar init")
 				}
 				a.Evaluate(metadata, tx)
-				if logsBuf.Len() != 0 && !tt.expectInvalidSyntaxError {
+				if logsBuf.Len() != 0 && tt.expectLog == "" {
 					t.Fatalf("unexpected error: %s", logsBuf.String())
 				}
 			}
