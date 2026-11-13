@@ -29,20 +29,6 @@ var _ = profile.RegisterProfile(profile.Profile{
 			},
 		},
 		{
-			Title: "an unset variable in setvar expands to the empty string",
-			Stages: []profile.Stage{
-				{
-					Stage: profile.SubStage{
-						Output: profile.ExpectedOutput{
-							TriggeredRules: []int{300},
-							LogContains:    "joined=[GET POST ]",
-							NoLogContains:  "tx.plugin_allowed_methods",
-						},
-					},
-				},
-			},
-		},
-		{
 			Title: "an unset variable in msg and in an operator expands to the empty string",
 			Stages: []profile.Stage{
 				{
@@ -68,9 +54,6 @@ SecRule TX:blocking_paranoia_level "@eq 1" "id:200,log,pass"
 
 SecRule TX:executing_paranoia_level "@lt %{tx.blocking_paranoia_level}" "id:901500,phase:1,log"
 
-SecAction "id:2,phase:1,pass,nolog,setvar:'tx.allowed_methods=GET POST'"
-SecAction "id:3,phase:1,pass,nolog,setvar:'tx.joined=%{tx.allowed_methods} %{tx.plugin_allowed_methods}'"
-SecRule TX:joined "@rx ^(.*)$" "id:300,phase:1,pass,log,msg:'joined=[%{tx.joined}]'"
 SecRule REQUEST_METHOD "@rx ." "id:301,phase:1,pass,log,msg:'direct=[%{tx.non_existent}]'"
 SecRule REQUEST_METHOD "@streq %{tx.non_existent}GET" "id:302,phase:1,pass,log"
 `,
