@@ -4,12 +4,4 @@
 # coraza.rule.multiphase_evaluation build tag is set.
 ---
 testoverride:
-  ignore:
-    920100-4: 'Invalid uri, Coraza not reached - 404 page not found' 
-    920100-5: 'Invalid uri, Coraza not reached - 404 page not found'
-    # TODO: investigate
-    920280-3: ''
-    920430-3: ''
-    920430-5: ''
-    920430-9: ''
-    920610-2: 'fragments, Coraza might just happly accept them. Run and check it.'
+  ignore: {}
