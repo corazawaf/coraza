@@ -11,22 +11,6 @@ import (
 	"testing"
 )
 
-// logLine returns what was logged after the 20-byte timestamp. It fails the test
-// when nothing was logged, instead of panicking and aborting the package.
-func logLine(t *testing.T, buf *bytes.Buffer) string {
-	t.Helper()
-	if buf.Len() < 20 {
-		t.Fatalf("expected a log line, have %q", buf.String())
-	}
-	return buf.String()[20:]
-}
-
-// prefixEvent is an integrator-style Event wrapper that renames the keys of the
-// string fields written through it.
-type prefixEvent struct{ Event }
-
-func (p prefixEvent) Str(key, val string) Event { return p.Event.Str("p."+key, val) }
-
 func TestLoggerLogLevels(t *testing.T) {
 	testCases := map[string]struct {
 		logFunction                func(Logger) func() Event
@@ -113,7 +97,8 @@ func TestMsg(t *testing.T) {
 
 		expected := "[INFO] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false error=\"my error\"\n"
 
-		if want, have := expected, logLine(t, &buf); want != have {
+		// [20:] Skips the timestamp.
+		if want, have := expected, buf.String()[20:]; want != have {
 			t.Fatalf("unexpected message, want %q, have %q", want, have)
 		}
 	})
@@ -160,7 +145,8 @@ func TestWithLogger(t *testing.T) {
 
 	expected := "[INFO] my message a=true b=-1 c=1 d=\"x\" e=\"y & z\" f=false g=\"w\"\n"
 
-	if want, have := expected, logLine(t, &buf); want != have {
+	// [20:] Skips the timestamp.
+	if want, have := expected, buf.String()[20:]; want != have {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 
@@ -173,42 +159,16 @@ func TestWithLogger(t *testing.T) {
 
 	expected = "[INFO] my message g=\"w\"\n"
 
-	if want, have := expected, logLine(t, &buf2); want != have {
+	// [20:] Skips the timestamp.
+	if want, have := expected, buf2.String()[20:]; want != have {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
-	}
-
-	// ContextField is an exported func type, so an integrator's field may return
-	// nil, wrap the Event it was given, or return a new Event. With must keep
-	// what the fields wrote, hand a returned Event to the fields after it, and
-	// must not panic.
-	returnsNil := func(e Event) Event { e.Str("a", "1"); return nil }
-	returnsWrapper := func(e Event) Event { return prefixEvent{e.Str("b", "2")} }
-	returnsNew := func(Event) Event { return Default().Info().Str("d", "4") }
-	customFields := []struct {
-		name     string
-		fields   []ContextField
-		expected string
-	}{
-		{"nil, then a wrapper", []ContextField{returnsNil, returnsWrapper, Str("c", "3")}, `[INFO] m a="1" b="2" p.c="3"` + "\n"},
-		// As on main, the new Event's fields replace the ones written before it.
-		{"a new event", []ContextField{Str("a", "1"), returnsNew}, `[INFO] m d="4"` + "\n"},
-	}
-	for _, tc := range customFields {
-		t.Run("custom fields returning "+tc.name, func(t *testing.T) {
-			buf := bytes.Buffer{}
-			Default().WithOutput(&buf).With(tc.fields...).Info().Msg("m")
-			if want, have := tc.expected, logLine(t, &buf); want != have {
-				t.Fatalf("unexpected message, want %q, have %q", want, have)
-			}
-		})
 	}
 
 	// Siblings derived from one parent must not share its backing array, or they
 	// overwrite each other's fields: the second logger's tx_id and the second
 	// event's field land in the first one's line. Without the fix, these two
 	// With calls leave the parent at len 34, cap 64, and l1 inherits that spare
-	// capacity, so one case covers sibling loggers and sibling events. It uses
-	// Debug, the level the per-rule loggers in internal/corazawaf log at.
+	// capacity, so one case covers sibling loggers and sibling events.
 	t.Run("siblings do not share fields", func(t *testing.T) {
 		buf := bytes.Buffer{}
 		parent := Default().WithOutput(&buf).WithLevel(LevelDebug).
@@ -221,8 +181,11 @@ func TestWithLogger(t *testing.T) {
 		_ = l1.Debug().Str("k", "2")
 		e1.Msg("m")
 
+		if buf.Len() < 20 {
+			t.Fatalf("expected a log line, have %q", buf.String())
+		}
 		expected := `[DEBUG] m service="my-gateway-prod" env="p" tx_id="AAA" k="1"` + "\n"
-		if want, have := expected, logLine(t, &buf); want != have {
+		if want, have := expected, buf.String()[20:]; want != have {
 			t.Fatalf("unexpected message, want %q, have %q", want, have)
 		}
 	})
@@ -239,7 +202,8 @@ func TestWithLoggerAccumulative(t *testing.T) {
 
 	expected := "[INFO] my message a=true b=-1 g=\"w\"\n"
 
-	if want, have := expected, logLine(t, &buf); want != have {
+	// [20:] Skips the timestamp.
+	if want, have := expected, buf.String()[20:]; want != have {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
 }

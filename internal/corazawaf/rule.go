@@ -365,15 +365,11 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 		for nr := r.Chain; nr != nil; {
 			chainLevel++
 
-			// Warn, not Debug: the chained rule logs "Error transforming
-			// argument for rule" at Warn, and that line must keep naming it.
-			nrLogger := logger
-			if logger.Warn().IsEnabled() {
-				if nr.ID_ == noID {
-					nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
-				} else {
-					nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
-				}
+			var nrLogger debuglog.Logger
+			if nr.ID_ == noID {
+				nrLogger = logger.With(debuglog.Str("chain_rule_ref", fmt.Sprintf("%s#L%d", nr.File_, nr.Line_)))
+			} else {
+				nrLogger = logger.With(debuglog.Int("chain_rule_id", nr.ID_))
 			}
 
 			matchedChainValues := nr.doEvaluate(nrLogger, phase, tx, collectiveMatchedValues, chainLevel, cache)
