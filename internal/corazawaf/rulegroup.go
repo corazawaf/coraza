@@ -156,9 +156,11 @@ func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
 
-// Eval rules for the specified phase, between 1 and 5.
+// Eval rules for the specified phase, between 1 and 5
 // Rules are evaluated in syntactic order and the evaluation finishes
-// as soon as an interruption has been triggered.
+// as soon as an interruption has been triggered (except in the logging phase),
+// or as soon as a rule turns the rule engine off with ctl:ruleEngine=Off
+// (in every phase, logging included).
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.DebugLogger().Debug().
@@ -186,14 +188,6 @@ RulesLoop:
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
 		if tx.IsInterrupted() && phase != types.PhaseLogging {
-			break RulesLoop
-		}
-		// ctl:ruleEngine=Off is final for the transaction, once it has run, no further rule is evaluated.
-		// Later phases are skipped by Process* methods, here we break the loop for the current phase.
-		if tx.IsRuleEngineOff() {
-			tx.DebugLogger().Debug().
-				Int("phase", int(phase)).
-				Msg("Skipping remaining rules because the rule engine is off")
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
@@ -267,7 +261,7 @@ RulesLoop:
 				break RulesLoop
 			}
 			if phase == types.PhaseRequestBody {
-				// tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
+				// // tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
 				tx.AllowType = corazatypes.AllowTypeUnset
 				break RulesLoop
 			}
@@ -284,6 +278,20 @@ RulesLoop:
 		r.Evaluate(phase, tx, transformationCache)
 		tx.Capture = false // we reset captures
 		usedRules++
+
+		// ctl:ruleEngine=Off is final for the transaction: once the rule that set it has
+		// been processed, no further rule or chain link is evaluated, as in ModSecurity v2.
+		// The rest of that rule's own actions still run. Rule.doEvaluate stops its chain,
+		// here we break the loop for the current phase, and Process* methods skip later phases.
+		// Only a rule can turn the engine off, and Eval is never entered with the engine off,
+		// so checking after each evaluated rule is enough.
+		if tx.IsRuleEngineOff() {
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Int("rule_id", r.ID_).
+				Msg("Rule engine turned off by this rule, skipping the remaining rules")
+			break RulesLoop
+		}
 	}
 	tx.DebugLogger().Debug().
 		Int("phase", int(phase)).
@@ -302,8 +310,10 @@ RulesLoop:
 	return tx.IsInterrupted()
 }
 
-// NewRuleGroup creates an empty RuleGroup that can be attached to a WAF instance
-// You might use this function to replace the rules and "reload" the WAF
+// NewRuleGroup creates an empty RuleGroup that
+// can be attached to a WAF instance
+// You might use this function to replace the rules
+// and "reload" the WAF
 func NewRuleGroup() RuleGroup {
 	return RuleGroup{}
 }
