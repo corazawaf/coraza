@@ -12,6 +12,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // WAF instance is used to store configurations and rules
@@ -126,8 +127,31 @@ func NewWAF(config WAFConfig) (WAF, error) {
 		return nil, err
 	}
 
+	warnUnreadSignals(waf)
+
 	initialized = true
 	return wafWrapper{waf: waf}, nil
+}
+
+// unreadSignals lists variables the engine sets for rules to act on. NewWAF warns
+// when no loaded rule reads one of them, unless SecRuleEngine is Off.
+var unreadSignals = []struct {
+	variable variables.RuleVariable
+	warning  string
+}{
+	{variables.ArgumentsLimitReached, "No loaded rule reads ARGUMENTS_LIMIT_REACHED; argument-limit overflows will not be handled based on this signal. Load recommended rules 200004 and 200005."},
+	{variables.ReqbodyError, "No loaded rule reads REQBODY_ERROR; request-body errors will not be handled based on this signal. Load recommended rule 200002."},
+}
+
+func warnUnreadSignals(waf *corazawaf.WAF) {
+	if waf.RuleEngine == types.RuleEngineOff {
+		return
+	}
+	for _, s := range unreadSignals {
+		if !waf.Rules.ReadsVariable(s.variable) {
+			waf.Logger.Warn().Msg(s.warning)
+		}
+	}
 }
 
 func populateAuditLog(waf *corazawaf.WAF, c *wafConfig) {
