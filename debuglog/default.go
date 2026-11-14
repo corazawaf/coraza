@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 )
 
@@ -87,6 +88,9 @@ func (defaultEvent) IsEnabled() bool {
 	return true
 }
 
+// defaultLogger keeps defaultFields at len == cap (see With), so appending to
+// them, in a child logger or in an event, allocates a new array instead of
+// writing into spare capacity that sibling loggers and events would share.
 type defaultLogger struct {
 	printer       Printer
 	factory       PrinterFactory
@@ -121,7 +125,7 @@ func (l defaultLogger) With(fs ...ContextField) Logger {
 		printer:       l.printer,
 		factory:       l.factory,
 		level:         l.level,
-		defaultFields: append(l.defaultFields, e.(*defaultEvent).fields...),
+		defaultFields: slices.Clip(append(l.defaultFields, e.(*defaultEvent).fields...)),
 	}
 }
 
