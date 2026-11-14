@@ -278,6 +278,97 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			// seclang-spec ADR-0034: once ctl:ruleEngine=Off has run, no later rule of the
+			// transaction is evaluated, so a later ctl:ruleEngine cannot undo it.
+			Title: "ruleEngine=Off is final for the transaction",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/engine-test?engine_off=1&mode=on",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 402 would set the engine back On and let rule 404 deny.
+							TriggeredRules:    []int{400},
+							NonTriggeredRules: []int{401, 402, 404},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/engine-test?engine_off=1&mode=detect",
+						},
+						Output: profile.ExpectedOutput{
+							// Rule 403 would set DetectionOnly, and rule 404 would inspect phase 2.
+							TriggeredRules:    []int{400},
+							NonTriggeredRules: []int{401, 403, 404},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/engine-test?mode=on",
+						},
+						Output: profile.ExpectedOutput{
+							// Negative: without Off the later rules run and rule 404 denies.
+							TriggeredRules:    []int{401, 402, 404},
+							NonTriggeredRules: []int{400},
+							Interruption: &profile.ExpectedInterruption{
+								RuleID: 404,
+								Action: "deny",
+								Status: 403,
+							},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/engine-test?chain_off=1&mode=on",
+						},
+						Output: profile.ExpectedOutput{
+							// The chain link of rule 411 would set the engine back On and let rule 404 deny.
+							TriggeredRules:    []int{401, 402},
+							NonTriggeredRules: []int{411, 412, 404},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/engine-test?chain_last_off=1",
+						},
+						Output: profile.ExpectedOutput{
+							// Off set by the last link: the chain matches, then nothing else runs.
+							TriggeredRules:    []int{401, 410},
+							NonTriggeredRules: []int{412, 404},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/engine-log?log_off=1",
+						},
+						Output: profile.ExpectedOutput{
+							// Off set in the logging phase, where the interruption check does not
+							// stop the loop: rule 421 comes later in phase 5 and must not run.
+							TriggeredRules:    []int{420},
+							NonTriggeredRules: []int{421},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecDebugLogLevel 9
@@ -367,5 +458,27 @@ SecRule REQUEST_METHOD "@rx ^GET$" "id:351,phase:1,log,tag:OWASP_CRS,chain"
 SecRule REQUEST_URI "@beginsWith /api/chain-msg" "id:360,phase:1,pass,log,ctl:ruleRemoveTargetByMsg=argument too long;ARGS_GET:json.content"
 SecRule REQUEST_METHOD "@rx ^GET$" "id:361,phase:1,log,msg:'argument too long',chain"
     SecRule ARGS_GET "@rx attack" ""
+
+# ruleEngine=Off is final (seclang-spec ADR-0034):
+# Rule 400 turns the engine off. Rules 402 and 403 come later in the same phase and
+# would switch it back On or to DetectionOnly; once Off has run they must not run,
+# and neither must rule 401 or the phase 2 rule 404.
+SecRule ARGS_GET:engine_off "@streq 1" "id:400,phase:1,pass,log,ctl:ruleEngine=Off"
+SecRule REQUEST_URI "@beginsWith /engine-test" "id:401,phase:1,pass,log"
+SecRule ARGS_GET:mode "@streq on" "id:402,phase:1,pass,log,ctl:ruleEngine=On"
+SecRule ARGS_GET:mode "@streq detect" "id:403,phase:1,pass,log,ctl:ruleEngine=DetectionOnly"
+# Chains, as in ModSecurity v2: Off set by the last link still matches the chain (410).
+# Off set by an earlier link stops the chain, which does not match, so the next link
+# cannot set the engine back On (411). Either way rule 412 must not run.
+SecRule ARGS_GET:chain_last_off "@streq 1" "id:410,phase:1,pass,log,chain"
+    SecRule REQUEST_URI "@beginsWith /engine-test" "ctl:ruleEngine=Off"
+SecRule ARGS_GET:chain_off "@streq 1" "id:411,phase:1,pass,log,ctl:ruleEngine=Off,chain"
+    SecRule ARGS_GET:mode "@streq on" "ctl:ruleEngine=On"
+SecRule REQUEST_URI "@beginsWith /engine-test" "id:412,phase:1,pass,log"
+# Last, so that multiphase evaluation also runs it after the rules above.
+SecRule REQUEST_URI "@beginsWith /engine-test" "id:404,phase:2,deny,status:403,log"
+# Off set in the logging phase stops the rest of that phase too.
+SecRule ARGS_GET:log_off "@streq 1" "id:420,phase:5,pass,log,ctl:ruleEngine=Off"
+SecRule REQUEST_URI "@beginsWith /engine-log" "id:421,phase:5,pass,log"
 `,
 })

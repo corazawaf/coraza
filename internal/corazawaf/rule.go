@@ -363,6 +363,13 @@ func (r *Rule) doEvaluate(logger debuglog.Logger, phase types.RulePhase, tx *Tra
 	if r.ParentID_ == noID {
 		// we only run the chains for the parent rule
 		for nr := r.Chain; nr != nil; {
+			// A link that already matched ran ctl:ruleEngine=Off: as in ModSecurity v2, no
+			// further link is evaluated, so the chain does not match and its disruptive
+			// actions and logging do not run. Off set by the last link still matches.
+			if tx.IsRuleEngineOff() {
+				logger.Debug().Msg("Skipping remaining chain links because the rule engine is off")
+				return nil
+			}
 			chainLevel++
 
 			var nrLogger debuglog.Logger
