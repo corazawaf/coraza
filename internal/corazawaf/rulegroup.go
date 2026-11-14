@@ -156,7 +156,7 @@ func (rg *RuleGroup) Count() int {
 	return len(rg.rules)
 }
 
-// Eval rules for the specified phase, between 1 and 5
+// Eval rules for the specified phase, between 1 and 5.
 // Rules are evaluated in syntactic order and the evaluation finishes
 // as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
@@ -186,6 +186,14 @@ RulesLoop:
 		// if there is already an interruption and the phase isn't logging
 		// we break the loop
 		if tx.IsInterrupted() && phase != types.PhaseLogging {
+			break RulesLoop
+		}
+		// ctl:ruleEngine=Off is final for the transaction, once it has run, no further rule is evaluated.
+		// Later phases are skipped by Process* methods, here we break the loop for the current phase.
+		if tx.IsRuleEngineOff() {
+			tx.DebugLogger().Debug().
+				Int("phase", int(phase)).
+				Msg("Skipping remaining rules because the rule engine is off")
 			break RulesLoop
 		}
 		// Rules with phase 0 will always run
@@ -259,7 +267,7 @@ RulesLoop:
 				break RulesLoop
 			}
 			if phase == types.PhaseRequestBody {
-				// // tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
+				// tx.AllowType is resetted, currently PhaseRequestBody is the last request phase
 				tx.AllowType = corazatypes.AllowTypeUnset
 				break RulesLoop
 			}
@@ -294,10 +302,8 @@ RulesLoop:
 	return tx.IsInterrupted()
 }
 
-// NewRuleGroup creates an empty RuleGroup that
-// can be attached to a WAF instance
-// You might use this function to replace the rules
-// and "reload" the WAF
+// NewRuleGroup creates an empty RuleGroup that can be attached to a WAF instance
+// You might use this function to replace the rules and "reload" the WAF
 func NewRuleGroup() RuleGroup {
 	return RuleGroup{}
 }
