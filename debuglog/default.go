@@ -117,12 +117,17 @@ func (l defaultLogger) WithLevel(lvl Level) Logger {
 }
 
 func (l defaultLogger) With(fs ...ContextField) Logger {
-	// Each field writes into e in place. The returned Event is ignored: a
-	// custom ContextField may return nil or a wrapper, and asserting it back to
-	// *defaultEvent would panic.
+	// Each field gets the Event the previous one returned, so a wrapper that
+	// overrides Str applies to the fields after it. The fields are read from e,
+	// which every write reaches: asserting the last Event back to
+	// *defaultEvent panicked when a custom field returned a wrapper, and a
+	// field returning nil keeps the Event it was given.
 	e := &defaultEvent{}
+	var cur Event = e
 	for _, f := range fs {
-		f(e)
+		if next := f(cur); next != nil {
+			cur = next
+		}
 	}
 	return defaultLogger{
 		printer:       l.printer,

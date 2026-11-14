@@ -4,10 +4,12 @@
 package corazawaf
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/debuglog"
@@ -1016,5 +1018,58 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	}
 	if matchdata[0].Data() != "ARGS_GET:test-data" {
 		t.Errorf("Expected ArgsGet-data, got %s", matchdata[0].Data())
+	}
+}
+
+// Not a profile: profiles assert the error log, and they run with a Debug
+// logger, where the chained rule's logger is always derived.
+func TestChainedRuleWarnLogNamesTheRule(t *testing.T) {
+	tests := []struct {
+		name    string
+		chainID int
+		level   debuglog.Level
+		want    string // "" means nothing is logged
+	}{
+		{name: "chained rule without id", level: debuglog.LevelWarn, want: `Error transforming argument for rule chain_rule_ref="rules.conf#L3"`},
+		{name: "chained rule with its own id", chainID: 2, level: debuglog.LevelWarn, want: `Error transforming argument for rule chain_rule_id=2`},
+		{name: "warn disabled", level: debuglog.LevelError, want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewRule()
+			r.ID_ = 1
+			r.LogID_ = "1"
+			r.HasChain = true
+			chainedRule := NewRule()
+			chainedRule.ID_ = tt.chainID
+			chainedRule.ParentID_ = 1
+			chainedRule.LogID_ = "1"
+			chainedRule.File_ = "rules.conf"
+			chainedRule.Line_ = 3
+			_ = r.AddVariable(variables.RequestURI, "", false)
+			_ = chainedRule.AddVariable(variables.ArgsGet, "", false)
+			r.SetOperator(&dummyEqOperator{}, "@eq", "0")
+			chainedRule.SetOperator(&dummyEqOperator{}, "@eq", "0")
+			_ = chainedRule.AddTransformation("A", transformationErrorA)
+			r.Chain = chainedRule
+
+			tx := NewWAF().NewTransaction()
+			tx.ProcessURI("0", "GET", "HTTP/1.1")
+			tx.AddGetRequestArgument("test", "0")
+			logs := bytes.Buffer{}
+			logger := debuglog.Default().WithOutput(&logs).WithLevel(tt.level)
+
+			var matchedValues []types.MatchData
+			r.doEvaluate(logger, types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache)
+			if tt.want == "" {
+				if logs.Len() != 0 {
+					t.Errorf("want no log, have %q", logs.String())
+				}
+				return
+			}
+			if !strings.Contains(logs.String(), tt.want) {
+				t.Errorf("want a Warn line containing %q, have %q", tt.want, logs.String())
+			}
+		})
 	}
 }

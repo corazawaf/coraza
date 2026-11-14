@@ -21,6 +21,12 @@ func logLine(t *testing.T, buf *bytes.Buffer) string {
 	return buf.String()[20:]
 }
 
+// prefixEvent is an integrator-style Event wrapper that renames the keys of the
+// string fields written through it.
+type prefixEvent struct{ Event }
+
+func (p prefixEvent) Str(key, val string) Event { return p.Event.Str("p."+key, val) }
+
 func TestLoggerLogLevels(t *testing.T) {
 	testCases := map[string]struct {
 		logFunction                func(Logger) func() Event
@@ -172,15 +178,15 @@ func TestWithLogger(t *testing.T) {
 	}
 
 	// ContextField is an exported func type, so an integrator's field may return
-	// nil or wrap the Event it was given. With must keep what the field wrote
-	// and must not panic.
+	// nil or wrap the Event it was given. With must keep what the field wrote,
+	// hand a returned wrapper to the fields after it, and must not panic.
 	t.Run("custom fields returning another Event", func(t *testing.T) {
 		buf := bytes.Buffer{}
 		returnsNil := func(e Event) Event { e.Str("a", "1"); return nil }
-		returnsWrapper := func(e Event) Event { return struct{ Event }{e.Str("b", "2")} }
+		returnsWrapper := func(e Event) Event { return prefixEvent{e.Str("b", "2")} }
 		Default().WithOutput(&buf).With(returnsNil, returnsWrapper, Str("c", "3")).Info().Msg("m")
 
-		expected := `[INFO] m a="1" b="2" c="3"` + "\n"
+		expected := `[INFO] m a="1" b="2" p.c="3"` + "\n"
 		if want, have := expected, logLine(t, &buf); want != have {
 			t.Fatalf("unexpected message, want %q, have %q", want, have)
 		}
