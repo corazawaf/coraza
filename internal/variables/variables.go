@@ -374,6 +374,16 @@ const (
 	// Description: **ARGS_POST** is similar to **ARGS**, but only contains arguments from the
 	// POST body.
 	ArgsPost // CanBeSelected
+	// Description: **ARGS_RAW** is similar to **ARGS**, but contains the raw wire-format
+	// argument values before any URL decoding. Available starting in phase 1 (for GET arguments)
+	// and phase 2 (for POST arguments).
+	ArgsRaw // CanBeSelected
+	// Description: **ARGS_GET_RAW** is similar to **ARGS_GET**, but contains query string
+	// parameters in their raw wire-format before URL decoding. Available starting with phase 1.
+	ArgsGetRaw // CanBeSelected
+	// Description: **ARGS_POST_RAW** is similar to **ARGS_POST**, but contains request body
+	// parameters in their raw wire-format before URL decoding. Available starting with phase 2.
+	ArgsPostRaw // CanBeSelected
 	// Description: Contains the URL path components as individual items. Useful for matching
 	// specific path segments without needing to parse the full URL.
 	ArgsPath // CanBeSelected
@@ -534,6 +544,15 @@ const (
 	// Description: **ARGS_POST_NAMES** is similar to **ARGS_NAMES**, but contains only the
 	// names of request body parameters.
 	ArgsPostNames // CanBeSelected
+	// Description: **ARGS_NAMES_RAW** is similar to **ARGS_NAMES**, but contains the names
+	// of all request parameters in their raw wire-format before URL decoding.
+	ArgsNamesRaw // CanBeSelected
+	// Description: **ARGS_GET_NAMES_RAW** is similar to **ARGS_GET_NAMES**, but contains
+	// only the names of query string parameters before URL decoding.
+	ArgsGetNamesRaw // CanBeSelected
+	// Description: **ARGS_POST_NAMES_RAW** is similar to **ARGS_POST_NAMES**, but contains
+	// only the names of request body parameters before URL decoding.
+	ArgsPostNamesRaw // CanBeSelected
 	// Description: Transient transaction collection used to store arbitrary data for the
 	// duration of the transaction, such as anomaly scores or state flags.
 	// ---
