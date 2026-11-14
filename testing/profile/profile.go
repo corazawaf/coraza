@@ -66,6 +66,9 @@ type ExpectedOutput struct {
 	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
 	Status            any                   `yaml:"status,omitempty"`
 	Interruption      *ExpectedInterruption `yaml:"interruption,omitempty"`
+	// DetectionOnlyInterruption is the interruption that SecRuleEngine DetectionOnly
+	// recorded instead of performing. It is only checked when set.
+	DetectionOnlyInterruption *ExpectedInterruption `yaml:"detection_only_interruption,omitempty"`
 }
 
 // ExpectedInterruption contains the expected interruption results for a test

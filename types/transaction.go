@@ -61,19 +61,31 @@ type Transaction interface {
 	// within the Transaction while also passing it further in an HTTP framework.
 	RequestBodyReader() (io.Reader, error)
 
-	// AddGetRequestArgument add arguments GET, this will feed ARGS_GET, ARGS_GET_NAMES,
-	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
+	// AddGetRequestArgument adds a GET argument, feeding ARGS_GET, ARGS_GET_NAMES, ARGS,
+	// ARGS_NAMES and ARGS_COMBINED_SIZE. Arguments over SecArgumentsLimit are dropped and
+	// ARGUMENTS_LIMIT_REACHED is set at once. It is expected to be called before
+	// ProcessRequestHeaders, which applies SecArgumentsLimitAction; ProcessRequestBody
+	// does the same for arguments added between the two. Later ones are never rejected
+	// by the action.
 	AddGetRequestArgument(key string, value string)
 
-	// AddPostRequestArgument add arguments POST, this will feed ARGS_POST, ARGS_POST_NAMES,
-	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
+	// AddPostRequestArgument adds a POST argument, feeding ARGS_POST, ARGS_POST_NAMES,
+	// ARGS, ARGS_NAMES and ARGS_COMBINED_SIZE. Arguments over SecArgumentsLimit are
+	// dropped. It is expected to be called before ProcessRequestBody, which sets
+	// ARGUMENTS_LIMIT_REACHED and applies SecArgumentsLimitAction; arguments dropped
+	// after it are reflected in phase 4 or 5 and never rejected by the action.
 	AddPostRequestArgument(key string, value string)
 
-	// AddPathRequestArgument add arguments PATH, this will feed ARGS_PATH, ARGS_PATH_NAMES,
-	// ARGS, ARGS_NAMES, and ARGS_COMBINED_SIZE variables.
+	// AddPathRequestArgument adds a PATH argument, feeding ARGS_PATH, ARGS_PATH_NAMES,
+	// ARGS, ARGS_NAMES and ARGS_COMBINED_SIZE. Arguments over SecArgumentsLimit are
+	// dropped and ARGUMENTS_LIMIT_REACHED is set at once, with the same ordering
+	// contract as AddGetRequestArgument.
 	AddPathRequestArgument(key string, value string)
 
-	// AddResponseArgument add arguments to the response, this will feed ARGS_RESPONSE
+	// AddResponseArgument adds a response argument, feeding RESPONSE_ARGS. Arguments
+	// over SecArgumentsLimit are dropped. It is expected to be called before
+	// ProcessResponseBody, which sets ARGUMENTS_LIMIT_REACHED; when phase 4 does not
+	// run, ProcessLogging sets it. SecArgumentsLimitAction never rejects response arguments.
 	AddResponseArgument(key string, value string)
 
 	// ProcessRequestBody performs the analysis of the request body (if any)

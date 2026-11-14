@@ -67,6 +67,7 @@ var (
 	_ directive = directiveSecIgnoreRuleCompilationErrors
 	_ directive = directiveSecDataset
 	_ directive = directiveSecArgumentsLimit
+	_ directive = directiveSecArgumentsLimitAction
 	_ directive = directiveSecRxPreFilter
 )
 
@@ -132,6 +133,7 @@ var directivesMap = map[string]directive{
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 	"secdataset":                     directiveSecDataset,
 	"secargumentslimit":              directiveSecArgumentsLimit,
+	"secargumentslimitaction":        directiveSecArgumentsLimitAction,
 	"secrxprefilter":                 directiveSecRxPreFilter,
 
 	// Unsupported directives

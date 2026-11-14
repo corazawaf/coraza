@@ -43,6 +43,18 @@ const (
 	defaultHighestSeverity = 255
 )
 
+// ArgumentLimitAction is the action taken when SecArgumentsLimit drops a request argument.
+type ArgumentLimitAction int
+
+const (
+	// ArgumentLimitActionReject interrupts with status 400 after the applicable
+	// request-phase rules, unless a rule interruption takes precedence.
+	ArgumentLimitActionReject ArgumentLimitAction = iota
+	// ArgumentLimitActionProcessPartial keeps the arguments that fit and only sets
+	// ARGUMENTS_LIMIT_REACHED.
+	ArgumentLimitActionProcessPartial
+)
+
 // WAF instance is used to store configurations and rules
 // Every web application should have a different WAF instance,
 // but you can share an instance if you are ok with sharing
@@ -162,6 +174,9 @@ type WAF struct {
 	// Configures the maximum number of ARGS that will be accepted for processing.
 	ArgumentLimit int
 
+	// ArgumentLimitAction is set by the SecArgumentsLimitAction directive.
+	ArgumentLimitAction ArgumentLimitAction
+
 	// RxPreFilterEnabled controls whether the @rx operator uses
 	// literal pre-filtering. Set by the SecRxPreFilter directive.
 	RxPreFilterEnabled bool
@@ -234,6 +249,9 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.debugLogger = w.Logger.With(debuglog.Str("tx_id", tx.id))
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
+	tx.uriArgumentLimitReached = false
+	tx.bodyArgumentLimitReached = false
+	tx.responseArgumentLimitReached = false
 
 	// Always non-nil if buffers / collections were already initialized, so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
@@ -354,10 +372,11 @@ func NewWAF() *WAF {
 			types.AuditLogPartResponseHeaders,
 			types.AuditLogPartAuditLogTrailer,
 		},
-		AuditLogFormat:     "Native",
-		Logger:             logger,
-		ArgumentLimit:      1000,
-		RxPreFilterEnabled: defaultRxPreFilterEnabled,
+		AuditLogFormat:      "Native",
+		Logger:              logger,
+		ArgumentLimit:       1000,
+		ArgumentLimitAction: ArgumentLimitActionReject,
+		RxPreFilterEnabled:  defaultRxPreFilterEnabled,
 	}
 
 	if environment.HasAccessToFS {
