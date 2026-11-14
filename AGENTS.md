@@ -484,6 +484,7 @@ Available assertions in `profile.ExpectedOutput`:
 | `LogContains` / `NoLogContains` | a substring is present / absent in the error log |
 | `Interruption` | the interruption's rule id, action, status and data |
 | `ExpectError` | running the phases returns an error |
+| `AuditLogStatus` | the response status recorded in the audit log (part F) |
 | `Status`, `Headers`, `Data` | response status, headers and body (e2e style checks) |
 
 If your case needs an assertion that does not exist, **add the assertion to the
