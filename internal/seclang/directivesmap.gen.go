@@ -64,6 +64,7 @@ var (
 	_ directive = directiveSecRuleUpdateTargetByID
 	_ directive = directiveSecRuleUpdateActionByID
 	_ directive = directiveSecRuleUpdateTargetByTag
+	_ directive = directiveSecRuleUpdateTargetByMsg
 	_ directive = directiveSecIgnoreRuleCompilationErrors
 	_ directive = directiveSecDataset
 	_ directive = directiveSecArgumentsLimit
@@ -129,17 +130,17 @@ var directivesMap = map[string]directive{
 	"secruleupdatetargetbyid":        directiveSecRuleUpdateTargetByID,
 	"secruleupdateactionbyid":        directiveSecRuleUpdateActionByID,
 	"secruleupdatetargetbytag":       directiveSecRuleUpdateTargetByTag,
+	"secruleupdatetargetbymsg":       directiveSecRuleUpdateTargetByMsg,
 	"secignorerulecompilationerrors": directiveSecIgnoreRuleCompilationErrors,
 	"secdataset":                     directiveSecDataset,
 	"secargumentslimit":              directiveSecArgumentsLimit,
 	"secrxprefilter":                 directiveSecRxPreFilter,
 
 	// Unsupported directives
-	"secargumentseparator":     directiveUnsupported,
-	"seccookieformat":          directiveUnsupported,
-	"secruleupdatetargetbymsg": directiveUnsupported,
-	"secrulescript":            directiveUnsupported,
-	"secruleperftime":          directiveUnsupported,
-	"secunicodemap":            directiveUnsupported,
-	"sectmpdir":                directiveUnsupported,
+	"secargumentseparator": directiveUnsupported,
+	"seccookieformat":      directiveUnsupported,
+	"secrulescript":        directiveUnsupported,
+	"secruleperftime":      directiveUnsupported,
+	"secunicodemap":        directiveUnsupported,
+	"sectmpdir":            directiveUnsupported,
 }
