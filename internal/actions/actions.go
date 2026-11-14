@@ -103,6 +103,7 @@ func init() {
 	Register("ctl", ctl)
 	Register("deny", deny)
 	Register("drop", drop)
+	Register("evalDepth", evalDepth)
 	Register("exec", exec)
 	Register("expirevar", expirevar)
 	Register("id", id)
