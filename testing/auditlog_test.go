@@ -557,3 +557,69 @@ func TestAuditLogRelevantOnlyDetectionOnly(t *testing.T) {
 		t.Errorf("Expected audit log to contain %q, got %q", expected, alWithErrMsg.ErrorMessage())
 	}
 }
+
+// Not a profile: profile.ExpectedOutput has no assertion on the audit log record.
+func TestAuditLogNativeParts(t *testing.T) {
+	tests := []struct {
+		name       string
+		parts      string
+		contains   []string
+		notContain []string
+	}{
+		{
+			name:     "default parts",
+			contains: []string{"-A--\n", " 10.1.2.3 5555 127.0.0.1 80\n", "-F--\n"},
+		},
+		{
+			name:       "explicit parts",
+			parts:      "SecAuditLogParts ABZ",
+			contains:   []string{"-A--\n", "-B--\n"},
+			notContain: []string{"-F--\n"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			parser := seclang.NewParser(waf)
+			file, err := os.CreateTemp(t.TempDir(), "tmp.log")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer file.Close()
+			if err := parser.FromString(fmt.Sprintf("SecAuditLog %s", file.Name())); err != nil {
+				t.Fatal(err)
+			}
+			if err := parser.FromString(`
+				SecAuditEngine On
+				SecAuditLogFormat Native
+				SecAuditLogType Serial
+				` + tt.parts); err != nil {
+				t.Fatal(err)
+			}
+			tx := waf.NewTransaction()
+			tx.ProcessConnection("10.1.2.3", 5555, "127.0.0.1", 80)
+			tx.ProcessURI("/", "GET", "HTTP/1.1")
+			tx.ProcessRequestHeaders()
+			tx.ProcessLogging()
+
+			b, err := os.ReadFile(file.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			record := string(b)
+			for _, s := range tt.contains {
+				if !strings.Contains(record, s) {
+					t.Errorf("expected record to contain %q, got:\n%s", s, record)
+				}
+			}
+			for _, s := range tt.notContain {
+				if strings.Contains(record, s) {
+					t.Errorf("expected record not to contain %q, got:\n%s", s, record)
+				}
+			}
+			if !strings.HasSuffix(strings.TrimSpace(record), "-Z--") {
+				t.Errorf("expected record to end with the Z boundary, got:\n%s", record)
+			}
+		})
+	}
+}
