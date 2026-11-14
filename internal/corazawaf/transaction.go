@@ -119,8 +119,8 @@ type Transaction struct {
 	// We must reuse it in the future
 	Capture bool
 
-	// Contains duration in useconds per phase
-	stopWatches map[types.RulePhase]int64
+	// Contains duration in nanoseconds per phase, indexed by phase number
+	stopWatches [types.PhaseLogging + 1]int64
 
 	// Contains a WAF instance for the current transaction
 	WAF *WAF
@@ -675,6 +675,10 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 		}
 	default:
 		matches = col.FindAll()
+	}
+
+	if len(rv.Exceptions) == 0 && !rv.Count {
+		return matches
 	}
 
 	// in the most common scenario filteredMatches length will be
