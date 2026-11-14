@@ -4,9 +4,13 @@
 package corazawaf
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/macro"
+	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 func newTestRule(id int) *Rule {
@@ -115,5 +119,59 @@ func TestRuleGroupDeleteByID(t *testing.T) {
 	rg.DeleteByRange(2, 4)
 	if rg.Count() != 1 || rg.GetRules()[0].ID() != 5 {
 		t.Fatal("Unexpected remaining rule in the rulegroup")
+	}
+}
+
+func TestRuleGroupEvalEmptiesTransformationCache(t *testing.T) {
+	// Up to the threshold the map is emptied in place and reused, past it the map
+	// is replaced: either way no entry must outlive the phase.
+	tests := []struct {
+		entries  int
+		replaced bool
+	}{
+		{entries: 2, replaced: false},
+		{entries: maxRetainedTransformationCacheEntries, replaced: false},
+		{entries: maxRetainedTransformationCacheEntries + 1, replaced: true},
+	}
+	for _, tt := range tests {
+		n := tt.entries
+		t.Run(strconv.Itoa(n), func(t *testing.T) {
+			r := newTestRule(1)
+			r.Phase_ = types.PhaseRequestHeaders
+			if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.AddTransformation("lowercase", func(input string) (string, bool, error) {
+				return strings.ToLower(input), true, nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			r.SetOperator(&dummyEqOperator{}, "@eq", "0")
+
+			waf := NewWAF()
+			waf.ArgumentLimit = n
+			if err := waf.Rules.Add(r); err != nil {
+				t.Fatal(err)
+			}
+			tx := waf.NewTransaction()
+			defer tx.Close()
+			before := tx.transformationCache
+			for i := 0; i < n; i++ {
+				tx.AddGetRequestArgument("arg"+strconv.Itoa(i), "Value"+strconv.Itoa(i))
+			}
+			tx.ProcessRequestHeaders()
+
+			if got := tx.variables.argsGet.Len(); got != n {
+				t.Fatalf("got %d arguments, want %d", got, n)
+			}
+			if got := len(tx.transformationCache); got != 0 {
+				t.Fatalf("transformation cache holds %d entries after the phase, want 0", got)
+			}
+			// A sentinel written through the old map shows whether it is still the cache.
+			before[transformationKey{transformationsID: -1}] = transformationValue{}
+			if replaced := len(tx.transformationCache) == 0; replaced != tt.replaced {
+				t.Errorf("cache map replaced = %t, want %t", replaced, tt.replaced)
+			}
+		})
 	}
 }
