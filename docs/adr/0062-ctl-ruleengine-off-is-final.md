@@ -4,7 +4,7 @@
 - **Date:** 2026-11-21 (expected; update before merge)
 - **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1863](https://github.com/corazawaf/coraza/pull/1863)
-- **Issue(s):** No linked issue
+- **Issue(s):** [#1864](https://github.com/corazawaf/coraza/issues/1864)
 - **Deciders:** @M4tteoP
 - **Category:** Parity (SecLang parity)
 
