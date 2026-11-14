@@ -22,6 +22,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 					Stage: profile.SubStage{
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{100, 150, 200, 301, 302},
+							LogContains:       `[msg "json="]`,
 							NonTriggeredRules: []int{901500},
 						},
 					},

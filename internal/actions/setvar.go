@@ -115,7 +115,7 @@ func (a *setvarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.Transacti
 	key := a.key.Expand(tx)
 	if key == "" {
 		// The key is a macro naming an unset variable
-		tx.DebugLogger().Warn().Int("rule_id", r.ID()).Str("var_key", a.key.String()).Msg("setvar key expanded to the empty string, skipping")
+		tx.DebugLogger().Debug().Int("rule_id", r.ID()).Str("var_key", a.key.String()).Msg("setvar key expanded to the empty string, skipping")
 		return
 	}
 	value := ""

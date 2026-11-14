@@ -5,7 +5,6 @@ package actions
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/collection"
@@ -59,7 +58,6 @@ func TestSetvarEvaluate(t *testing.T) {
 		name              string
 		init              string
 		init2             string
-		expectLog         string
 		expectNewVarValue string
 	}{
 		{
@@ -126,11 +124,7 @@ func TestSetvarEvaluate(t *testing.T) {
 			tx := waf.NewTransaction()
 			a.Evaluate(metadata, tx)
 
-			if tt.expectLog != "" {
-				if !strings.Contains(logsBuf.String(), tt.expectLog) {
-					t.Errorf("expected log containing %q, got %q", tt.expectLog, logsBuf.String())
-				}
-			} else if logsBuf.Len() != 0 {
+			if logsBuf.Len() != 0 {
 				t.Fatalf("unexpected error: %s", logsBuf.String())
 			}
 
@@ -139,7 +133,7 @@ func TestSetvarEvaluate(t *testing.T) {
 					t.Fatal("unexpected error during setvar init")
 				}
 				a.Evaluate(metadata, tx)
-				if logsBuf.Len() != 0 && tt.expectLog == "" {
+				if logsBuf.Len() != 0 {
 					t.Fatalf("unexpected error: %s", logsBuf.String())
 				}
 			}
