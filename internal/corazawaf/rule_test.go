@@ -1021,8 +1021,9 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 	}
 }
 
-// Not a profile: profiles assert the error log, and they run with a Debug
-// logger, where the chained rule's logger is always derived.
+// Not a profile: this Warn line goes to the debug log, and LogContains reads the
+// matched rules' error log instead. Profiles also log at Debug, where a
+// Debug-only gate still names the chained rule, so these rows log at Warn.
 func TestChainedRuleWarnLogNamesTheRule(t *testing.T) {
 	tests := []struct {
 		name    string
