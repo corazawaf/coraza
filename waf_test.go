@@ -114,6 +114,23 @@ func TestResponseBodyLimit(t *testing.T) {
 	}
 }
 
+func TestNewTransactionWithIDRejectsTrailingControl(t *testing.T) {
+	waf, err := NewWAF(NewWAFConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := waf.NewTransactionWithID("abc\n")
+	t.Cleanup(func() {
+		if err := tx.Close(); err != nil {
+			t.Errorf("close transaction: %v", err)
+		}
+	})
+	if got := tx.ID(); got == "abc" || got == "abc\n" {
+		t.Fatalf("expected a generated transaction ID, got %q", got)
+	}
+}
+
 type testAuditLogWriter struct {
 	plugintypes.AuditLogWriter
 }
