@@ -123,9 +123,18 @@ func TestRuleGroupDeleteByID(t *testing.T) {
 }
 
 func TestRuleGroupEvalEmptiesTransformationCache(t *testing.T) {
-	// Below the threshold the map is emptied in place, above it is replaced:
-	// either way no entry must outlive the phase.
-	for _, n := range []int{2, maxRetainedTransformationCacheEntries + 1} {
+	// Up to the threshold the map is emptied in place and reused, past it the map
+	// is replaced: either way no entry must outlive the phase.
+	tests := []struct {
+		entries  int
+		replaced bool
+	}{
+		{entries: 2, replaced: false},
+		{entries: maxRetainedTransformationCacheEntries, replaced: false},
+		{entries: maxRetainedTransformationCacheEntries + 1, replaced: true},
+	}
+	for _, tt := range tests {
+		n := tt.entries
 		t.Run(strconv.Itoa(n), func(t *testing.T) {
 			r := newTestRule(1)
 			r.Phase_ = types.PhaseRequestHeaders
@@ -146,6 +155,7 @@ func TestRuleGroupEvalEmptiesTransformationCache(t *testing.T) {
 			}
 			tx := waf.NewTransaction()
 			defer tx.Close()
+			before := tx.transformationCache
 			for i := 0; i < n; i++ {
 				tx.AddGetRequestArgument("arg"+strconv.Itoa(i), "Value"+strconv.Itoa(i))
 			}
@@ -155,7 +165,12 @@ func TestRuleGroupEvalEmptiesTransformationCache(t *testing.T) {
 				t.Fatalf("got %d arguments, want %d", got, n)
 			}
 			if got := len(tx.transformationCache); got != 0 {
-				t.Errorf("transformation cache holds %d entries after the phase, want 0", got)
+				t.Fatalf("transformation cache holds %d entries after the phase, want 0", got)
+			}
+			// A sentinel written through the old map shows whether it is still the cache.
+			before[transformationKey{transformationsID: -1}] = transformationValue{}
+			if replaced := len(tx.transformationCache) == 0; replaced != tt.replaced {
+				t.Errorf("cache map replaced = %t, want %t", replaced, tt.replaced)
 			}
 		})
 	}
