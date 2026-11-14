@@ -168,6 +168,20 @@ func TestPrefilterNeverCausesFalseNegatives(t *testing.T) {
 		{"(?i)s(?:elect.*into|ubstr)", "SUBSTR(x,1)", true},
 		{"(?i)s(?:elect.*into|ubstr)", "unrelated", false},
 
+		// Trie suffixes must begin at the branch boundary before they are joined
+		// to a factored prefix. The first pair is the reduced reproducer from
+		// #1790; the last pair is CRS 942220 with the payload the issue reported.
+		{`2(?:x|.2250)`, "2.2250", true},
+		{`2(?:x|.2250)`, "unrelated", false},
+		{`a(?:b|.cde)`, "a.cde", true},
+		{`a(?:b|.cde)`, "unrelated", false},
+		{`a(?:bc|.(?:de|fg))`, "a.de", true},
+		{`a(?:bc|.(?:de|fg))`, "unrelated", false},
+		{`a(?:bc|.xy(?:de|fg))`, "a.xyde", true},
+		{`a(?:bc|.xy(?:de|fg))`, "unrelated", false},
+		{`(?i)^(?:json\.)?(?:429496729[56]|2(?:14748364[78]|.22507385850720(?:07|11)e-308)|-(?:214748364[89]|0000023456)|00000(?:12345|23456)|1e309)$`, "2.2250738585072011e-308", true},
+		{`(?i)^(?:json\.)?(?:429496729[56]|2(?:14748364[78]|.22507385850720(?:07|11)e-308)|-(?:214748364[89]|0000023456)|00000(?:12345|23456)|1e309)$`, "2.2250738585072011e-307", false},
+
 		// Regression: an end anchor does not mean the last extracted literal is
 		// adjacent to it. Here an alternation (no extractable literal) and a
 		// trailing \.* sit between ".ph" and $, so ".ph" is NOT a true suffix
@@ -1050,9 +1064,11 @@ func FuzzPrefilterFixedCRSPatterns(f *testing.F) {
 	f.Add("../../../etc/passwd")
 	f.Add("")
 	f.Add("UNION SELECT")
+	f.Add("2.2250738585072011e-308")
 
 	// Fixed patterns representative of real CRS rules
 	crsPatterns := []string{
+		`(?i)^(?:json\.)?(?:429496729[56]|2(?:14748364[78]|.22507385850720(?:07|11)e-308)|-(?:214748364[89]|0000023456)|00000(?:12345|23456)|1e309)$`,
 		`(?i)(?:union\s+(?:all\s+)?select)`,
 		`(?i)(?:insert\s+into|delete\s+from|update\s+\w+\s+set)`,
 		`(?i)<script[^>]*>`,
@@ -1120,7 +1136,9 @@ func TestPrefilterCodePaths(t *testing.T) {
 		// --- minMatchLength edge cases ---
 		{"mml_rune_error", "\xef\xbf\xbd", false, "", ""},
 		{"mml_rune_error_plus_literal", "(?s)\xef\xbf\xbd" + "hello", true, "\xef\xbf\xbdhello!xx", "hello"},
-		{"mml_repeat_3_5", "a{3,5}", false, "", ""},
+		// Simplify() expands a{3,5} to a a a (a a?)?; the literal run "aaa" is
+		// a trie suffix on its own, so a prefilter is built from it.
+		{"mml_repeat_3_5", "a{3,5}", true, "xaaax", "aa"},
 		{"mml_repeat_0_5", "a{0,5}", false, "", ""},
 
 		// --- allRequired paths ---
@@ -1134,6 +1152,12 @@ func TestPrefilterCodePaths(t *testing.T) {
 		{"any_CI_2_elements", "(?si)(?:hello|world)", true, "HELLO there", "nothing here"},
 		{"any_too_short_bailout", "(?s)(?:a|hello)", false, "", ""},
 		{"any_non_ascii_CI_bailout", "(?si)(?:café|naïve)", false, "", ""},
+		// More needles than anyRequiredMaxN: the length guard still applies.
+		{"any_over_max_n_length_guard", manyWordsPattern(anyRequiredMaxN + 1), true, "abcdefgh", "abc"},
+		// Simplify() writes each {0,20} as 20 nested optional groups. The
+		// expansion budget keeps this from compiling for minutes; the bounded
+		// set still has to be correct.
+		{"optional_expansion_budget", "s(?:elect(?:bc){0,20}(?:de){0,20}(?:fg){0,20}(?:hi){0,20}y|leep)", true, "selectbcdey", "unrelated"},
 		{"any_nested_alternation", "(?s)(?:hello|(?:world|test))", true, "test", "none"},
 
 		// --- OpConcat with anyRequired child ---
@@ -1203,6 +1227,17 @@ func TestPrefilterCodePaths(t *testing.T) {
 	if got := minMatchLength("a{0,5}"); got != 0 {
 		t.Errorf("minMatchLength(a{0,5}) = %d, want 0", got)
 	}
+}
+
+// manyWordsPattern returns an alternation of n distinct six-byte words,
+// three letters that spell i in base 26 followed by "xyz", so that the trie
+// reconstruction yields one needle per word.
+func manyWordsPattern(n int) string {
+	words := make([]string, n)
+	for i := range words {
+		words[i] = string([]byte{byte('a' + i/676%26), byte('a' + i/26%26), byte('a' + i%26)}) + "xyz"
+	}
+	return "(?:" + strings.Join(words, "|") + ")"
 }
 
 // TestTrieReconstructionBasic verifies that prefilterFunc correctly handles
@@ -1276,6 +1311,74 @@ func TestTrieReconstructionBasic(t *testing.T) {
 			// After fix: each group reconstructed → anyRequired{all 20 keywords}
 			shouldMatch: []string{"SELECT id FROM", "UNION ALL SELECT", "benchmark(1000000,1)", "UPPER(col)"},
 			shouldMiss:  []string{"GET /api/v1/users?page=1", "Host: example.com", "Content-Type: application/json"},
+		},
+		{
+			name:    "branch_with_consuming_node",
+			pattern: "s(?:elect.*from|leep)",
+			// The first branch is a concat whose literals are separated by .*,
+			// so only its leading literal may take the prefix:
+			// anyRequired{"select","sleep"}, never "selectfrom".
+			shouldMatch: []string{"select x from users", "sleep(5)"},
+			shouldMiss:  []string{"unrelated", "GET /api"},
+		},
+		{
+			name:    "alternation_head_after_prefix",
+			pattern: "x(?:(?:ab|cd)ef|gh)",
+			// The first branch starts with an alternation, not a literal. Its
+			// own suffixes begin at the branch boundary, so they take the
+			// prefix: anyRequired{"xab","xcd","xgh"}. The raw propagation
+			// alone would settle for {"ab","cd","gh"}.
+			shouldMatch: []string{"xabef", "xcdef", "xgh"},
+			shouldMiss:  []string{"ab", "cd", "gh"},
+		},
+		{
+			name:    "three_child_concat_branch",
+			pattern: "a(?:b(?:cd|ef)g|xyz)",
+			// A branch with more than two children still joins its leading
+			// literal to the child right after it:
+			// anyRequired{"abcd","abef","axyz"}. Stopping at the bare "b"
+			// would give {"ab","axyz"}.
+			shouldMatch: []string{"abcdg", "abefg", "axyz"},
+			shouldMiss:  []string{"ab", "abg", "cdg"},
+		},
+		{
+			name:    "single_byte_truncated_lead",
+			pattern: "(?i)u(?:n.on|pdate)",
+			// "n" is followed by a consuming node, so the first branch has no
+			// joinable suffix. A single truncated byte is dropped rather than
+			// turned into the two-byte needle "un"; the branch contributes
+			// its floating literal "on" instead: anyRequired{"on","update"}.
+			shouldMatch: []string{"union", "UPDATE t"},
+			shouldMiss:  []string{"un", "fun", "pdate"},
+		},
+		{
+			name:    "floating_literal_is_not_joined",
+			pattern: "x(?:a[0-9]bc|yz)",
+			// The first branch has no joinable suffix and no single byte to
+			// keep, so it contributes "bc" from anywhere in its body. That
+			// literal is not joined to "x": anyRequired{"bc","xyz"}.
+			shouldMatch: []string{"xa1bc", "xyz"},
+			shouldMiss:  []string{"xa1b", "yz"},
+		},
+		{
+			name:    "short_lead_when_branch_has_nothing_else",
+			pattern: "s(?:ave|h(?:ell|ow)?)",
+			// "h" is followed by an optional group and the branch has no
+			// literal of two bytes anywhere, so its lead is kept: a branch
+			// that matches "sh" alone leaves no better needle, and dropping
+			// it would cost the alternation its prefilter (CRS 932210).
+			shouldMatch: []string{"sh -c id", "save", "show"},
+			shouldMiss:  []string{"unrelated", "GET /api"},
+		},
+		{
+			name:    "optional_group_inside_branch",
+			pattern: "(?i)c(?:o(?:mpres)?s|eil)",
+			// The shape CRS 942151 uses for COMPRESS and COS. A match takes
+			// the optional group or skips it, so the branch is expanded both
+			// ways: anyRequired{"compress","cos","ceil"} rather than a
+			// truncated "co".
+			shouldMatch: []string{"COMPRESS(x)", "cos(1)", "ceil(2)"},
+			shouldMiss:  []string{"count", "co"},
 		},
 	}
 
@@ -1544,7 +1647,7 @@ func TestIndexedMatcherEdgeCases(t *testing.T) {
 }
 
 // TestAnyRequiredThresholdBoundary tests indexedMatcher at the anyRequiredMaxN
-// boundary (16 needles) and beyond it (256 needles fall back to no prefilter).
+// boundary (16 needles) and beyond it.
 func TestAnyRequiredThresholdBoundary(t *testing.T) {
 	genWords := func(n int) []string {
 		words := make([]string, n)
@@ -1701,8 +1804,8 @@ func TestInternalNodeCoverage(t *testing.T) {
 		// rawExtractSuffixes must return nil for a literal containing RuneError
 		// so the calling trieReconstruct bails out rather than building a wrong prefilter.
 		re := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune{utf8.RuneError}}
-		if got := rawExtractSuffixes(re, false); got != nil {
-			t.Errorf("rawExtractSuffixes(RuneError) = %v, want nil", got)
+		if j, f := rawExtractSuffixes(re, false); j != nil || f != nil {
+			t.Errorf("rawExtractSuffixes(RuneError) = %v, %v, want nil, nil", j, f)
 		}
 	})
 
@@ -1710,9 +1813,18 @@ func TestInternalNodeCoverage(t *testing.T) {
 		// Capture groups are transparent — rawExtractSuffixes must unwrap them.
 		inner := &syntax.Regexp{Op: syntax.OpLiteral, Rune: []rune("elect")}
 		cap := &syntax.Regexp{Op: syntax.OpCapture, Sub: []*syntax.Regexp{inner}}
-		got := rawExtractSuffixes(cap, false)
-		if len(got) != 1 || got[0] != "elect" {
-			t.Errorf("rawExtractSuffixes(OpCapture(elect)) = %v, want [elect]", got)
+		got, floating := rawExtractSuffixes(cap, false)
+		if len(got) != 1 || got[0] != "elect" || floating != nil {
+			t.Errorf("rawExtractSuffixes(OpCapture(elect)) = %v, %v, want [elect], nil", got, floating)
+		}
+	})
+
+	t.Run("rawExtractSuffixes/empty_OpConcat", func(t *testing.T) {
+		// syntax.Parse never emits an empty OpConcat, but the concat case reads
+		// Sub[0]; the guard must return nil instead of panicking.
+		re := &syntax.Regexp{Op: syntax.OpConcat, Sub: []*syntax.Regexp{}}
+		if j, f := rawExtractSuffixes(re, false); j != nil || f != nil {
+			t.Errorf("rawExtractSuffixes(empty OpConcat) = %v, %v, want nil, nil", j, f)
 		}
 	})
 
