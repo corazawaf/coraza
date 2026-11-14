@@ -1046,11 +1046,17 @@ func TestChainedRuleWarnLogNamesTheRule(t *testing.T) {
 			chainedRule.LogID_ = "1"
 			chainedRule.File_ = "rules.conf"
 			chainedRule.Line_ = 3
-			_ = r.AddVariable(variables.RequestURI, "", false)
-			_ = chainedRule.AddVariable(variables.ArgsGet, "", false)
+			if err := r.AddVariable(variables.RequestURI, "", false); err != nil {
+				t.Fatalf("adding REQUEST_URI to the parent rule: %v", err)
+			}
+			if err := chainedRule.AddVariable(variables.ArgsGet, "", false); err != nil {
+				t.Fatalf("adding ARGS_GET to the chained rule: %v", err)
+			}
 			r.SetOperator(&dummyEqOperator{}, "@eq", "0")
 			chainedRule.SetOperator(&dummyEqOperator{}, "@eq", "0")
-			_ = chainedRule.AddTransformation("A", transformationErrorA)
+			if err := chainedRule.AddTransformation("A", transformationErrorA); err != nil {
+				t.Fatalf("adding the failing transformation: %v", err)
+			}
 			r.Chain = chainedRule
 
 			tx := NewWAF().NewTransaction()

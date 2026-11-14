@@ -118,10 +118,12 @@ func (l defaultLogger) WithLevel(lvl Level) Logger {
 
 func (l defaultLogger) With(fs ...ContextField) Logger {
 	// Each field gets the Event the previous one returned, so a wrapper that
-	// overrides Str applies to the fields after it. The fields are read from e,
-	// which every write reaches: asserting the last Event back to
-	// *defaultEvent panicked when a custom field returned a wrapper, and a
-	// field returning nil keeps the Event it was given.
+	// overrides Str applies to the fields after it, and a field returning nil
+	// keeps the Event it was given. The fields come from the last Event when it
+	// is a *defaultEvent, as before (a field may return a new one, such as
+	// Default().Info().Str(...)). Otherwise they come from e, which writes
+	// through a wrapper reach: asserting the last Event back to *defaultEvent
+	// panicked when a custom field returned a wrapper.
 	e := &defaultEvent{}
 	var cur Event = e
 	for _, f := range fs {
@@ -129,11 +131,15 @@ func (l defaultLogger) With(fs ...ContextField) Logger {
 			cur = next
 		}
 	}
+	fields := e.fields
+	if d, ok := cur.(*defaultEvent); ok {
+		fields = d.fields
+	}
 	return defaultLogger{
 		printer:       l.printer,
 		factory:       l.factory,
 		level:         l.level,
-		defaultFields: slices.Clip(append(l.defaultFields, e.fields...)),
+		defaultFields: slices.Clip(append(l.defaultFields, fields...)),
 	}
 }
 

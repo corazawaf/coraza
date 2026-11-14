@@ -178,19 +178,30 @@ func TestWithLogger(t *testing.T) {
 	}
 
 	// ContextField is an exported func type, so an integrator's field may return
-	// nil or wrap the Event it was given. With must keep what the field wrote,
-	// hand a returned wrapper to the fields after it, and must not panic.
-	t.Run("custom fields returning another Event", func(t *testing.T) {
-		buf := bytes.Buffer{}
-		returnsNil := func(e Event) Event { e.Str("a", "1"); return nil }
-		returnsWrapper := func(e Event) Event { return prefixEvent{e.Str("b", "2")} }
-		Default().WithOutput(&buf).With(returnsNil, returnsWrapper, Str("c", "3")).Info().Msg("m")
-
-		expected := `[INFO] m a="1" b="2" p.c="3"` + "\n"
-		if want, have := expected, logLine(t, &buf); want != have {
-			t.Fatalf("unexpected message, want %q, have %q", want, have)
-		}
-	})
+	// nil, wrap the Event it was given, or return a new Event. With must keep
+	// what the fields wrote, hand a returned Event to the fields after it, and
+	// must not panic.
+	returnsNil := func(e Event) Event { e.Str("a", "1"); return nil }
+	returnsWrapper := func(e Event) Event { return prefixEvent{e.Str("b", "2")} }
+	returnsNew := func(Event) Event { return Default().Info().Str("d", "4") }
+	customFields := []struct {
+		name     string
+		fields   []ContextField
+		expected string
+	}{
+		{"nil, then a wrapper", []ContextField{returnsNil, returnsWrapper, Str("c", "3")}, `[INFO] m a="1" b="2" p.c="3"` + "\n"},
+		// As on main, the new Event's fields replace the ones written before it.
+		{"a new event", []ContextField{Str("a", "1"), returnsNew}, `[INFO] m d="4"` + "\n"},
+	}
+	for _, tc := range customFields {
+		t.Run("custom fields returning "+tc.name, func(t *testing.T) {
+			buf := bytes.Buffer{}
+			Default().WithOutput(&buf).With(tc.fields...).Info().Msg("m")
+			if want, have := tc.expected, logLine(t, &buf); want != have {
+				t.Fatalf("unexpected message, want %q, have %q", want, have)
+			}
+		})
+	}
 
 	// Siblings derived from one parent must not share its backing array, or they
 	// overwrite each other's fields: the second logger's tx_id and the second
