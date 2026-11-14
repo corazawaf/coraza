@@ -344,12 +344,12 @@ var _ = profile.RegisterProfile(profile.Profile{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
 							Method: "GET",
-							URI:    "/engine-test?chain_off=1",
+							URI:    "/engine-test?chain_last_off=1",
 						},
 						Output: profile.ExpectedOutput{
-							// Off set by the chain parent holds even though the chain does not match.
-							TriggeredRules:    []int{401},
-							NonTriggeredRules: []int{411, 412, 404},
+							// Off set by the last link: the chain matches, then nothing else runs.
+							TriggeredRules:    []int{401, 410},
+							NonTriggeredRules: []int{412, 404},
 						},
 					},
 				},
@@ -357,12 +357,13 @@ var _ = profile.RegisterProfile(profile.Profile{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
 							Method: "GET",
-							URI:    "/engine-test?chain_last_off=1",
+							URI:    "/engine-log?log_off=1",
 						},
 						Output: profile.ExpectedOutput{
-							// Off set by the last link: the chain matches, then nothing else runs.
-							TriggeredRules:    []int{401, 410},
-							NonTriggeredRules: []int{412, 404},
+							// Off set in the logging phase, where the interruption check does not
+							// stop the loop: rule 421 comes later in phase 5 and must not run.
+							TriggeredRules:    []int{420},
+							NonTriggeredRules: []int{421},
 						},
 					},
 				},
@@ -467,8 +468,8 @@ SecRule REQUEST_URI "@beginsWith /engine-test" "id:401,phase:1,pass,log"
 SecRule ARGS_GET:mode "@streq on" "id:402,phase:1,pass,log,ctl:ruleEngine=On"
 SecRule ARGS_GET:mode "@streq detect" "id:403,phase:1,pass,log,ctl:ruleEngine=DetectionOnly"
 # Chains, as in ModSecurity v2: Off set by the last link still matches the chain (410).
-# Off set by an earlier link stops the chain, which does not match, whether the next
-# link would set the engine back On or fail (411). Either way rule 412 must not run.
+# Off set by an earlier link stops the chain, which does not match, so the next link
+# cannot set the engine back On (411). Either way rule 412 must not run.
 SecRule ARGS_GET:chain_last_off "@streq 1" "id:410,phase:1,pass,log,chain"
     SecRule REQUEST_URI "@beginsWith /engine-test" "ctl:ruleEngine=Off"
 SecRule ARGS_GET:chain_off "@streq 1" "id:411,phase:1,pass,log,ctl:ruleEngine=Off,chain"
@@ -476,5 +477,8 @@ SecRule ARGS_GET:chain_off "@streq 1" "id:411,phase:1,pass,log,ctl:ruleEngine=Of
 SecRule REQUEST_URI "@beginsWith /engine-test" "id:412,phase:1,pass,log"
 # Last, so that multiphase evaluation also runs it after the rules above.
 SecRule REQUEST_URI "@beginsWith /engine-test" "id:404,phase:2,deny,status:403,log"
+# Off set in the logging phase stops the rest of that phase too.
+SecRule ARGS_GET:log_off "@streq 1" "id:420,phase:5,pass,log,ctl:ruleEngine=Off"
+SecRule REQUEST_URI "@beginsWith /engine-log" "id:421,phase:5,pass,log"
 `,
 })

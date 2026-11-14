@@ -97,6 +97,12 @@ const (
 //  4. Option `forceRequestBodyVariable“ allows you to configure the `REQUEST_BODY` variable to be set when there is no request body processor configured.
 //     This allows for inspection of request bodies of unknown types.
 //
+//  5. Option `ruleEngine` changes the engine mode for the rest of the transaction, and `ctl:ruleEngine=Off` is final:
+//     once the rule that sets it has run, no further rule or chain link is evaluated, in any phase, the logging phase included.
+//     A later `ctl:ruleEngine=On` or `=DetectionOnly` therefore never runs, and a rule that must still run has to come before the `Off`.
+//     When a chain link other than the last sets `Off`, it applies as soon as that link matches and the chain stops there without matching:
+//     put the `ctl` on the last link to scope it to the whole chain. The audit log is still written.
+//
 // Example:
 // ```seclang
 // # Parse requests with Content-Type "text/xml" as XML

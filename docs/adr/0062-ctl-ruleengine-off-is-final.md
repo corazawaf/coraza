@@ -5,7 +5,7 @@
 - **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1863](https://github.com/corazawaf/coraza/pull/1863)
 - **Issue(s):** [#1864](https://github.com/corazawaf/coraza/issues/1864)
-- **Deciders:** @M4tteoP
+- **Deciders:** @M4tteoP, @fzipi
 - **Category:** Parity (SecLang parity)
 
 ## Context and Problem
@@ -98,13 +98,46 @@ every later phase.
 
 ## Technical Discussion
 
-No substantive technical discussion recorded in this repository yet. The
-decision follows seclang-spec ADR-0034, which was discussed and accepted in
-the SecLang specification repository.
+The decision to make `Off` final follows seclang-spec ADR-0034, which was
+discussed and accepted in the SecLang specification repository. Review on
+#1863 then shaped how it applies in Coraza.
+
+The first version only checked between top-level rules. The review showed
+that a chain link could still undo `Off`, which led to the check in the chain
+loop:
+
+> "This check only runs between top-level rules, so a chain child in the same `Rule.Evaluate` can still undo Off:
+>
+> ```
+> SecRule REQUEST_URI "@beginsWith /x" "id:1,phase:1,pass,ctl:ruleEngine=Off,chain"
+>   SecRule ARGS:m "@streq on" "ctl:ruleEngine=On"
+> ```
+>
+> Non-disruptive actions run per match in `Rule.matchVariable` for the parent and every chain child, so the starter sets Off, the child sets On within the same `doEvaluate`, and this check then sees On: every later rule and phase runs and can block. ModSecurity v2 checks before each rule entry, chain children included (`mode=NEXT_RULE`, `re.c:1700`), so it never reaches the child. Either check inside `doEvaluate`'s chain loop, or have the `ctl` action refuse to leave Off once it is set. […]"
+> — @fzipi ([review comment](https://github.com/corazawaf/coraza/pull/1863#discussion_r4574105203))
+
+The multiphase consequence below comes from the review:
+
+> "Under `coraza.rule.multiphase_evaluation` the effect isn't the same. A later-phase rule placed before earlier-phase rules, e.g.
+>
+> ```
+> SecRule REQUEST_URI "@beginsWith /h" "id:50,phase:2,pass,ctl:ruleEngine=Off"
+> # phase:1 rules 60-90 follow
+> ```
+>
+> In the default build, phase 1 runs 60–90 and Off takes effect in phase 2. Under multiphase, rule 50 is evaluated in its inferred phase 1 at its syntactic position, and the new break skips 60–90. The same ruleset then gives different detections (and CRS anomaly scores) per build. […]"
+> — @fzipi ([review comment](https://github.com/corazawaf/coraza/pull/1863#discussion_r4574105227))
+
+The check sits right after `r.Evaluate`, rather than at the top of the loop,
+so that it costs one comparison per evaluated rule:
+
+> "Small perf point: this runs on every iteration, including rules the phase filter, `ruleRemoveById`, `skip` or `skipAfter` discard straight away. Only `r.Evaluate` can change `tx.RuleEngine`, so `if tx.IsRuleEngineOff() { break RulesLoop }` right after the `r.Evaluate(...)` call behaves the same with one branch per evaluated rule instead of one per rule per phase, on the hottest loop in the engine."
+> — @fzipi ([review comment](https://github.com/corazawaf/coraza/pull/1863#discussion_r4574105218))
 
 ## Participants
 
 - @M4tteoP — author
+- @fzipi — review
 
 ## Consequences
 
