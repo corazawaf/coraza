@@ -69,11 +69,12 @@ func TestXMLPayloadFlexibility(t *testing.T) {
 	}
 }
 
-func TestXMLUnexpectedEOF(t *testing.T) {
+func TestReadXML(t *testing.T) {
 	testCases := []struct {
-		Name  string
-		Input string
-		Want  []string
+		Name    string
+		Input   string
+		Want    []string
+		WantErr bool
 	}{
 		{
 			Name: "inTheMiddleOfText",
@@ -101,11 +102,47 @@ func TestXMLUnexpectedEOF(t *testing.T) {
 			<heading>Reminder</heading`,
 			Want: []string{"Tove", "Jani", "Reminder"},
 		},
+		{
+			Name:  "ISO-8859-1 with ASCII content",
+			Input: `<?xml version="1.0" encoding="ISO-8859-1"?><customer id="42"><name>Renee</name></customer>`,
+			Want:  []string{"Renee"},
+		},
+		{
+			Name:  "cp819 is strict Latin-1",
+			Input: "<?xml version=\"1.0\" encoding=\"cp819\"?><a>M\xfcnchen \x80</a>",
+			Want:  []string{"München \u0080"},
+		},
+		{
+			Name:  "windows-1252",
+			Input: "<?xml version=\"1.0\" encoding=\"windows-1252\"?><a>\x80</a>",
+			Want:  []string{"€"},
+		},
+		{
+			Name:  "ANSI_X3.4-1968",
+			Input: `<?xml version="1.0" encoding="ANSI_X3.4-1968"?><a>d</a>`,
+			Want:  []string{"d"},
+		},
+		{
+			Name:    "US-ASCII with non-ASCII content",
+			Input:   "<?xml version=\"1.0\" encoding=\"US-ASCII\"?><a>Ren\xe9e</a>",
+			WantErr: true,
+		},
+		{
+			Name:    "unsupported Shift_JIS encoding",
+			Input:   `<?xml version="1.0" encoding="Shift_JIS"?><a>b</a>`,
+			WantErr: true,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			xmldoc := tc.Input
 			_, contents, err := readXML(bytes.NewReader([]byte(xmldoc)))
+			if tc.WantErr {
+				if err == nil {
+					t.Error("expected an error")
+				}
+				return
+			}
 			if err != nil {
 				t.Error(err)
 			}
