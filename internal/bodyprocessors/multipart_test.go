@@ -31,6 +31,18 @@ func multipartProcessor(t *testing.T) plugintypes.BodyProcessor {
 	return mp
 }
 
+type passthroughBodyProcessor struct{}
+
+func (*passthroughBodyProcessor) ProcessRequest(reader io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	_, err := io.Copy(io.Discard, reader)
+	return err
+}
+
+func (*passthroughBodyProcessor) ProcessResponse(reader io.Reader, _ plugintypes.TransactionVariables, _ plugintypes.BodyProcessorOptions) error {
+	_, err := io.Copy(io.Discard, reader)
+	return err
+}
+
 func TestProcessRequestFailsDueToIncorrectMimeType(t *testing.T) {
 	mp := multipartProcessor(t)
 
@@ -85,6 +97,102 @@ Content-Type: text/html
 		if (h[0] != header1 && h[0] != header2) || (h[1] != header1 && h[1] != header2) {
 			t.Fatalf("Got invalid multipart headers")
 		}
+	}
+}
+
+func TestMultipartNoFilesLimit(t *testing.T) {
+	fieldHeaders := "Content-Disposition: form-data; name=\"f\"\r\n\r\n"
+	fileHeaders := "Content-Disposition: form-data; name=\"f\"; filename=\"evil.php\"\r\n" +
+		"Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+	tests := []struct {
+		name         string
+		body         string
+		limit        int64
+		wantLimitErr bool
+		wantOtherErr bool
+		wantArg      string
+		wantFilename string
+		custom       bool
+		wantHandled  bool
+	}{
+		{
+			name:        "long preamble excluded",
+			body:        strings.Repeat("p\r\n", 6*1024) + "--b\r\n" + fieldHeaders + "x\r\n--b--\r\n",
+			limit:       int64(len(fieldHeaders) + 1),
+			wantArg:     "x",
+			wantHandled: true,
+		},
+		{
+			name:        "epilogue excluded",
+			body:        "--b\r\n" + fieldHeaders + "x\r\n--b--\r\n" + strings.Repeat("e", 16*1024),
+			limit:       int64(len(fieldHeaders) + 1),
+			wantArg:     "x",
+			wantHandled: true,
+		},
+		{
+			name:        "quoted printable at limit",
+			body:        "--b\r\nContent-Disposition: form-data; name=\"f\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n=41\r\n--b--\r\n",
+			limit:       int64(len("Content-Disposition: form-data; name=\"f\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n=41")),
+			wantArg:     "A",
+			wantHandled: true,
+		},
+		{
+			name:         "quoted printable over limit",
+			body:         "--b\r\nContent-Disposition: form-data; name=\"f\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n=41\r\n--b--\r\n",
+			limit:        int64(len("Content-Disposition: form-data; name=\"f\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n=41") - 1),
+			wantLimitErr: true,
+			wantHandled:  true,
+		},
+		{
+			name:         "non-limit error publishes metadata",
+			body:         "--b\r\n" + fileHeaders + "\x00\r\n--b--\r\n",
+			limit:        4096,
+			wantOtherErr: true,
+			wantFilename: "evil.php",
+			wantHandled:  true,
+		},
+		{
+			name:   "custom processor not handled",
+			body:   "custom",
+			limit:  1,
+			custom: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := corazawaf.NewTransactionVariables()
+			processor := multipartProcessor(t)
+			if tt.custom {
+				processor = &passthroughBodyProcessor{}
+			}
+			handled, err := bodyprocessors.ProcessMultipartWithNoFilesLimit(
+				processor,
+				strings.NewReader(tt.body),
+				v,
+				plugintypes.BodyProcessorOptions{Mime: "multipart/form-data; boundary=b"},
+				tt.limit,
+			)
+			if handled != tt.wantHandled {
+				t.Fatalf("handled=%t, want %t", handled, tt.wantHandled)
+			}
+			if got := errors.Is(err, bodyprocessors.ErrNoFilesLimit); got != tt.wantLimitErr {
+				t.Fatalf("limit error=%t, want %t: %v", got, tt.wantLimitErr, err)
+			}
+			if got := err != nil && !errors.Is(err, bodyprocessors.ErrNoFilesLimit); got != tt.wantOtherErr {
+				t.Fatalf("other error=%t, want %t: %v", got, tt.wantOtherErr, err)
+			}
+			if tt.wantArg != "" {
+				if got := v.ArgsPost().Get("f"); len(got) != 1 || got[0] != tt.wantArg {
+					t.Fatalf("ARGS_POST:f=%v, want %q", got, tt.wantArg)
+				}
+			}
+			if tt.wantFilename != "" {
+				if got := v.MultipartFilename().Get("f"); len(got) != 1 || got[0] != tt.wantFilename {
+					t.Fatalf("MULTIPART_FILENAME:f=%v, want %q", got, tt.wantFilename)
+				}
+			}
+		})
 	}
 }
 
@@ -921,6 +1029,61 @@ func BenchmarkMultipartFilenameStar(b *testing.B) {
 					Mime: "multipart/form-data; boundary=X",
 				}); err != nil {
 					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkMultipartNoFilesLimit(b *testing.B) {
+	const boundary = "coraza-benchmark-boundary"
+	payload := "--" + boundary + "\r\n" +
+		"Content-Disposition: form-data; name=\"field\"\r\n\r\n" +
+		"value\r\n" +
+		"--" + boundary + "\r\n" +
+		"Content-Disposition: form-data; name=\"upload\"; filename=\"large.bin\"\r\n" +
+		"Content-Type: application/octet-stream\r\n\r\n" +
+		strings.Repeat("x", 4<<20) + "\r\n" +
+		"--" + boundary + "--\r\n"
+	options := plugintypes.BodyProcessorOptions{
+		Mime:        "multipart/form-data; boundary=" + boundary,
+		StoragePath: b.TempDir(),
+	}
+
+	for _, tc := range []struct {
+		name  string
+		limit int64
+	}{
+		{name: "disabled"},
+		{name: "enabled", limit: 4096},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			processor, err := bodyprocessors.GetBodyProcessor("multipart")
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			b.SetBytes(int64(len(payload)))
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				v := corazawaf.NewTransactionVariables()
+				if tc.limit == 0 {
+					err = processor.ProcessRequest(strings.NewReader(payload), v, options)
+				} else {
+					var handled bool
+					handled, err = bodyprocessors.ProcessMultipartWithNoFilesLimit(processor, strings.NewReader(payload), v, options, tc.limit)
+					if !handled {
+						b.Fatal("built-in multipart processor was not handled")
+					}
+				}
+				if err != nil {
+					b.Fatal(err)
+				}
+				for _, name := range v.FilesTmpNames().(*collections.Map).Get("") {
+					if err := os.Remove(name); err != nil {
+						b.Fatal(err)
+					}
 				}
 			}
 		})
