@@ -227,3 +227,51 @@ SecRule ARGS_GET:fbclid "@unconditionalMatch" "id:942441, phase:2,pass,t:none,t:
 SecRule ARGS_NAMES|ARGS "@rx justanid" "id:942440,phase:2,status:503,log,t:none,t:urlDecodeUni"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "M4tteoP",
+		Description: "ctl:ruleEngine=Off set by a rule evaluated in an inferred earlier phase",
+		Enabled:     true,
+		Name:        "multiphase_ruleengine_off.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			// Rule 50 is a phase 2 rule, but REQUEST_URI is available in phase 1, so multiphase
+			// evaluation runs it there, at its syntactic position. Its ctl:ruleEngine=Off takes
+			// effect in phase 1, and the phase 1 rule 60 after it no longer runs. In the default
+			// build rule 60 runs, and Off takes effect in phase 2 (ADR-0062).
+			Title: "Off from a later-phase rule ends the inferred phase",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/off-early",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{50},
+							NonTriggeredRules: []int{60},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/other",
+						},
+						Output: profile.ExpectedOutput{
+							// Negative: rule 50 does not match, rule 60 runs in phase 1.
+							TriggeredRules:    []int{60},
+							NonTriggeredRules: []int{50},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRuleEngine On
+SecRule REQUEST_URI "@beginsWith /off-early" "id:50,phase:2,pass,log,ctl:ruleEngine=Off"
+SecRule REQUEST_URI "@rx ^/" "id:60,phase:1,pass,log"
+`,
+})
