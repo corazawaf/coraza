@@ -7,10 +7,10 @@
 //
 // Known limitations:
 //
-// Flow actions (skip, skipAfter) and allow actions behave differently under
+// Flow actions (skip, skipAfter) and allow:phase behave differently under
 // multiphase evaluation because rules from different defined phases share
-// the same evaluation loop. See rulegroup.go:224-252 for the allow/skip
-// handling and allow.go (internal/actions) for the allow variants.
+// the same evaluation loop. See RuleGroup.Eval for the allow/skip handling
+// and allow.go (internal/actions) for the allow variants.
 //
 // See https://github.com/corazawaf/coraza/issues/804 and
 // https://gist.github.com/M4tteoP/57001a5066f2f76c9f99c6dc3e9bf4af for context.
