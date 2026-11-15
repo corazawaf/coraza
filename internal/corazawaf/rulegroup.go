@@ -168,10 +168,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
+	// The previous phase emptied the cache when it ended, see below.
 	transformationCache := tx.transformationCache
-	for k := range transformationCache {
-		delete(transformationCache, k)
-	}
 	// The logging phase always runs, as in ModSecurity: a plain allow issued in an
 	// earlier phase skips the remaining request and response phases, not this one.
 	// An allow issued by a logging phase rule still stops the rest of the phase.
