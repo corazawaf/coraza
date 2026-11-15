@@ -124,7 +124,9 @@ func TestRuleGroupDeleteByID(t *testing.T) {
 
 func TestRuleGroupEvalEmptiesTransformationCache(t *testing.T) {
 	// Up to the threshold the map is emptied in place and reused, past it the map
-	// is replaced: either way no entry must outlive the phase.
+	// is replaced. That the cache is empty after the phase is checked by
+	// TestTransformationCacheAcrossRules. This is not an engine profile because
+	// rules cannot tell a reused map from a new one.
 	tests := []struct {
 		entries  int
 		replaced bool
@@ -163,9 +165,6 @@ func TestRuleGroupEvalEmptiesTransformationCache(t *testing.T) {
 
 			if got := tx.variables.argsGet.Len(); got != n {
 				t.Fatalf("got %d arguments, want %d", got, n)
-			}
-			if got := len(tx.transformationCache); got != 0 {
-				t.Fatalf("transformation cache holds %d entries after the phase, want 0", got)
 			}
 			// A sentinel written through the old map shows whether it is still the cache.
 			before[transformationKey{transformationsID: -1}] = transformationValue{}
