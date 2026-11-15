@@ -4,10 +4,14 @@
 package coraza
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/types"
@@ -202,6 +206,81 @@ func TestDetectionOnlyEnforcesProcessPartialBodyLimitActions(t *testing.T) {
 	}
 	if w.ResponseBodyLimitAction != types.BodyLimitActionProcessPartial {
 		t.Fatalf("expected ResponseBodyLimitAction to be ProcessPartial in DetectionOnly mode, got %v", w.ResponseBodyLimitAction)
+	}
+}
+
+func TestNewWAFWarnsWhenNoRuleReadsSignal(t *testing.T) {
+	const (
+		argsWarning    = "No loaded rule reads ARGUMENTS_LIMIT_REACHED"
+		reqbodyWarning = "No loaded rule reads REQBODY_ERROR"
+	)
+	tests := []struct {
+		name       string
+		directives string
+		want       []string
+	}{
+		{
+			name:       "no rules",
+			directives: "SecRuleEngine On",
+			want:       []string{argsWarning, reqbodyWarning},
+		},
+		{
+			name: "both read, one through a chained count",
+			directives: `SecRuleEngine On
+SecRule REQBODY_ERROR "!@eq 0" "id:1,phase:2,deny"
+SecRule REQUEST_METHOD "POST" "id:2,phase:2,deny,chain"
+  SecRule &ARGUMENTS_LIMIT_REACHED "@eq 1"`,
+		},
+		{
+			name: "only REQBODY_ERROR read",
+			directives: `SecRuleEngine On
+SecRule REQBODY_ERROR "!@eq 0" "id:1,phase:2,deny"`,
+			want: []string{argsWarning},
+		},
+		{
+			name: "reading rule removed at parse time",
+			directives: `SecRuleEngine On
+SecRule REQBODY_ERROR "!@eq 0" "id:1,phase:2,deny"
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" "id:2,phase:2,deny"
+SecRuleRemoveById 2`,
+			want: []string{argsWarning},
+		},
+		{
+			name: "reading rule has the variable excluded as a whole",
+			directives: `SecRuleEngine On
+SecRule REQBODY_ERROR "!@eq 0" "id:1,phase:2,deny"
+SecRule ARGUMENTS_LIMIT_REACHED "@eq 1" "id:2,phase:2,deny"
+SecRuleUpdateTargetById 1 "!REQBODY_ERROR"`,
+			want: []string{reqbodyWarning},
+		},
+		{
+			name:       "engine off",
+			directives: "SecRuleEngine Off",
+		},
+		{
+			name:       "detection only",
+			directives: "SecRuleEngine DetectionOnly",
+			want:       []string{argsWarning, reqbodyWarning},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logs bytes.Buffer
+			logger := debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(&logs)
+			if _, err := NewWAF(NewWAFConfig().WithDebugLogger(logger).WithDirectives(tt.directives)); err != nil {
+				t.Fatal(err)
+			}
+			for _, w := range []string{argsWarning, reqbodyWarning} {
+				want := 0
+				if slices.Contains(tt.want, w) {
+					want = 1
+				}
+				if got := strings.Count(logs.String(), w); got != want {
+					t.Errorf("warning %q logged %d times, want %d\nlogs:\n%s", w, got, want, logs.String())
+				}
+			}
+		})
 	}
 }
 

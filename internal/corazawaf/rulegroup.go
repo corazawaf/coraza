@@ -10,6 +10,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
 	utils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // RuleGroup is a collection of rules
@@ -77,6 +78,33 @@ func (rg *RuleGroup) SetObserver(observer func(rule types.RuleMetadata)) {
 // GetRules returns the slice of rules,
 func (rg *RuleGroup) GetRules() []Rule {
 	return rg.rules
+}
+
+// ReadsVariable reports whether any rule, or a rule chained to it, lists v among
+// its variables, in the value or count (&VAR) form. An entry excluded as a whole
+// ("!VAR") does not count.
+func (rg *RuleGroup) ReadsVariable(v variables.RuleVariable) bool {
+	for i := range rg.rules {
+		for r := &rg.rules[i]; r != nil; r = r.Chain {
+			for _, rv := range r.variables {
+				if rv.Variable == v && !excludedAsWhole(rv) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// excludedAsWhole reports whether rv carries a key-less exception, which GetField
+// treats as matching every key.
+func excludedAsWhole(rv ruleVariableParams) bool {
+	for _, ex := range rv.Exceptions {
+		if ex.KeyRx == nil && ex.KeyStr == "" {
+			return true
+		}
+	}
+	return false
 }
 
 // FindByID return a Rule with the requested Id
