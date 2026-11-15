@@ -6,8 +6,11 @@ package bodyprocessors
 import (
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
+
+	"golang.org/x/text/encoding/charmap"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -37,6 +40,7 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 	dec.Strict = false
 	dec.AutoClose = xml.HTMLAutoClose
 	dec.Entity = xml.HTMLEntity
+	dec.CharsetReader = xmlCharsetReader
 	for {
 		token, err := dec.Token()
 		if err != nil && err != io.EOF && !isUnexpectedEOFXMLSyntaxError(err) {
@@ -62,6 +66,55 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 func isUnexpectedEOFXMLSyntaxError(err error) bool {
 	var serr *xml.SyntaxError
 	return errors.As(err, &serr) && serr.Msg == "unexpected EOF"
+}
+
+// xmlCharsetReader is used by the XML decoder for bodies declaring an encoding
+// other than UTF-8. Labels are matched case-insensitively against the IANA
+// names and aliases of the supported encodings:
+//   - ISO-8859-1 is decoded as strict Latin-1 (charmap.ISO8859_1), so 0x80-0x9F
+//     become the C1 controls U+0080-U+009F. Unlike WHATWG, which treats these
+//     labels as windows-1252, the declared encoding is honored as XML requires.
+//   - windows-1252 is decoded with charmap.Windows1252.
+//   - US-ASCII passes the input through and fails at the first non-ASCII byte.
+//
+// Any other encoding results in an error.
+func xmlCharsetReader(label string, input io.Reader) (io.Reader, error) {
+	switch strings.ToLower(strings.TrimSpace(label)) {
+	case "iso-8859-1", "iso8859-1", "iso88591", "iso_8859-1", "iso_8859-1:1987",
+		"iso-ir-100", "latin1", "latin-1", "l1", "ibm819", "cp819", "csisolatin1":
+		return charmap.ISO8859_1.NewDecoder().Reader(input), nil
+	case "windows-1252", "cp1252", "x-cp1252", "cswindows1252":
+		return charmap.Windows1252.NewDecoder().Reader(input), nil
+	case "us-ascii", "ascii", "us", "iso-ir-6", "ansi_x3.4-1968", "ansi_x3.4-1986",
+		"iso_646.irv:1991", "iso646-us", "ibm367", "cp367", "csascii":
+		return &asciiReader{r: input}, nil
+	}
+	return nil, fmt.Errorf("unsupported XML encoding %q", label)
+}
+
+// asciiReader passes US-ASCII input through unchanged and fails at the first
+// byte outside the ASCII range, returning only the valid bytes before it.
+// x/text has no strict US-ASCII decoder: ianaindex replaces such bytes with
+// U+FFFD and WHATWG decodes them as windows-1252.
+type asciiReader struct {
+	r   io.Reader
+	err error
+}
+
+// Read reads from the underlying reader and returns an error once a non-ASCII
+// byte is found.
+func (a *asciiReader) Read(p []byte) (int, error) {
+	if a.err != nil {
+		return 0, a.err
+	}
+	n, err := a.r.Read(p)
+	for i, b := range p[:n] {
+		if b > 0x7f {
+			a.err = fmt.Errorf("invalid US-ASCII byte 0x%02x", b)
+			return i, a.err
+		}
+	}
+	return n, err
 }
 
 var (
