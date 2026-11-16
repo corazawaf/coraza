@@ -716,7 +716,9 @@ const (
 	MultipartHeaderFolding
 	// MultipartInvalidHeaderFolding kept for compatibility
 	MultipartInvalidHeaderFolding
-	// MultipartInvalidPart kept for compatibility
+	// MultipartInvalidPart is set to 1 when a structurally invalid multipart part is seen
+	// while parsing the body: a part with no Content-Disposition header, or one whose
+	// Content-Disposition header could not be parsed.
 	MultipartInvalidPart
 	// MultipartInvalidQuoting kept for compatibility
 	MultipartInvalidQuoting

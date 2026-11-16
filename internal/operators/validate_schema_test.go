@@ -442,6 +442,7 @@ func (m *mockTransaction) MultipartFilenameLanguage() collection.Map       { ret
 func (m *mockTransaction) MultipartStrictError() collection.Single         { return nil }
 func (m *mockTransaction) MultipartDuplicatePartHeader() collection.Single { return nil }
 func (m *mockTransaction) MultipartInvalidQuoting() collection.Single      { return nil }
+func (m *mockTransaction) MultipartInvalidPart() collection.Single         { return nil }
 func (m *mockTransaction) ArgumentsLimitReached() collection.Single        { return nil }
 func (m *mockTransaction) HighestSeverity() collection.Single              { return nil }
 func (m *mockTransaction) StatusLine() collection.Single                   { return nil }
