@@ -403,9 +403,14 @@ func TestWriteRequestBodyIsNopWhenBodyIsNotAccesible(t *testing.T) {
 
 func TestResponseHeader(t *testing.T) {
 	tx := makeTransaction(t)
-	tx.AddResponseHeader("content-type", "test")
+	tx.AddResponseHeader("content-type", " test ; charset=utf-8")
 	if tx.variables.responseContentType.Get() != "test" {
 		t.Fatal("invalid RESPONSE_CONTENT_TYPE after response headers")
+	}
+	// A second Content-Type header does not replace the first one.
+	tx.AddResponseHeader("content-type", "other")
+	if tx.variables.responseContentType.Get() != "test" {
+		t.Fatal("RESPONSE_CONTENT_TYPE should keep the first Content-Type header")
 	}
 
 	interruption := tx.ProcessResponseHeaders(200, "OK")
