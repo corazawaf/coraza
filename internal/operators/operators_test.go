@@ -4,6 +4,7 @@
 package operators
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -90,7 +91,11 @@ func TestMemoizeKeysAreContentBound(t *testing.T) {
 // https://github.com/SpiderLabs/secrules-language-tests/
 func TestOperators(t *testing.T) {
 	root := "./testdata"
-	var files [][]byte
+	type corpusFile struct {
+		name string
+		data []byte
+	}
+	var files []corpusFile
 	if _, err := os.Stat(root); os.IsNotExist(err) {
 		t.Fatal("failed to find operator test files")
 	}
@@ -101,7 +106,7 @@ func TestOperators(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			files = append(files, data)
+			files = append(files, corpusFile{name: strings.TrimSuffix(filepath.Base(path), ".json"), data: data})
 		}
 		return nil
 	}); err != nil {
@@ -116,46 +121,62 @@ func TestOperators(t *testing.T) {
 		"verifysvnr",
 	}
 
+	emptyArgumentRejected := []string{"beginsWith", "contains", "endsWith", "streq", "within"}
+
 	captureMatrix := map[string]bool{
 		"with capture":    true,
 		"without capture": false,
 	}
 
 	waf := corazawaf.NewWAF()
+	ran := 0
 	for _, f := range files {
-		cases := unmarshalTests(t, f)
-		for _, data := range cases {
-			if utils.InSlice("containsWord", notImplemented) {
+		cases := unmarshalTests(t, f.data)
+		for i, data := range cases {
+			if utils.InSlice(data.Name, notImplemented) {
 				continue
 			}
+			name := fmt.Sprintf("%s/%d", f.name, i)
+
+			// UNMARSHALL does not transform \u0000 to binary
+			input := strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
+			param := strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
+			if strings.Contains(input, `\x`) {
+				in, err := strconv.Unquote(`"` + input + `"`)
+				if err != nil {
+					t.Errorf("%s: cannot parse input: %s", name, err.Error())
+					continue
+				}
+				input = in
+			}
+			if strings.Contains(param, `\x`) {
+				p, err := strconv.Unquote(`"` + param + `"`)
+				if err != nil {
+					t.Errorf("%s: cannot parse param: %s", name, err.Error())
+					continue
+				}
+				param = p
+			}
+			opts := plugintypes.OperatorOptions{
+				Arguments: param,
+				Path:      []string{"op"},
+				Root:      os.DirFS("testdata"),
+			}
+
+			// ModSecurity matches every input against an empty argument; Coraza
+			// rejects it when the rule is compiled (macro.NewMacro: "empty data").
+			if param == "" && utils.InSlice(data.Name, emptyArgumentRejected) {
+				t.Run(name+" empty argument rejected", func(t *testing.T) {
+					if _, err := Get(data.Name, opts); err == nil {
+						t.Errorf("@%s with an empty argument compiled; Coraza rejects it", data.Name)
+					}
+				})
+				ran++
+				continue
+			}
+
 			for capName, capVal := range captureMatrix {
-				t.Run(data.Name+" "+capName, func(t *testing.T) {
-					// UNMARSHALL does not transform \u0000 to binary
-					data.Input = strings.ReplaceAll(data.Input, `\u0000`, "\u0000")
-					data.Param = strings.ReplaceAll(data.Param, `\u0000`, "\u0000")
-
-					if strings.Contains(data.Input, `\x`) {
-						in, err := strconv.Unquote(`"` + data.Input + `"`)
-						if err != nil {
-							t.Errorf("Cannot parse test case: %s", err.Error())
-						} else {
-							data.Input = in
-						}
-					}
-
-					if strings.Contains(data.Param, `\x`) {
-						p, err := strconv.Unquote(`"` + data.Param + `"`)
-						if err != nil {
-							t.Errorf("Cannot parse test case: %s", err.Error())
-						}
-						data.Param = p
-					}
-
-					opts := plugintypes.OperatorOptions{
-						Arguments: data.Param,
-						Path:      []string{"op"},
-						Root:      os.DirFS("testdata"),
-					}
+				t.Run(name+" "+capName, func(t *testing.T) {
 					op, err := Get(data.Name, opts)
 					if err != nil {
 						t.Error(err)
@@ -163,7 +184,7 @@ func TestOperators(t *testing.T) {
 					}
 					tx := waf.NewTransaction()
 					tx.Capture = capVal
-					res := op.Evaluate(tx, data.Input)
+					res := op.Evaluate(tx, input)
 					// 1 = expected true
 					// 0 = expected false
 					if (res && data.Ret != 1) || (!res && data.Ret == 1) {
@@ -171,11 +192,16 @@ func TestOperators(t *testing.T) {
 						if data.Ret == 0 {
 							expected = "no match"
 						}
-						t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, data.Param, data.Input, expected)
+						t.Errorf("Invalid operator result for @%s(%q, %q), %s expected", data.Name, param, input, expected)
 					}
 				})
+				ran++
 			}
 		}
+	}
+	// The corpus was skipped entirely for three years without anyone noticing.
+	if ran == 0 {
+		t.Fatal("no operator corpus case ran")
 	}
 }
 
