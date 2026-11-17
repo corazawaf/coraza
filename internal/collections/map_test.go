@@ -16,6 +16,7 @@ package collections
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/types/variables"
@@ -48,17 +49,54 @@ func TestMap(t *testing.T) {
 `
 
 	if have := fmt.Sprint(c); have != wantStr {
-		// Map order is not guaranteed, not pretty but checking twice is the simplest for now.
-		wantStr = `REQUEST_HEADERS:
-    user-agent: value2,value3
-    user: value
-`
-		if have != wantStr {
-			t.Errorf("String() = %q, want %q", have, wantStr)
-		}
+		t.Errorf("String() = %q, want %q", have, wantStr)
 	}
 
-	if c.Len() != len(c.data) {
+	// A removed key that comes back goes after the keys still present, and
+	// removing keys keeps the order of the rest (#1815).
+	c.Remove("user")
+	c.Add("User", "back")
+	c.Add("accept", "value4")
+	wantStr = `REQUEST_HEADERS:
+    user-agent: value2,value3
+    user: back
+    accept: value4
+`
+	if have := fmt.Sprint(c); have != wantStr {
+		t.Errorf("String() after Remove = %q, want %q", have, wantStr)
+	}
+	c.Remove("user-agent")
+	c.Remove("missing")
+	var keys []string
+	for _, m := range c.FindAll() {
+		keys = append(keys, m.Key())
+	}
+	if want := []string{"User", "accept"}; !slices.Equal(keys, want) {
+		t.Errorf("FindAll() keys after Remove = %q, want %q", keys, want)
+	}
+
+	// Three of the four slots are now deleted, which compacts the slots and
+	// rebuilds the index: lookups and the order must survive it.
+	c.Remove("user")
+	if len(c.entries) != 1 {
+		t.Fatalf("expected the deleted slots to be compacted, have %d slots", len(c.entries))
+	}
+	if got := c.Get("accept"); !slices.Equal(got, []string{"value4"}) {
+		t.Errorf("Get(accept) after compaction = %q", got)
+	}
+	c.Add("user-agent", "value5")
+	keys = keys[:0]
+	for _, m := range c.FindAll() {
+		keys = append(keys, m.Key())
+	}
+	if want := []string{"accept", "user-agent"}; !slices.Equal(keys, want) {
+		t.Errorf("FindAll() keys after compaction = %q, want %q", keys, want)
+	}
+	if c.Len() != 2 || c.TotalValues() != 2 {
+		t.Errorf("Len() = %d, TotalValues() = %d after compaction, want 2 and 2", c.Len(), c.TotalValues())
+	}
+
+	if c.Len() != len(c.index) {
 		t.Fatal("The lengths are not equal.")
 	}
 
@@ -189,17 +227,10 @@ func TestNewCaseSensitiveKeyMap(t *testing.T) {
 `
 
 	if have := fmt.Sprint(c); have != wantStr {
-		// Map order is not guaranteed, not pretty but checking twice is the simplest for now.
-		wantStr = `ARGS_POST:
-    key2: value2,value3
-    key: value
-`
-		if have != wantStr {
-			t.Errorf("String() = %q, want %q", have, wantStr)
-		}
+		t.Errorf("String() = %q, want %q", have, wantStr)
 	}
 
-	if c.Len() != len(c.data) {
+	if c.Len() != len(c.index) {
 		t.Fatal("The lengths are not equal.")
 	}
 
