@@ -89,6 +89,64 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRule ARGS:t1|REQUEST_COOKIES "@rx aaa" "id:62,phase:1,log,tag:tag-2"
 	# The tag might also be wrapped in double quotes
 	SecRuleUpdateTargetByTag "tag-2" "!ARGS:t1|!ARGS:t2"
+	`,
+})
 
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "AdamMagued",
+		Description: "Test SecRuleRemoveBy directives",
+		Enabled:     true,
+		Name:        "SecRuleRemoveBy.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			Title: "SecRuleRemoveBy",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/index.php?arg=attack",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								100,
+								103,
+								106,
+							},
+							NonTriggeredRules: []int{
+								101,
+								102,
+								104,
+								105,
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+	# Rule 100 is kept
+	SecRule ARGS:arg "@rx attack" "id:100,phase:1,log,pass"
+
+	# Rule 101 is removed by SecRuleRemoveById
+	SecRule ARGS:arg "@rx attack" "id:101,phase:1,log,pass"
+	SecRuleRemoveById 101
+
+	# Rule 102 is removed by SecRuleRemoveByMsg with single quotes and extra whitespace
+	SecRule ARGS:arg "@rx attack" "id:102,phase:1,log,pass,msg:'remove-msg'"
+	# Rule 103 has a different msg and should remain
+	SecRule ARGS:arg "@rx attack" "id:103,phase:1,log,pass,msg:'keep-msg'"
+	SecRuleRemoveByMsg   'remove-msg'  
+
+	# Rule 104 is removed by SecRuleRemoveByTag with single quotes and extra whitespace
+	SecRule ARGS:arg "@rx attack" "id:104,phase:1,log,pass,tag:'remove-tag'"
+	# Rule 105 is removed by SecRuleRemoveByTag with double quotes
+	SecRule ARGS:arg "@rx attack" "id:105,phase:1,log,pass,tag:'remove-tag-double'"
+	# Rule 106 has a different tag and should remain
+	SecRule ARGS:arg "@rx attack" "id:106,phase:1,log,pass,tag:'keep-tag'"
+	SecRuleRemoveByTag   'remove-tag'  
+	SecRuleRemoveByTag "remove-tag-double"
 	`,
 })
