@@ -719,6 +719,11 @@ func (tx *Transaction) GetField(rv ruleVariableParams) []types.MatchData {
 // key for pattern-based matching (e.g. removing all ARGS matching
 // /^json\.\d+\.field$/ from a given rule).
 func (tx *Transaction) RemoveRuleTargetByID(id int, variable variables.RuleVariable, key string, keyRx *regexp.Regexp) {
+	if id == noID {
+		// Rules without an id all share ID_ 0; a removal stored there would
+		// apply to every one of them.
+		return
+	}
 	c := ruleVariableParams{
 		Variable: variable,
 		KeyStr:   key,
