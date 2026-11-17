@@ -199,6 +199,10 @@ func (mr MatchedRule) writeDetails(log *strings.Builder, matchData types.MatchDa
 		mr.Rule_.File(), strconv.Itoa(mr.Rule_.Line()), strconv.Itoa(mr.Rule_.ID()), mr.Rule_.Revision(), msg, data, mr.Rule_.Severity().String(), mr.Rule_.Version(),
 		strconv.Itoa(mr.Rule_.Maturity()), strconv.Itoa(mr.Rule_.Accuracy()))
 	for _, t := range mr.Rule_.Tags() {
+		// Tags may carry expanded request data, bound them like msg and data
+		if len(t) > maxSizeLogMessage {
+			t = t[:maxSizeLogMessage]
+		}
 		fmt.Fprintf(log, " [tag %q]", t)
 	}
 	fmt.Fprintf(log, " [hostname %q] [uri %q] [unique_id %q]", mr.ServerIPAddress_, mr.URI_, mr.TransactionID_)
