@@ -546,6 +546,12 @@ func TestParseActions(t *testing.T) {
 			expectError:     false,
 			expectedLogLine: "[WARN] unclosed quotes",
 		},
+		{
+			name:            "missing phase",
+			inputActions:    "id:1,log,deny",
+			expectError:     false,
+			expectedLogLine: "[WARN] rule phase is not specified, defaulting to phase 2",
+		},
 	}
 
 	for _, tt := range tests {
