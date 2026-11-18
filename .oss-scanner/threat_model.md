@@ -142,7 +142,6 @@ Not vulnerabilities, do not report:
   third party's traffic.
 - `@inspectFile` passing the variable value as the program's argument: that is its
   documented contract and ModSecurity's.
-- `SecRequestBodyNoFilesLimit` not being enforced: documented as unsupported.
 - The comment transformations (`removeComments`, `replaceComments`) being unaware of SQL
   string literals: a documented limitation shared with ModSecurity since 2016
   (ModSecurity#1207); the mitigation is at the rule level.
