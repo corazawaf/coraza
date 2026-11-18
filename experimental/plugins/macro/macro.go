@@ -76,15 +76,17 @@ func expandToken(tx plugintypes.TransactionState, token macroToken) string {
 		}
 	case collection.Single:
 		return col.Get()
+	case nil:
+		// The transaction has no collection for this variable (e.g. JSON)
 	default:
 		if c := col.FindAll(); len(c) > 0 {
 			return c[0].Value()
 		}
 	}
 
-	// If the variable is known (e.g. TX) but the key is not found, we return the original text
-	tx.DebugLogger().Warn().Str("variable", token.variable.Name()).Str("key", token.key).Msg("key not found in collection, returning the original text")
-	return token.text
+	// An unset variable expands to the empty string, as in ModSecurity v2 and v3
+	tx.DebugLogger().Debug().Str("variable", token.variable.Name()).Str("key", token.key).Msg("key not found in collection, expanding to the empty string")
+	return ""
 }
 
 // compile is used to parse the input and generate the corresponding token
