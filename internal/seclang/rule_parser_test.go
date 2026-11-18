@@ -569,6 +569,25 @@ func TestParseActions(t *testing.T) {
 			expectError:     false,
 			expectedLogLine: `[WARN] rule phase is not specified, defaulting to phase 2 file="_inline_" line=1`,
 		},
+		{
+			name:            "missing phase on top-level SecAction",
+			inputRule:       `SecAction "id:107,log,pass"`,
+			expectError:     false,
+			expectedLogLine: `[WARN] rule phase is not specified, defaulting to phase 2`,
+		},
+		{
+			name: "missing phase on chain starter",
+			inputRule: `SecRule REQUEST_URI "abc" "id:105,deny,chain"
+SecRule REQUEST_URI "def" "t:lowercase"`,
+			expectError:     false,
+			expectedLogLine: `[WARN] rule phase is not specified, defaulting to phase 2`,
+		},
+		{
+			name: "phase-less SecRuleUpdateActionById must not warn",
+			inputRule: `SecRule REQUEST_URI "abc" "id:109,phase:2,deny"
+SecRuleUpdateActionById 109 "log"`,
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
