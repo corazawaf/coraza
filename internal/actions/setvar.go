@@ -103,12 +103,21 @@ func (a *setvarFn) Init(_ plugintypes.RuleMetadata, data string) error {
 		// as ModSecurity does
 		val = "1"
 	}
+	if val == "" {
+		// An empty value sets the variable to the empty string; Evaluate handles a nil macro
+		return nil
+	}
 	a.value, err = macro.NewMacro(val)
 	return err
 }
 
 func (a *setvarFn) Evaluate(r plugintypes.RuleMetadata, tx plugintypes.TransactionState) {
 	key := a.key.Expand(tx)
+	if key == "" {
+		// The key is a macro naming an unset variable
+		tx.DebugLogger().Debug().Int("rule_id", r.ID()).Str("var_key", a.key.String()).Msg("setvar key expanded to the empty string, skipping")
+		return
+	}
 	value := ""
 	if a.value != nil {
 		value = a.value.Expand(tx)

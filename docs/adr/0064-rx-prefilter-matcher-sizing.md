@@ -1,4 +1,4 @@
-# ADR-0062: Size the `@rx` `anyRequired` matcher for one needle per keyword
+# ADR-0064: Size the `@rx` `anyRequired` matcher for one needle per keyword
 
 - **Status:** proposed
 - **Date:** 2026-11-05 (expected)

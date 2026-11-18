@@ -1,6 +1,6 @@
 # ADR-0052: Replace Aho-Corasick with indexed-bitmap matcher for `@rx` `anyRequired` prefilter
 
-- **Status:** superseded by ADR-0062
+- **Status:** superseded by ADR-0064
 - **Date:** 2026-04-09
 - **Version:** unreleased (post-v3.7.0)
 - **PR:** [#1597](https://github.com/corazawaf/coraza/pull/1597)
