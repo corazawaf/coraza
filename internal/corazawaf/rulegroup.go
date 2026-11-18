@@ -46,24 +46,27 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 		}
 	}
 
-	numInferred := 0
-	rule.set(rule.Phase_)
-	for _, v := range rule.variables {
+	cloned := rule.clone()
+	cloned.set(cloned.Phase_)
+	for _, v := range cloned.variables {
 		min := minPhase(v.Variable)
 		if min != types.PhaseUnknown {
 			// We infer the earliest phase a variable used by the rule may be evaluated for use when
 			// multiphase evaluation is enabled
-			rule.set(min)
-			numInferred++
+			cloned.set(min)
 		} else {
-			rule.withPhaseUnknownVariable = true
+			cloned.withPhaseUnknownVariable = true
 		}
 	}
+	if cloned.HasChain && cloned.Chain != nil {
+		cloned.ComputeChainMinPhase()
+	}
 
-	rg.rules = append(rg.rules, *rule)
+	rg.rules = append(rg.rules, cloned)
 
 	if rg.observer != nil {
-		rg.observer(rule)
+		obs := cloned.clone()
+		rg.observer(&obs)
 	}
 
 	return nil

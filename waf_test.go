@@ -6,10 +6,12 @@ package coraza
 import (
 	"errors"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
+	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -232,5 +234,120 @@ func TestRulesCount(t *testing.T) {
 	}
 	if rules.RulesCount() != 2 {
 		t.Fatalf("expected 2 rules, got %d", rules.RulesCount())
+	}
+}
+
+// Not a profile: engine profiles compile directives into one WAF and cannot pass one *corazawaf.Rule via WithRules into two WAFs.
+func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
+	seedWAF := corazawaf.NewWAF()
+	if err := seclang.NewParser(seedWAF).FromString(`
+		SecRule ARGS "@streq attack" "id:100,phase:2,deny,status:403,tag:'base'"
+	`); err != nil {
+		t.Fatalf("failed to parse seed rule: %v", err)
+	}
+	shared := seedWAF.Rules.FindByID(100)
+	// Ensure Tags_ has spare capacity so an uncloned append in waf2 would overwrite waf1's tag.
+	shared.Tags_ = append(make([]string, 0, 4), shared.Tags_...)
+
+	baseCfg := NewWAFConfig().WithDirectives(`
+		SecRuleEngine On
+		SecRule ARGS:skip_rule "@streq 1" "id:1,phase:1,pass,nolog,ctl:ruleRemoveByTag=keep-tag"
+		SecRule ARGS:skip_target "@streq 1" "id:2,phase:1,pass,nolog,ctl:ruleRemoveTargetByTag=keep-tag;ARGS:payload"
+	`).(*wafConfig).WithRules(shared)
+
+	waf1, err := NewWAF(baseCfg.WithDirectives(`
+		SecRuleUpdateActionById 100 "tag:'keep-tag'"
+		SecRuleUpdateTargetById 100 "!ARGS:waf1_safe"
+	`))
+	if err != nil {
+		t.Fatalf("NewWAF(waf1) failed: %v", err)
+	}
+
+	waf2, err := NewWAF(baseCfg.WithDirectives(`
+		SecRuleUpdateActionById 100 "tag:'other-tag'"
+		SecRuleUpdateTargetById 100 "!ARGS:waf2_safe"
+	`))
+	if err != nil {
+		t.Fatalf("NewWAF(waf2) failed: %v", err)
+	}
+
+	evalRequest := func(t *testing.T, w WAF, uri string) *types.Interruption {
+		t.Helper()
+		tx := w.NewTransaction()
+		defer func() {
+			if err := tx.Close(); err != nil {
+				t.Errorf("tx.Close failed: %v", err)
+			}
+		}()
+		tx.ProcessURI(uri, "GET", "HTTP/1.1")
+		if it := tx.ProcessRequestHeaders(); it != nil {
+			return it
+		}
+		it, err := tx.ProcessRequestBody()
+		if err != nil {
+			t.Errorf("ProcessRequestBody failed: %v", err)
+			return nil
+		}
+		return it
+	}
+
+	tests := []struct {
+		name            string
+		uri             string
+		wantWAF1Blocked bool
+		wantWAF2Blocked bool
+	}{
+		{
+			name:            "matching payload blocked in both WAFs without exclusions",
+			uri:             "/?payload=attack",
+			wantWAF1Blocked: true,
+			wantWAF2Blocked: true,
+		},
+		{
+			name:            "ctl ruleRemoveByTag selects waf1 tag after spare-capacity tag append in waf2",
+			uri:             "/?skip_rule=1&payload=attack",
+			wantWAF1Blocked: false,
+			wantWAF2Blocked: true,
+		},
+		{
+			name:            "ctl ruleRemoveTargetByTag selects waf1 tag after spare-capacity tag append in waf2",
+			uri:             "/?skip_target=1&payload=attack",
+			wantWAF1Blocked: false,
+			wantWAF2Blocked: true,
+		},
+		{
+			name:            "target negation in waf1 does not leak to waf2",
+			uri:             "/?waf1_safe=attack",
+			wantWAF1Blocked: false,
+			wantWAF2Blocked: true,
+		},
+		{
+			name:            "target negation in waf2 does not leak to waf1",
+			uri:             "/?waf2_safe=attack",
+			wantWAF1Blocked: true,
+			wantWAF2Blocked: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wg sync.WaitGroup
+			for range 4 {
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					if got := evalRequest(t, waf1, tt.uri) != nil; got != tt.wantWAF1Blocked {
+						t.Errorf("waf1 blocked = %v, want %v", got, tt.wantWAF1Blocked)
+					}
+				}()
+				go func() {
+					defer wg.Done()
+					if got := evalRequest(t, waf2, tt.uri) != nil; got != tt.wantWAF2Blocked {
+						t.Errorf("waf2 blocked = %v, want %v", got, tt.wantWAF2Blocked)
+					}
+				}()
+			}
+			wg.Wait()
+		})
 	}
 }
