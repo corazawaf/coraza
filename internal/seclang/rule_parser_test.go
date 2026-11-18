@@ -373,13 +373,23 @@ SecRule REQUEST_URI "def" ""`,
 SecRule REQUEST_URI "abc" "id:103,phase:2,chain"
 SecRule REQUEST_URI "def" ""`,
 		},
+		{
+			name: "non-disruptive action on member without phase must not warn",
+			rules: `SecRule REQUEST_URI "abc" "id:104,phase:2,chain"
+SecRule REQUEST_URI "def" "t:lowercase"`,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			waf := corazawaf.NewWAF()
+			logsBuf := &bytes.Buffer{}
+			waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 			p := NewParser(waf)
 			if err := p.FromString(tc.rules); err != nil {
 				t.Errorf("unexpected error for %q: %s", tc.name, err)
+			}
+			if logsBuf.Len() > 0 {
+				t.Errorf("expected empty warn debug log for %q, got %q", tc.name, logsBuf.String())
 			}
 		})
 	}
@@ -519,6 +529,7 @@ func TestParseActions(t *testing.T) {
 	tests := []struct {
 		name            string
 		inputActions    string
+		inputRule       string
 		expectedLogLine string
 		expectError     bool
 	}{
@@ -552,21 +563,33 @@ func TestParseActions(t *testing.T) {
 			expectError:     false,
 			expectedLogLine: "[WARN] rule phase is not specified, defaulting to phase 2",
 		},
+		{
+			name:            "missing phase with empty actions",
+			inputRule:       `SecRule REQUEST_URI "abc" ""`,
+			expectError:     false,
+			expectedLogLine: `[WARN] rule phase is not specified, defaulting to phase 2 file="_inline_" line=1`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			logsBuf := &bytes.Buffer{}
+			waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 			rp := &RuleParser{
 				rule:           corazawaf.NewRule(),
 				defaultActions: map[types.RulePhase][]ruleAction{},
 				options: RuleOptions{
-					WAF: corazawaf.NewWAF(),
+					WAF: waf,
 				},
 			}
-			logsBuf := &bytes.Buffer{}
-			rp.options.WAF.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 
-			err := rp.ParseActions(tt.inputActions)
+			var err error
+			if tt.inputRule != "" {
+				err = NewParser(waf).FromString(tt.inputRule)
+			} else {
+				err = rp.ParseActions(tt.inputActions)
+			}
 			if tt.expectError && err == nil {
 				t.Errorf("expected error")
 			} else if !tt.expectError && err != nil {

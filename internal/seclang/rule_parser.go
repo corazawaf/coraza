@@ -276,10 +276,19 @@ func (rp *RuleParser) ParseActions(actions string) error {
 	if err := rp.applyParsedActions(act); err != nil {
 		return err
 	}
-	if getLastRuleExpectingChain(rp.options.WAF) == nil && !hasPhaseAction(act) && rp.options.WAF.Logger != nil {
-		rp.options.WAF.Logger.Warn().Str("actions", actions).Msg("rule phase is not specified, defaulting to phase 2")
+	if !hasPhaseAction(act) {
+		rp.warnMissingPhase()
 	}
 	return nil
+}
+
+func (rp *RuleParser) warnMissingPhase() {
+	if getLastRuleExpectingChain(rp.options.WAF) == nil && rp.options.WAF.Logger != nil {
+		rp.options.WAF.Logger.Warn().
+			Str("file", rp.options.ParserConfig.ConfigFile).
+			Int("line", rp.options.ParserConfig.LastLine).
+			Msg("rule phase is not specified, defaulting to phase 2")
+	}
 }
 
 // applyParsedActions applies a list of already-parsed actions to the rule.
@@ -415,8 +424,8 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			if err := rp.ParseActions(acts); err != nil {
 				return nil, err
 			}
-		} else if getLastRuleExpectingChain(options.WAF) == nil && options.WAF.Logger != nil {
-			options.WAF.Logger.Warn().Str("actions", acts).Msg("rule phase is not specified, defaulting to phase 2")
+		} else {
+			rp.warnMissingPhase()
 		}
 	} else {
 		// quoted actions separated by comma (,)
