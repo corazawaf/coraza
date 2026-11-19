@@ -199,6 +199,25 @@ func TestSecRuleUpdateActionByID(t *testing.T) {
 
 }
 
+func TestSecRuleUpdateByIDChecksEveryID(t *testing.T) {
+	// Every id in the list is looked up, not only the first: a missing id after an existing one is reported.
+	for directive, arg := range map[string]string{
+		"SecRuleUpdateActionById": `"pass"`,
+		"SecRuleUpdateTargetById": `"!ARGS:a"`,
+	} {
+		t.Run(directive, func(t *testing.T) {
+			p := NewParser(corazawaf.NewWAF())
+			if err := p.FromString(`SecRule ARGS "@rx a" "id:1,phase:1,deny"`); err != nil {
+				t.Fatal(err)
+			}
+			err := p.FromString(directive + " 1 2 " + arg)
+			if err == nil || !strings.Contains(err.Error(), `rule "2" not found`) {
+				t.Errorf("expected rule \"2\" not found, got %v", err)
+			}
+		})
+	}
+}
+
 func TestSecRuleUpdateTargetByID(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rule, err := ParseRule(RuleOptions{

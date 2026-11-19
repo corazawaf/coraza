@@ -40,9 +40,12 @@ var _ = profile.RegisterProfile(profile.Profile{
 								10,
 								12,
 								16,
+								18,
 								40,
 								60,
 								61,
+								70,
+								71,
 							},
 						},
 					},
@@ -59,8 +62,9 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRule ARGS:t2 "@rx bbb" "id:12,phase:1,log"
 	SecRuleUpdateTargetById 11-13 "!ARGS:t2"
 
-	# ARGS:t2 is removed by SecRuleUpdateTargetById, rule 16 (in range) should not be triggered
+	# ARGS:t2 is removed by SecRuleUpdateTargetById, rules 16 and 18 (ids after a range) should not be triggered
 	SecRule ARGS:t2 "@rx bbb" "id:16,phase:1,log"
+	SecRule ARGS:t2 "@rx bbb" "id:18,phase:1,log"
 	SecRuleUpdateTargetById 13-15 16 18 "!ARGS:t2"
 	
 	# ARGS:t1 is removed by SecRuleUpdateTargetById, but REQUEST_COOKIES should still trigger rule 20
@@ -89,6 +93,11 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRule ARGS:t1|REQUEST_COOKIES "@rx aaa" "id:62,phase:1,log,tag:tag-2"
 	# The tag might also be wrapped in double quotes
 	SecRuleUpdateTargetByTag "tag-2" "!ARGS:t1|!ARGS:t2"
+
+	# ARGS:t2 is removed from both rules: a one-id range followed by another id, rules 70 and 71 should not be triggered
+	SecRule ARGS:t2 "@rx bbb" "id:70,phase:1,log"
+	SecRule ARGS:t2 "@rx bbb" "id:71,phase:1,log"
+	SecRuleUpdateTargetById 70-70 71 "!ARGS:t2"
 
 	`,
 })

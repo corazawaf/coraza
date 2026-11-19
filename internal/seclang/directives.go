@@ -1487,7 +1487,9 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
-			return updateTargetBySingleID(id, variables, options)
+			if err := updateTargetBySingleID(id, variables, options); err != nil {
+				return err
+			}
 		} else {
 			if idx == 0 {
 				return fmt.Errorf("SecRuleUpdateTargetById: invalid negative id: %s", idOrRange)
@@ -1502,7 +1504,10 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 				return err
 			}
 			if start == end {
-				return updateTargetBySingleID(start, variables, options)
+				if err := updateTargetBySingleID(start, variables, options); err != nil {
+					return err
+				}
+				continue
 			}
 			if start > end {
 				return fmt.Errorf("invalid range: %s", idOrRange)
@@ -1588,7 +1593,9 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
-			return updateActionBySingleID(id, actions, options)
+			if err := updateActionBySingleID(id, actions, options); err != nil {
+				return err
+			}
 		} else {
 			if idx == 0 {
 				return fmt.Errorf("SecRuleUpdateActionById: invalid negative id: %s", idOrRange)
@@ -1603,7 +1610,10 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 				return err
 			}
 			if start == end {
-				return updateActionBySingleID(start, actions, options)
+				if err := updateActionBySingleID(start, actions, options); err != nil {
+					return err
+				}
+				continue
 			}
 			if start > end {
 				return fmt.Errorf("invalid range: %s", idOrRange)

@@ -111,6 +111,80 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "SecRuleUpdateActionById with several ids updates every listed rule",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test?multi=1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								5001, 5002,
+							},
+							// No interruption expected - both listed rules were changed from deny to pass
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test?unlisted=1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								5003,
+							},
+							// A rule that is not listed keeps its deny
+							Interruption: &profile.ExpectedInterruption{
+								Status: 403,
+								RuleID: 5003,
+								Action: "deny",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "SecRuleUpdateActionById with a one-id range followed by another id updates both rules",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test?multirange=1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								6001, 6002,
+							},
+							// No interruption expected - both rules were changed from deny to pass
+						},
+					},
+				},
+			},
+		},
+		{
+			Title: "SecRuleUpdateActionById with a one-id range applies the update once",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test?once=1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								7001, 7003,
+							},
+							NonTriggeredRules: []int{
+								7002,
+							},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 	# Test 1: Updating deny to pass
@@ -133,5 +207,22 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRule ARGS:id "@eq 0" "id:4001, phase:1,deny,status:403,msg:'Invalid id',log,auditlog"
 	SecRule ARGS:id "@eq 0" "id:4002, phase:1,deny,status:403,msg:'Invalid id',log,auditlog"
 	SecRuleUpdateActionById 4001-4002 "log,pass"
+
+	# Test 5: Several ids in one directive - every listed rule is updated, a rule left out keeps its deny
+	SecRule ARGS:multi "@eq 1" "id:5001, phase:1,deny,status:403,log"
+	SecRule ARGS:multi "@eq 1" "id:5002, phase:1,deny,status:403,log"
+	SecRule ARGS:unlisted "@eq 1" "id:5003, phase:1,deny,status:403,log"
+	SecRuleUpdateActionById 5001 5002 "log,pass"
+
+	# Test 6: A one-id range followed by another id - both rules are updated
+	SecRule ARGS:multirange "@eq 1" "id:6001, phase:1,deny,status:403,log"
+	SecRule ARGS:multirange "@eq 1" "id:6002, phase:1,deny,status:403,log"
+	SecRuleUpdateActionById 6001-6001 6002 "log,pass"
+
+	# Test 7: A one-id range applies the update once - the added setvar runs once, so tx.once is 1, not 2
+	SecRule ARGS:once "@eq 1" "id:7001, phase:1,pass,log"
+	SecRuleUpdateActionById 7001-7001 "setvar:tx.once=+1"
+	SecRule TX:once "@eq 2" "id:7002, phase:1,deny,status:403,log"
+	SecRule TX:once "@eq 1" "id:7003, phase:1,pass,log"
 	`,
 })
