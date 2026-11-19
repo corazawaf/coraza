@@ -125,6 +125,9 @@ func (i *rwInterceptor) Write(b []byte) (int, error) {
 	if !i.wroteHeader {
 		// if no header has been wrote at this point we aim to return 200
 		i.WriteHeader(http.StatusOK)
+		if i.tx.IsInterrupted() {
+			return len(b), nil
+		}
 	}
 
 	if i.tx.IsResponseBodyAccessible() && i.tx.IsResponseBodyProcessable() && !i.wroteBufferedBodyToDownstream {
@@ -236,6 +239,13 @@ func wrap(w http.ResponseWriter, r *http.Request, tx types.Transaction) (
 		// we must not attempt to write to the response writer anymore.
 		if i.isHijacked {
 			return nil
+		}
+
+		// If the handler returned without calling WriteHeader or Write,
+		// net/http implies a 200 OK response; evaluate phase 3 response
+		// headers before flushing.
+		if !i.wroteHeader && !tx.IsInterrupted() {
+			i.WriteHeader(http.StatusOK)
 		}
 
 		// We look for interruptions triggered at phase 3 (response headers)
