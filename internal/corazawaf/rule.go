@@ -794,6 +794,45 @@ func (r *Rule) memoizeDo(key string, fn func() (any, error)) (any, error) {
 	return fn()
 }
 
+// clone returns a copy of r with isolated mutable rule state (tags, variables
+// and their exceptions, operator descriptor, transformations and prefix IDs,
+// actions, and chained rule links) so adding the same Rule to multiple
+// RuleGroups cannot leak subsequent rule updates across groups or back to the
+// caller. Compiled regexes, macros (Msg, LogData), operator/transformation/action
+// implementations, and the memoizer are immutable or concurrent-safe after
+// initialization and are shared by reference.
+func (r *Rule) clone() Rule {
+	c := r.cloneLink()
+	dst := &c
+	for src := r.Chain; src != nil; src = src.Chain {
+		link := src.cloneLink()
+		dst.Chain = &link
+		dst = dst.Chain
+	}
+	return c
+}
+
+func (r *Rule) cloneLink() Rule {
+	c := *r
+	c.Tags_ = slices.Clone(r.Tags_)
+	if r.variables != nil {
+		c.variables = make([]ruleVariableParams, len(r.variables))
+		for i, rv := range r.variables {
+			rv.Exceptions = slices.Clone(rv.Exceptions)
+			c.variables[i] = rv
+		}
+	}
+	if r.operator != nil {
+		op := *r.operator
+		c.operator = &op
+	}
+	c.transformations = slices.Clone(r.transformations)
+	c.transformationPrefixIDs = slices.Clone(r.transformationPrefixIDs)
+	c.actions = slices.Clone(r.actions)
+	c.Chain = nil
+	return c
+}
+
 // NewRule returns a new initialized rule
 // By default, the rule is set to phase 2
 func NewRule() *Rule {
