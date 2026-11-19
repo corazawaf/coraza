@@ -1464,6 +1464,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 // ---
 // This directive will append variables to the specified rule with the targets provided in the second parameter.
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+// An ID that matches no rule is skipped with a warning, and a range may match no rules.
 //
 // Example:
 // ```seclang
@@ -1540,7 +1541,8 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 
 	rule := options.WAF.Rules.FindByID(id)
 	if rule == nil {
-		return fmt.Errorf("SecRuleUpdateTargetById: rule \"%d\" not found", id)
+		options.WAF.Logger.Warn().Int("rule_id", id).Msg("SecRuleUpdateTargetById: rule not found, skipping")
+		return nil
 	}
 	rp := RuleParser{
 		rule: rule,
@@ -1575,6 +1577,7 @@ func hasDisruptiveActions(actions []ruleAction) bool {
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
 // The rule ID can be single IDs or ranges of IDs.
+// An ID that matches no rule is skipped with a warning, and a range may match no rules.
 func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1661,7 +1664,8 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 func updateActionBySingleID(id int, actions string, options *DirectiveOptions) error {
 	rule := options.WAF.Rules.FindByID(id)
 	if rule == nil {
-		return fmt.Errorf("SecRuleUpdateActionById: rule \"%d\" not found", id)
+		options.WAF.Logger.Warn().Int("rule_id", id).Msg("SecRuleUpdateActionById: rule not found, skipping")
+		return nil
 	}
 
 	// Parse actions first to check if any are disruptive.

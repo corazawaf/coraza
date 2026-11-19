@@ -46,6 +46,7 @@ var _ = profile.RegisterProfile(profile.Profile{
 								61,
 								70,
 								71,
+								81,
 							},
 						},
 					},
@@ -98,6 +99,10 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRule ARGS:t2 "@rx bbb" "id:70,phase:1,log"
 	SecRule ARGS:t2 "@rx bbb" "id:71,phase:1,log"
 	SecRuleUpdateTargetById 70-70 71 "!ARGS:t2"
+
+	# ARGS:t2 is removed from rule 81: the missing first id (80) is skipped, rule 81 should not be triggered
+	SecRule ARGS:t2 "@rx bbb" "id:81,phase:1,log"
+	SecRuleUpdateTargetById 80 81 "!ARGS:t2"
 
 	`,
 })

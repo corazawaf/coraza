@@ -185,6 +185,23 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "SecRuleUpdateActionById skips a missing id and updates the rest",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/test?skip=1",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								8001, 8003,
+							},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 	# Test 1: Updating deny to pass
@@ -224,5 +241,9 @@ var _ = profile.RegisterProfile(profile.Profile{
 	SecRuleUpdateActionById 7001-7001 "setvar:tx.once=+1"
 	SecRule TX:once "@eq 2" "id:7002, phase:1,deny,status:403,log"
 	SecRule TX:once "@eq 1" "id:7003, phase:1,pass,log"
+	# Test 8: A missing id in the list (8002) is skipped, and the ids after it are still updated
+	SecRule ARGS:skip "@eq 1" "id:8001, phase:1,deny,status:403,log"
+	SecRule ARGS:skip "@eq 1" "id:8003, phase:1,deny,status:403,log"
+	SecRuleUpdateActionById 8001 8002 8003 "log,pass"
 	`,
 })

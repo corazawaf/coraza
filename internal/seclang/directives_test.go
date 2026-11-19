@@ -4,11 +4,12 @@
 package seclang
 
 import (
+	"bytes"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
@@ -199,20 +200,27 @@ func TestSecRuleUpdateActionByID(t *testing.T) {
 
 }
 
-func TestSecRuleUpdateByIDChecksEveryID(t *testing.T) {
-	// Every id in the list is looked up, not only the first: a missing id after an existing one is reported.
+func TestSecRuleUpdateByIDSkipsMissingID(t *testing.T) {
+	// A missing id is skipped with a warning, wherever it is in the list, and the other ids are still looked up.
 	for directive, arg := range map[string]string{
 		"SecRuleUpdateActionById": `"pass"`,
 		"SecRuleUpdateTargetById": `"!ARGS:a"`,
 	} {
 		t.Run(directive, func(t *testing.T) {
-			p := NewParser(corazawaf.NewWAF())
+			logsBuf := &bytes.Buffer{}
+			waf := corazawaf.NewWAF()
+			waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
+			p := NewParser(waf)
 			if err := p.FromString(`SecRule ARGS "@rx a" "id:1,phase:1,deny"`); err != nil {
 				t.Fatal(err)
 			}
-			err := p.FromString(directive + " 1 2 " + arg)
-			if err == nil || !strings.Contains(err.Error(), `rule "2" not found`) {
-				t.Errorf("expected rule \"2\" not found, got %v", err)
+			if err := p.FromString(directive + " 1 2 3 " + arg); err != nil {
+				t.Fatalf("expected the missing ids to be skipped, got %v", err)
+			}
+			for _, id := range []string{`rule_id=2`, `rule_id=3`} {
+				if !strings.Contains(logsBuf.String(), id) {
+					t.Errorf("expected a warning for %s, got %q", id, logsBuf.String())
+				}
 			}
 		})
 	}
@@ -514,12 +522,7 @@ func TestDirectives(t *testing.T) {
 						}
 					} else {
 						if err != nil {
-							match, _ := regexp.MatchString(`rule "\d+" not found`, err.Error())
-							// Logical errors are not checked by this test, therefore this specific pattern is allowed here
-							if !match {
-								// Syntax errors are checked
-								t.Errorf("unexpected error: %s", err.Error())
-							}
+							t.Errorf("unexpected error: %s", err.Error())
 						}
 
 						if !tCase.check(waf) {
