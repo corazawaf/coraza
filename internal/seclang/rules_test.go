@@ -1379,3 +1379,82 @@ func TestRuleEvaluationDoesNotLogBuiltinTAction(t *testing.T) {
 		t.Errorf("expected debug logs NOT to contain action=\"t\", got:\n%s", logs)
 	}
 }
+
+// The ctl actions that select rules by ID range, tag or msg remember which
+// rules they selected. A rule added after transactions ran must be selected
+// too, also when it takes the place of a removed one, and so must a rule that
+// SecRuleUpdateActionById gives the tag and msg. Not a profile: the rules
+// change between transactions.
+func TestCtlSelectionFollowsTheRuleGroup(t *testing.T) {
+	tests := []struct {
+		ctl string
+		// removesRule is true when the ctl removes whole rules, so the
+		// request with b=... passes too.
+		removesRule bool
+	}{
+		{ctl: "ruleRemoveTargetById=10-19;ARGS:a"},
+		{ctl: "ruleRemoveTargetByTag=t1;ARGS:a"},
+		{ctl: "ruleRemoveTargetByMsg=m1;ARGS:a"},
+		{ctl: "ruleRemoveByTag=t1", removesRule: true},
+		{ctl: "ruleRemoveByMsg=m1", removesRule: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.ctl, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			p := NewParser(waf)
+			if err := p.FromString(`
+SecRuleEngine On
+SecAction "id:1,phase:1,pass,nolog,ctl:` + tc.ctl + `"
+SecRule ARGS "@contains x" "id:10,phase:1,deny,status:403,tag:t1,msg:'m1'"
+SecRule ARGS "@contains z" "id:20,phase:1,deny,status:403"
+`); err != nil {
+				t.Fatal(err)
+			}
+			blocked := func(query string) bool {
+				tx := waf.NewTransaction()
+				defer func() {
+					if err := tx.Close(); err != nil {
+						t.Errorf("closing transaction: %v", err)
+					}
+				}()
+				tx.ProcessURI("/?"+query, "GET", "HTTP/1.1")
+				return tx.ProcessRequestHeaders() != nil
+			}
+			check := func(arg string) {
+				t.Helper()
+				if blocked("a=" + arg) {
+					t.Errorf("a=%s was blocked", arg)
+				}
+				if got := blocked("b=" + arg); got == tc.removesRule {
+					t.Errorf("b=%s blocked: %t, want %t", arg, got, !tc.removesRule)
+				}
+				if !blocked("a=z") {
+					t.Error("a=z passed rule 20, which the ctl does not select")
+				}
+			}
+			check("x")
+			if err := p.FromString(`SecRule ARGS "@contains y" "id:11,phase:1,deny,status:403,tag:t1,msg:'m1'"`); err != nil {
+				t.Fatal(err)
+			}
+			check("y")
+			if err := p.FromString(`
+SecRuleRemoveById 10
+SecRule ARGS "@contains w" "id:12,phase:1,deny,status:403,tag:t1,msg:'m1'"
+`); err != nil {
+				t.Fatal(err)
+			}
+			check("w")
+			if err := p.FromString(`SecRule ARGS "@contains v" "id:13,phase:1,deny,status:403"`); err != nil {
+				t.Fatal(err)
+			}
+			// Rule 13 has no tag or msg yet, so only the ID range selects it.
+			if got, want := blocked("a=v"), !strings.HasPrefix(tc.ctl, "ruleRemoveTargetById"); got != want {
+				t.Errorf("a=v blocked before the update: %t, want %t", got, want)
+			}
+			if err := p.FromString(`SecRuleUpdateActionById 13 "tag:t1,msg:'m1'"`); err != nil {
+				t.Fatal(err)
+			}
+			check("v")
+		})
+	}
+}

@@ -1479,6 +1479,7 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 	if length < 2 {
 		return errors.New("syntax error: SecRuleUpdateTargetById id \"VARIABLES\"")
 	}
+	defer options.WAF.Rules.MarkChanged()
 	// The last element is expected to be the variable(s)
 	variables := idsOrRanges[length-1]
 	for _, idOrRange := range idsOrRanges[:length-1] {
@@ -1580,6 +1581,7 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if idsOrRangesLen < 2 {
 		return errors.New("syntax error: SecRuleUpdateActionById id \"ACTION1,ACTION2,...\"")
 	}
+	defer options.WAF.Rules.MarkChanged()
 	// The last element is expected to be the action(s)
 	actions := idsOrRanges[idsOrRangesLen-1]
 	for _, idOrRange := range idsOrRanges[:idsOrRangesLen-1] {
@@ -1703,6 +1705,7 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 	if len(tagAndvars) != 2 {
 		return errors.New("syntax error: SecRuleUpdateTargetByTag tag \"VARIABLES\"")
 	}
+	defer options.WAF.Rules.MarkChanged()
 
 	// Indexed, not ranged: see the note in directiveSecRuleUpdateTargetByID.
 	rules := options.WAF.Rules.GetRules()
