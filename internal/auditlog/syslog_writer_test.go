@@ -119,6 +119,18 @@ func Test_syslogWriter_Init(t *testing.T) {
 			},
 		},
 		{
+			name: "SocketSingleSlash",
+			args: args{
+				c: plugintypes.AuditLogConfig{
+					Target: "unixgram:/var/run/syslog",
+				},
+			},
+			want: want{
+				network: "unixgram",
+				raddr:   "/var/run/syslog",
+			},
+		},
+		{
 			name: "Formatter",
 			args: args{
 				c: plugintypes.AuditLogConfig{
