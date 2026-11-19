@@ -385,6 +385,14 @@ func TestDirectives(t *testing.T) {
 			{"-1 \"status:403\"", expectErrorOnDirective},
 			{"1 2 3-4 \"status:403\"", expectNoErrorOnDirective},
 			{"1 2 3-4 \"status:403,nolog\"", expectNoErrorOnDirective},
+			// rule 1 does not exist: the id is skipped, but the action list is still checked
+			{"1 \"not_a_real_action\"", expectErrorOnDirective},
+			{"1 \"status:abc\"", expectErrorOnDirective},
+			{"1-1 \"not_a_real_action\"", expectErrorOnDirective},
+			// a malformed token after a skipped id still fails
+			{"1 abc \"status:403\"", expectErrorOnDirective},
+			{"1 5-3 \"status:403\"", expectErrorOnDirective},
+			{"1 -5 \"status:403\"", expectErrorOnDirective},
 		},
 		"SecRuleUpdateTargetById": {
 			{"", expectErrorOnDirective},
@@ -403,6 +411,10 @@ func TestDirectives(t *testing.T) {
 			{"1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"7-7 \"ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"1 2 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			// rule 1 does not exist: the id is skipped, but the target list is still checked
+			{"1 \"NOT_A_VARIABLE\"", expectErrorOnDirective},
+			{"1 \"ARGS:/(/\"", expectErrorOnDirective},
+			{"1-1 \"NOT_A_VARIABLE\"", expectErrorOnDirective},
 			{"1 2 3-4 \"ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"1 \"REQUEST_BODY|ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"1 2 3-4 \"ARGS:wp_post|RESPONSE_HEADERS\"", expectNoErrorOnDirective},
