@@ -13,6 +13,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/seclang"
 	"github.com/corazawaf/coraza/v3/types"
+	"github.com/corazawaf/coraza/v3/types/variables"
 )
 
 // wafWithRules mirrors experimental.WAFWithRules for testing without import cycle.
@@ -242,21 +243,43 @@ func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
 	seedWAF := corazawaf.NewWAF()
 	if err := seclang.NewParser(seedWAF).FromString(`
 		SecRule ARGS "@streq attack" "id:100,phase:2,deny,status:403,tag:'base'"
+		SecRule ARGS:act "@streq hit" "id:101,phase:2,deny,status:403"
+		SecRule REQUEST_URI "@beginsWith /chain" "id:200,phase:2,deny,status:403,chain"
+		SecRule ARGS:part "@streq evil" ""
+		SecRule REQUEST_URI "@beginsWith /handchain" "id:201,phase:1,deny,status:403"
+		SecRule &ARGS_POST "@eq 0" "id:202,phase:1,pass"
 	`); err != nil {
-		t.Fatalf("failed to parse seed rule: %v", err)
+		t.Fatalf("failed to parse seed rules: %v", err)
 	}
 	shared := seedWAF.Rules.FindByID(100)
 	// Ensure Tags_ has spare capacity so an uncloned append in waf2 would overwrite waf1's tag.
 	shared.Tags_ = append(make([]string, 0, 4), shared.Tags_...)
+	sharedAction := seedWAF.Rules.FindByID(101)
+	sharedChain := seedWAF.Rules.FindByID(200)
 
+	// Hand-built chain whose chainMinPhase is intentionally unset (PhaseUnknown).
+	handChain := seedWAF.Rules.FindByID(201)
+	handChild := *seedWAF.Rules.FindByID(202)
+	handChild.ID_ = 0
+	handChild.ParentID_ = 201
+	handChild.LogID_ = "201"
+	handChild.Phase_ = 0
+	handChain.HasChain = true
+	handChain.Chain = &handChild
+
+	var observedRule100 types.RuleMetadata
 	baseCfg := NewWAFConfig().WithDirectives(`
 		SecRuleEngine On
 		SecRule ARGS:skip_rule "@streq 1" "id:1,phase:1,pass,nolog,ctl:ruleRemoveByTag=keep-tag"
 		SecRule ARGS:skip_target "@streq 1" "id:2,phase:1,pass,nolog,ctl:ruleRemoveTargetByTag=keep-tag;ARGS:payload"
-	`).(*wafConfig).WithRules(shared)
+	`).(*wafConfig).WithRules(shared, sharedAction, sharedChain, handChain)
 
-	waf1, err := NewWAF(baseCfg.WithDirectives(`
-		SecRuleUpdateActionById 100 "tag:'keep-tag'"
+	waf1, err := NewWAF(baseCfg.(*wafConfig).WithRuleObserver(func(r types.RuleMetadata) {
+		if r.ID() == 100 {
+			observedRule100 = r
+		}
+	}).WithDirectives(`
+		SecRuleUpdateActionById 100 "tag:'keep-tag',t:lowercase"
 		SecRuleUpdateTargetById 100 "!ARGS:waf1_safe"
 	`))
 	if err != nil {
@@ -266,9 +289,14 @@ func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
 	waf2, err := NewWAF(baseCfg.WithDirectives(`
 		SecRuleUpdateActionById 100 "tag:'other-tag'"
 		SecRuleUpdateTargetById 100 "!ARGS:waf2_safe"
+		SecRuleUpdateActionById 101 "pass"
 	`))
 	if err != nil {
 		t.Fatalf("NewWAF(waf2) failed: %v", err)
+	}
+	// Mutating waf2's cloned chain child must not leak into waf1 or the seed chain.
+	if err := waf2.(wafWrapper).waf.Rules.FindByID(200).Chain.AddVariableNegation(variables.Args, "part"); err != nil {
+		t.Fatalf("AddVariableNegation on waf2 chain failed: %v", err)
 	}
 
 	evalRequest := func(t *testing.T, w WAF, uri string) *types.Interruption {
@@ -327,6 +355,30 @@ func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
 			wantWAF1Blocked: true,
 			wantWAF2Blocked: false,
 		},
+		{
+			name:            "transformation added in waf1 applies only in waf1",
+			uri:             "/?payload=ATTACK",
+			wantWAF1Blocked: true,
+			wantWAF2Blocked: false,
+		},
+		{
+			name:            "disruptive action update in waf2 does not leak to waf1",
+			uri:             "/?act=hit",
+			wantWAF1Blocked: true,
+			wantWAF2Blocked: false,
+		},
+		{
+			name:            "chained rule child mutation in waf2 does not leak to waf1",
+			uri:             "/chain?part=evil",
+			wantWAF1Blocked: true,
+			wantWAF2Blocked: false,
+		},
+		{
+			name:            "hand-built chain with unset chainMinPhase is not skipped in phase 1",
+			uri:             "/handchain",
+			wantWAF1Blocked: true,
+			wantWAF2Blocked: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -350,4 +402,24 @@ func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
 			wg.Wait()
 		})
 	}
+
+	t.Run("observer snapshot and group rule tags are isolated in both directions", func(t *testing.T) {
+		if observedRule100 == nil {
+			t.Fatal("observer did not record rule 100")
+		}
+		g1Rule := waf1.(wafWrapper).waf.Rules.FindByID(100)
+		// Mutate observer snapshot in place -> must not affect group rule or source rule.
+		observedRule100.Tags()[0] = "observer-edit"
+		if g1Rule.Tags_[0] != "base" || shared.Tags_[0] != "base" {
+			t.Errorf("observer tag edit leaked: group=%q source=%q", g1Rule.Tags_[0], shared.Tags_[0])
+		}
+		// Mutate group rule in place -> must not affect observer snapshot or waf2.
+		g1Rule.Tags_[0] = "group-edit"
+		if observedRule100.Tags()[0] != "observer-edit" {
+			t.Errorf("group tag edit leaked to observer: got %q", observedRule100.Tags()[0])
+		}
+		if got := waf2.(wafWrapper).waf.Rules.FindByID(100).Tags_[0]; got != "base" {
+			t.Errorf("group tag edit leaked to waf2: got %q", got)
+		}
+	})
 }

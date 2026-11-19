@@ -58,9 +58,6 @@ func (rg *RuleGroup) Add(rule *Rule) error {
 			cloned.withPhaseUnknownVariable = true
 		}
 	}
-	if cloned.HasChain && cloned.Chain != nil {
-		cloned.ComputeChainMinPhase()
-	}
 
 	rg.rules = append(rg.rules, cloned)
 
