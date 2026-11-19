@@ -59,6 +59,42 @@ func Test_syslogWriter_Init(t *testing.T) {
 			},
 		},
 		{
+			name: "HostnameOnly",
+			args: args{
+				c: plugintypes.AuditLogConfig{
+					Target: "localhost:514",
+				},
+			},
+			want: want{
+				network: "tcp",
+				raddr:   "localhost:514",
+			},
+		},
+		{
+			name: "FQDNOnly",
+			args: args{
+				c: plugintypes.AuditLogConfig{
+					Target: "syslog.example.com:514",
+				},
+			},
+			want: want{
+				network: "tcp",
+				raddr:   "syslog.example.com:514",
+			},
+		},
+		{
+			name: "IPv6Only",
+			args: args{
+				c: plugintypes.AuditLogConfig{
+					Target: "[::1]:514",
+				},
+			},
+			want: want{
+				network: "tcp",
+				raddr:   "[::1]:514",
+			},
+		},
+		{
 			name: "UDP",
 			args: args{
 				c: plugintypes.AuditLogConfig{

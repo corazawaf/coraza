@@ -10,6 +10,7 @@ import (
 	"log/syslog"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -42,8 +43,12 @@ func (s *syslogWriter) Init(c plugintypes.AuditLogConfig) error {
 	var network, raddr string
 	if c.Target != "" {
 		network, raddr = "tcp", c.Target
-		if u, err := url.Parse(c.Target); err == nil {
-			network, raddr = u.Scheme, path.Join(u.Host, u.Path)
+		// Only a target with an explicit "scheme://" selects the network. url.Parse
+		// also accepts "localhost:514" and reads "localhost" as the scheme.
+		if strings.Contains(c.Target, "://") {
+			if u, err := url.Parse(c.Target); err == nil {
+				network, raddr = u.Scheme, path.Join(u.Host, u.Path)
+			}
 		}
 	}
 	w, err := s.dialer(network, raddr, syslog.LOG_LOCAL0, "com.coraza.waf")
