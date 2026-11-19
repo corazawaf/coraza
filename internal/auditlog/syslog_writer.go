@@ -10,6 +10,7 @@ import (
 	"log/syslog"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
@@ -42,8 +43,17 @@ func (s *syslogWriter) Init(c plugintypes.AuditLogConfig) error {
 	var network, raddr string
 	if c.Target != "" {
 		network, raddr = "tcp", c.Target
-		if u, err := url.Parse(c.Target); err == nil {
+		// url.Parse also accepts "localhost:514", reading "localhost" as the
+		// scheme and "514" as opaque data. Only a target that parses with no
+		// opaque part ("udp://host:port", "unixgram:///path", "unixgram:/path")
+		// selects the network; anything else is dialed over TCP as-is, unless it
+		// asks for a transport with "://" and does not parse.
+		u, err := url.Parse(c.Target)
+		switch {
+		case err == nil && u.Opaque == "":
 			network, raddr = u.Scheme, path.Join(u.Host, u.Path)
+		case err != nil && strings.Contains(c.Target, "://"):
+			return fmt.Errorf("invalid syslog target %q: %w", c.Target, err)
 		}
 	}
 	w, err := s.dialer(network, raddr, syslog.LOG_LOCAL0, "com.coraza.waf")
