@@ -6,6 +6,7 @@ package seclang
 import (
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -393,7 +394,11 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecResponseBodyMimeType": {
 			{"", expectErrorOnDirective},
-			{"text/html", func(w *corazawaf.WAF) bool { return w.ResponseBodyMimeTypes[0] == "text/html" }},
+			{"   ", expectErrorOnDirective},
+			{"text/html", func(w *corazawaf.WAF) bool { return slices.Equal(w.ResponseBodyMimeTypes, []string{"text/html"}) }},
+			{"text/plain  text/html\ttext/xml", func(w *corazawaf.WAF) bool {
+				return slices.Equal(w.ResponseBodyMimeTypes, []string{"text/plain", "text/html", "text/xml"})
+			}},
 		},
 		"SecServerSignature": {
 			{"", expectErrorOnDirective},
@@ -508,6 +513,46 @@ func TestDirectives(t *testing.T) {
 						}
 					}
 				})
+			}
+		})
+	}
+}
+
+// Tests multi-directive SecResponseBodyMimeType accumulation and reset on the
+// parsed WAF config directly; engine profiles cannot inspect WAF.ResponseBodyMimeTypes.
+func TestSecResponseBodyMimeTypeAppendAndClear(t *testing.T) {
+	tests := []struct {
+		name       string
+		directives string
+		want       []string
+	}{
+		{
+			name: "appends across multiple directives and deduplicates",
+			directives: `
+SecResponseBodyMimeType text/plain text/html
+SecResponseBodyMimeType application/json text/plain
+`,
+			want: []string{"text/plain", "text/html", "application/json"},
+		},
+		{
+			name: "SecResponseBodyMimeTypesClear resets before subsequent additions",
+			directives: `
+SecResponseBodyMimeType text/plain text/html
+SecResponseBodyMimeTypesClear
+SecResponseBodyMimeType application/json
+`,
+			want: []string{"application/json"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			if err := NewParser(waf).FromString(tt.directives); err != nil {
+				t.Fatalf("unexpected parse error: %v", err)
+			}
+			if !slices.Equal(waf.ResponseBodyMimeTypes, tt.want) {
+				t.Errorf("ResponseBodyMimeTypes: want %v, got %v", tt.want, waf.ResponseBodyMimeTypes)
 			}
 		})
 	}
