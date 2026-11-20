@@ -590,11 +590,16 @@ func directiveSecResponseBodyMimeTypesClear(options *DirectiveOptions) error {
 // SecResponseBodyMimeType text/plain text/html text/xml
 // ```
 func directiveSecResponseBodyMimeType(options *DirectiveOptions) error {
-	if len(options.Opts) == 0 {
+	mimeTypes := strings.Fields(options.Opts)
+	if len(mimeTypes) == 0 {
 		return errEmptyOptions
 	}
 
-	options.WAF.ResponseBodyMimeTypes = strings.Split(options.Opts, " ")
+	for _, mt := range mimeTypes {
+		if !utils.InSlice(mt, options.WAF.ResponseBodyMimeTypes) {
+			options.WAF.ResponseBodyMimeTypes = append(options.WAF.ResponseBodyMimeTypes, mt)
+		}
+	}
 	return nil
 }
 
