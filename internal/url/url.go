@@ -95,6 +95,12 @@ func doParseQuery(query string, separator byte, urlUnescape bool, limit int) (m 
 	return m, false
 }
 
+// QueryUnescape decodes a query string key or value the same way ParseQuery
+// does, so callers can compare raw pairs with the parsed arguments.
+func QueryUnescape(input string) string {
+	return queryUnescape(input)
+}
+
 // queryUnescape is a non-strict version of net/url.QueryUnescape.
 func queryUnescape(input string) string {
 	ilen := len(input)

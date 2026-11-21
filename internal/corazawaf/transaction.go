@@ -134,6 +134,15 @@ type Transaction struct {
 	// it will write to the audit log
 	audit bool
 
+	// sanitise holds the arguments and headers the sanitise* actions asked to
+	// mask in the audit log.
+	sanitise auditLogSanitise
+
+	// lastMatchedVariable and lastMatchedKey identify the variable that matched
+	// last, so sanitiseMatched knows what to mask.
+	lastMatchedVariable variables.RuleVariable
+	lastMatchedKey      string
+
 	variables TransactionVariables
 
 	transformationCache map[transformationKey]transformationValue
@@ -569,6 +578,9 @@ func (tx *Transaction) matchVariable(match *corazarules.MatchData) {
 	tx.variables.matchedVar.Set(match.Value_)
 
 	matchedVarName.Set(varName)
+
+	tx.lastMatchedVariable = match.Variable_
+	tx.lastMatchedKey = match.Key_
 }
 
 // MatchRule Matches a rule to be logged
@@ -1562,6 +1574,15 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		highestSeverity = ""
 	}
 
+	// redactor is nil unless a sanitise* action ran in this transaction.
+	redactor := tx.newAuditLogRedactor()
+	requestURI := tx.variables.requestURI.Get()
+	requestArgs := tx.variables.args
+	if redactor != nil {
+		requestURI = redactor.uri(requestURI)
+		requestArgs = redactor.args()
+	}
+
 	// YYYY/MM/DD HH:mm:ss
 	ts := time.Unix(0, tx.Timestamp).Format("2006/01/02 15:04:05")
 	al.Transaction_ = auditlog.Transaction{
@@ -1575,10 +1596,10 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		ServerID_:      tx.variables.serverName.Get(), // TODO check
 		Request_: &auditlog.TransactionRequest{
 			Method_:      tx.variables.requestMethod.Get(),
-			URI_:         tx.variables.requestURI.Get(),
+			URI_:         requestURI,
 			Protocol_:    tx.variables.requestProtocol.Get(),
 			HTTPVersion_: tx.variables.requestProtocol.Get(),
-			Args_:        tx.variables.args,
+			Args_:        requestArgs,
 			Length_:      int32(requestLength),
 		},
 		HighestSeverity_: highestSeverity,
@@ -1590,13 +1611,15 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		switch part {
 		case types.AuditLogPartRequestHeaders:
 			al.Transaction_.Request_.Headers_ = tx.variables.requestHeaders.Data()
+			if redactor != nil {
+				redactor.headers(al.Transaction_.Request_.Headers_, tx.sanitise.requestHeaders)
+			}
 		case types.AuditLogPartRequestBody:
-			reader, err := tx.requestBodyBuffer.Reader()
-			if err == nil {
-				content, err := io.ReadAll(reader)
-				if err == nil {
-					al.Transaction_.Request_.Body_ = string(content)
+			if body, err := tx.readRequestBodyForAuditLog(); err == nil {
+				if redactor != nil {
+					body = redactor.requestBody(body)
 				}
+				al.Transaction_.Request_.Body_ = body
 			}
 
 			// Note: Part I is a replacement for Part C that logs a fake
@@ -1616,6 +1639,9 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 			status, _ := strconv.Atoi(tx.variables.responseStatus.Get())
 			al.Transaction_.Response_.Status_ = status
 			al.Transaction_.Response_.Headers_ = tx.variables.responseHeaders.Data()
+			if redactor != nil {
+				redactor.headers(al.Transaction_.Response_.Headers_, tx.sanitise.responseHeaders)
+			}
 		case types.AuditLogPartAuditLogTrailer:
 			auditLogPartAuditLogTrailerSet = true
 			al.Transaction_.Producer_ = &auditlog.TransactionProducer{
@@ -1637,6 +1663,10 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				// - log,noauditlog: Log=true, Audit=false (error log only)
 				mrWithlog, ok := mr.(*corazarules.MatchedRule)
 				if ok && mrWithlog.Audit() {
+					if redactor != nil {
+						mrWithlog = redactor.matchedRule(mrWithlog)
+						mr = mrWithlog
+					}
 					r := mr.Rule()
 					for _, matchData := range mr.MatchedDatas() {
 						newAlEntry := auditlog.Message{
@@ -1675,8 +1705,11 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 		for _, mr := range tx.matchedRules {
 			mrWithlog, ok := mr.(*corazarules.MatchedRule)
 			if ok && mrWithlog.Audit() {
+				if redactor != nil {
+					mrWithlog = redactor.matchedRule(mrWithlog)
+				}
 				al.Messages_ = append(al.Messages_, auditlog.Message{
-					ErrorMessage_: mr.ErrorLog(),
+					ErrorMessage_: mrWithlog.ErrorLog(),
 				})
 			}
 		}
@@ -1684,6 +1717,19 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 	}
 
 	return al
+}
+
+// readRequestBodyForAuditLog returns the buffered request body.
+func (tx *Transaction) readRequestBodyForAuditLog() (string, error) {
+	reader, err := tx.requestBodyBuffer.Reader()
+	if err != nil {
+		return "", err
+	}
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 // auditLogCollectFiles collects uploaded file metadata from transaction variables

@@ -1203,7 +1203,7 @@ func TestRelevantAuditLoggingWithoutAuditFlag(t *testing.T) {
 // Transaction: when it does, make sure the field is reset on pool reuse, then
 // update wantFields.
 func TestTransactionFieldCount(t *testing.T) {
-	const wantFields = 35
+	const wantFields = 38
 	if got := reflect.TypeFor[Transaction]().NumField(); got != wantFields {
 		t.Fatalf("Transaction has %d fields, want %d. If you added a field, make sure it "+
 			"is reset on pool reuse in newTransaction() (or Close()), then update wantFields.", got, wantFields)
@@ -2826,5 +2826,63 @@ func BenchmarkRuleEvalWithRemovedRules(b *testing.B) {
 
 	for b.Loop() {
 		waf.Rules.Eval(types.PhaseRequestHeaders, tx)
+	}
+}
+
+func TestSanitiseURLEncoded(t *testing.T) {
+	sanitised := map[string]struct{}{"password": {}, "card no": {}}
+	tests := []struct {
+		name       string
+		in         string
+		separator  byte
+		want       string
+		wantMasked []string
+	}{
+		{"masks the raw value byte by byte", "user=bob&password=hunter22", '&', "user=bob&password=********", []string{"hunter22"}},
+		{"masks raw bytes and keeps encoding of other pairs", "q=a%20b&password=p%40ss", '&', "q=a%20b&password=******", []string{"p%40ss"}},
+		{"matches the decoded name", "Card+No=4111&x=1", '&', "Card+No=****&x=1", []string{"4111"}},
+		{"masks every repeated name", "password=a&password=bb", '&', "password=*&password=**", []string{"a", "bb"}},
+		{"honours the separator", "password=s3cret;x=1", ';', "password=******;x=1", []string{"s3cret"}},
+		{"empty value is kept empty", "password=&x=1", '&', "password=&x=1", nil},
+		{"pair without a value is untouched", "password&x=1", '&', "password&x=1", nil},
+		{"no sanitised name leaves input as is", "user=bob&id=7", '&', "user=bob&id=7", nil},
+		{"empty input", "", '&', "", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, masked := sanitiseURLEncoded(tt.in, tt.separator, sanitised)
+			if got != tt.want {
+				t.Errorf("sanitiseURLEncoded(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+			if len(masked) != len(tt.wantMasked) {
+				t.Fatalf("masked values = %q, want %q", masked, tt.wantMasked)
+			}
+			for i := range masked {
+				if masked[i] != tt.wantMasked[i] {
+					t.Errorf("masked[%d] = %q, want %q", i, masked[i], tt.wantMasked[i])
+				}
+			}
+		})
+	}
+}
+
+func TestSanitiseURI(t *testing.T) {
+	sanitised := map[string]struct{}{"token": {}}
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"masks the query value", "/login?token=abc123&next=/home", "/login?token=******&next=/home"},
+		{"path without a query is untouched", "/token/abc123", "/token/abc123"},
+		{"query without the name is untouched", "/a?x=token", "/a?x=token"},
+		{"empty query", "/a?", "/a?"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got, _ := sanitiseURI(tt.in, '&', sanitised); got != tt.want {
+				t.Errorf("sanitiseURI(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
 	}
 }

@@ -66,6 +66,13 @@ type ExpectedOutput struct {
 	NonTriggeredRules []int                 `yaml:"non_triggered_rules,omitempty"`
 	Status            any                   `yaml:"status,omitempty"`
 	Interruption      *ExpectedInterruption `yaml:"interruption,omitempty"`
+
+	// AuditLogContains must appear in the audit log record rendered by the
+	// native formatter.
+	AuditLogContains string `yaml:"audit_log_contains,omitempty"`
+	// NoAuditLogContains must not appear in the audit log record rendered by any
+	// built-in formatter (native, json, jsonlegacy and ocsf).
+	NoAuditLogContains string `yaml:"no_audit_log_contains,omitempty"`
 }
 
 // ExpectedInterruption contains the expected interruption results for a test

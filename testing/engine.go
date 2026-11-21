@@ -10,9 +10,13 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3"
+	"github.com/corazawaf/coraza/v3/internal/auditlog"
 	"github.com/corazawaf/coraza/v3/testing/profile"
 	"github.com/corazawaf/coraza/v3/types"
 )
+
+// auditLogFormats are the built-in formatters NoAuditLogContains checks.
+var auditLogFormats = []string{"native", "json", "jsonlegacy", "ocsf"}
 
 // Test represents a unique transaction within
 // a WAF instance for a test case
@@ -243,6 +247,26 @@ func (t *Test) OutputErrors() []string {
 			errors = append(errors, fmt.Sprintf("Expected log to not contain '%s'", lc))
 		}
 	}
+	if s := t.ExpectedOutput.AuditLogContains; s != "" {
+		record, err := t.AuditLog("native")
+		if err != nil {
+			errors = append(errors, err.Error())
+		} else if !strings.Contains(record, s) {
+			errors = append(errors, fmt.Sprintf("Expected native audit log to contain '%s', got:\n%s", s, record))
+		}
+	}
+	if s := t.ExpectedOutput.NoAuditLogContains; s != "" {
+		for _, format := range auditLogFormats {
+			record, err := t.AuditLog(format)
+			if err != nil {
+				errors = append(errors, err.Error())
+				continue
+			}
+			if strings.Contains(record, s) {
+				errors = append(errors, fmt.Sprintf("Expected %s audit log to not contain '%s', got:\n%s", format, s, record))
+			}
+		}
+	}
 	/*
 		if rc := t.ExpectedOutput.Status; rc != 0 {
 			// do nothing
@@ -273,6 +297,23 @@ func (t *Test) LogContains(log string) bool {
 		}
 	}
 	return false
+}
+
+// AuditLog renders the transaction's audit log record with the named formatter.
+func (t *Test) AuditLog(format string) (string, error) {
+	tx, ok := t.transaction.(interface{ AuditLog() *auditlog.Log })
+	if !ok {
+		return "", fmt.Errorf("transaction %T does not expose its audit log", t.transaction)
+	}
+	formatter, err := auditlog.GetFormatter(format)
+	if err != nil {
+		return "", err
+	}
+	record, err := formatter.Format(tx.AuditLog())
+	if err != nil {
+		return "", fmt.Errorf("formatting %s audit log: %v", format, err)
+	}
+	return string(record), nil
 }
 
 // Transaction returns the transaction

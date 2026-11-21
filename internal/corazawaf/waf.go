@@ -23,6 +23,7 @@ import (
 	"github.com/corazawaf/coraza/v3/internal/memoize"
 	stringutils "github.com/corazawaf/coraza/v3/internal/strings"
 	"github.com/corazawaf/coraza/v3/internal/sync"
+	"github.com/corazawaf/coraza/v3/internal/variables"
 	"github.com/corazawaf/coraza/v3/types"
 )
 
@@ -234,6 +235,9 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.debugLogger = w.Logger.With(debuglog.Str("tx_id", tx.id))
 	tx.Timestamp = time.Now().UnixNano()
 	tx.audit = false
+	tx.sanitise = auditLogSanitise{}
+	tx.lastMatchedVariable = variables.Unknown
+	tx.lastMatchedKey = ""
 
 	// Always non-nil if buffers / collections were already initialized, so we don't do any of them
 	// based on the presence of RequestBodyBuffer.
