@@ -16,9 +16,8 @@ import (
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 )
 
-// httpsWriter is used to store logs in a single file
+// httpsWriter is used to send audit logs to an HTTP(S) endpoint.
 type httpsWriter struct {
-	io.Closer
 	formatter plugintypes.AuditLogFormatter
 	url       string
 	client    *http.Client
@@ -63,6 +62,13 @@ func (h *httpsWriter) Write(al plugintypes.AuditLog) error {
 		// the stream failed, but the log was received, we don't return error
 		// we cannot generate a log using the current api
 		return nil
+	}
+	return nil
+}
+
+func (h *httpsWriter) Close() error {
+	if h.client != nil {
+		h.client.CloseIdleConnections()
 	}
 	return nil
 }
