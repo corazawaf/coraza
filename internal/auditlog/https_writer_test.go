@@ -121,3 +121,36 @@ func TestOCSFAuditHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestHTTPSWriterClose(t *testing.T) {
+	t.Run("before init", func(t *testing.T) {
+		writer := &httpsWriter{}
+		if err := writer.Close(); err != nil {
+			t.Fatalf("unexpected error closing uninitialized httpsWriter: %v", err)
+		}
+	})
+
+	t.Run("after init and write", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		writer := &httpsWriter{}
+		if err := writer.Init(plugintypes.AuditLogConfig{
+			Target:    server.URL,
+			Formatter: &jsonFormatter{},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := writer.Write(sampleHttpsAuditLog); err != nil {
+			t.Fatal(err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatalf("unexpected error closing initialized httpsWriter: %v", err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatalf("unexpected error closing httpsWriter a second time: %v", err)
+		}
+	})
+}
