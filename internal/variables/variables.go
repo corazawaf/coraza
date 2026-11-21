@@ -577,12 +577,9 @@ const (
 	// application/x-www-form-urlencoded request body (only on the requests that use the
 	// URLENCODED request body processor).
 	//
-	// **Note:** This variable is currently NOT implemented by Coraza. Coraza's query and
-	// body decoder (internal/url) is deliberately non-strict -- it mirrors what backends
-	// accept rather than rejecting malformed percent-encoding -- so no invalid-encoding
-	// condition is ever detected to set this from. It was previously set on a different
-	// condition entirely, a structural URI parse failure, which URI_PARSE_ERROR now
-	// reports. CRS does not consume it either: coreruleset/coreruleset#482.
+	// **Note:** Decoding stays non-strict: a malformed escape such as `%ZZ` is kept verbatim
+	// in ARGS, and this variable is set to 1. A structural URI parse failure is reported by
+	// URI_PARSE_ERROR instead.
 	UrlencodedError
 	// ResponseArgs contains the response parsed arguments
 	ResponseArgs // CanBeSelected

@@ -184,8 +184,8 @@ const (
 	JSON = variables.JSON
 	// Env contains the process environment variables
 	Env = variables.Env
-	// UrlencodedError equals 1 if we failed to parse de URL
-	// It applies for URL query part and urlencoded post body
+	// UrlencodedError equals 1 if the query string or an urlencoded request
+	// body contains malformed percent-encoding
 	UrlencodedError = variables.UrlencodedError
 	// ResponseArgs contains the response parsed arguments
 	ResponseArgs = variables.ResponseArgs
