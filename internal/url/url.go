@@ -57,6 +57,9 @@ func ParseQueryOrdered(query string, separator byte, limit int) (result []KeyVal
 		// separator once the limit was reached, even though nothing more was
 		// going to be dropped (e.g. "a=1&b=2&&" with limit=2).
 		if limit > 0 && len(result) >= limit {
+			if hasInvalidEscape(key) || hasInvalidEscape(query) {
+				err = ErrInvalidURLEncoding
+			}
 			return result, true, err
 		}
 		value := ""
@@ -91,6 +94,9 @@ func doParseQuery(query string, separator byte, urlUnescape bool, limit int) (m 
 		// empty-key skip so a trailing separator at the limit doesn't report
 		// truncation for a pair that was never going to be added.
 		if limit > 0 && total >= limit {
+			if hasInvalidEscape(key) || hasInvalidEscape(query) {
+				err = ErrInvalidURLEncoding
+			}
 			return m, true, err
 		}
 		value := ""
@@ -150,6 +156,25 @@ func queryUnescape(input string) (string, error) {
 		res.WriteByte(ci)
 	}
 	return res.String(), err
+}
+
+func hasInvalidEscape(input string) bool {
+	for i := 0; i < len(input); i++ {
+		if input[i] != '%' {
+			continue
+		}
+		if i+2 >= len(input) {
+			return true
+		}
+		if _, ok := hexDigitToByte(input[i+1]); !ok {
+			return true
+		}
+		if _, ok := hexDigitToByte(input[i+2]); !ok {
+			return true
+		}
+		i += 2
+	}
+	return false
 }
 
 func hexDigitToByte(digit byte) (byte, bool) {
