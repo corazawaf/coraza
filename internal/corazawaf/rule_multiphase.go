@@ -221,7 +221,7 @@ func minPhase(v variables.RuleVariable) types.RulePhase {
 	case variables.Env:
 		return types.PhaseRequestHeaders
 	case variables.UrlencodedError:
-		return types.PhaseRequestHeaders
+		return types.PhaseRequestBody
 	case variables.URIParseError:
 		return types.PhaseRequestHeaders
 	case variables.ResponseArgs:
