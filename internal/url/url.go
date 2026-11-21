@@ -31,7 +31,7 @@ type KeyValue struct {
 // Parsing is non-strict: malformed percent encoding is kept as-is and
 // ErrInvalidURLEncoding is returned alongside the fully populated result.
 func ParseQuery(query string, separator byte, limit int) (result map[string][]string, truncated bool, err error) {
-	return doParseQuery(query, separator, true, limit)
+	return doParseQuery(query, separator, limit)
 }
 
 // ParseQueryOrdered parses the URL-encoded query string and returns key-value
@@ -62,22 +62,16 @@ func ParseQueryOrdered(query string, separator byte, limit int) (result []KeyVal
 			}
 			return result, true, err
 		}
-		value := ""
-		if i := strings.IndexByte(key, '='); i >= 0 {
-			key, value = key[:i], key[i+1:]
-		}
-		var keyErr, valueErr error
-		key, keyErr = queryUnescape(key)
-		value, valueErr = queryUnescape(value)
-		if keyErr != nil || valueErr != nil {
-			err = ErrInvalidURLEncoding
+		key, value, pairErr := unescapePair(key)
+		if pairErr != nil {
+			err = pairErr
 		}
 		result = append(result, KeyValue{Key: key, Value: value})
 	}
 	return result, false, err
 }
 
-func doParseQuery(query string, separator byte, urlUnescape bool, limit int) (m map[string][]string, truncated bool, err error) {
+func doParseQuery(query string, separator byte, limit int) (m map[string][]string, truncated bool, err error) {
 	m = make(map[string][]string)
 	total := 0
 	for query != "" {
@@ -99,22 +93,27 @@ func doParseQuery(query string, separator byte, urlUnescape bool, limit int) (m 
 			}
 			return m, true, err
 		}
-		value := ""
-		if i := strings.IndexByte(key, '='); i >= 0 {
-			key, value = key[:i], key[i+1:]
-		}
-		if urlUnescape {
-			var keyErr, valueErr error
-			key, keyErr = queryUnescape(key)
-			value, valueErr = queryUnescape(value)
-			if keyErr != nil || valueErr != nil {
-				err = ErrInvalidURLEncoding
-			}
+		key, value, pairErr := unescapePair(key)
+		if pairErr != nil {
+			err = pairErr
 		}
 		m[key] = append(m[key], value)
 		total++
 	}
 	return m, false, err
+}
+
+func unescapePair(pair string) (key, value string, err error) {
+	key = pair
+	if i := strings.IndexByte(key, '='); i >= 0 {
+		key, value = key[:i], key[i+1:]
+	}
+	key, keyErr := queryUnescape(key)
+	value, valueErr := queryUnescape(value)
+	if keyErr != nil {
+		return key, value, keyErr
+	}
+	return key, value, valueErr
 }
 
 // queryUnescape is a non-strict version of net/url.QueryUnescape.
