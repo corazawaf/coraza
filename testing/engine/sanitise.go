@@ -4,6 +4,8 @@
 package engine
 
 import (
+	"strings"
+
 	"github.com/corazawaf/coraza/v3/testing/profile"
 )
 
@@ -106,6 +108,40 @@ var _ = profile.RegisterProfile(profile.Profile{
 				Output: profile.ExpectedOutput{
 					AuditLogContains:   `"password":"*****************"`,
 					NoAuditLogContains: "aped77",
+				},
+			}}},
+		},
+		{
+			Title: "json body is masked by position only",
+			Stages: []profile.Stage{{Stage: profile.SubStage{
+				Input: profile.StageInput{
+					URI:    "/login",
+					Method: "POST",
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+					},
+					Data: `{"password":"dup88","note":"dup88"}`,
+				},
+				Output: profile.ExpectedOutput{
+					AuditLogContains: `{"password":"*****","note":"dup88"}`,
+				},
+			}}},
+		},
+		{
+			Title: "a json body over the masking budget is masked whole",
+			Stages: []profile.Stage{{Stage: profile.SubStage{
+				Input: profile.StageInput{
+					URI:    "/login",
+					Method: "POST",
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+					},
+					// Every array element repeats the long name in its key.
+					Data: `{"user":"bob","` + strings.Repeat("k", 5000) + `":[` + strings.Repeat("1,", 2000) + `1],"password":"budget77"}`,
+				},
+				Output: profile.ExpectedOutput{
+					AuditLogContains:   strings.Repeat("*", 9000),
+					NoAuditLogContains: "budget77",
 				},
 			}}},
 		},

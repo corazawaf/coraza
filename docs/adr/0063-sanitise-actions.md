@@ -62,8 +62,9 @@ When the record is built, the redactor masks:
 - an `application/x-www-form-urlencoded` request body by position;
 - a JSON request body by position on its raw text, so a value is masked however
   it is escaped. The keys are built as the JSON body processor builds them
-  (`bodyprocessors.MaskJSONValues`). Remaining occurrences of a sanitised value
-  are masked as well;
+  (`bodyprocessors.MaskJSONValues`), and the walk works under the same depth
+  limit and byte budget. A body it cannot walk to the end, because it goes past
+  one of those or is not valid JSON, is masked whole;
 - other body formats by masking each occurrence of a sanitised value;
 - matched values, rule messages and log data, through a masked copy of each
   matched rule, which also produces the masked error message. The values looked
@@ -112,10 +113,18 @@ Representative quotes from the issue thread:
     than the parsed value;
   - a rule wrote it into another variable in a changed form and a later rule
     logs that variable. Transformed forms are only known for the matches the
-    record carries.
-- **Over-masking.** Free-text fields, paths and bodies other than url-encoded
-  forms are also masked by value occurrence, so a short value is masked wherever
-  the same text appears. A masked JSON number or boolean is no longer valid JSON.
+    record carries;
+  - the request has more sanitised arguments than `SecArgumentsLimit` and a
+    rule logs the raw URI or body in its message. Every one of them is masked
+    by position in the URI and the body, but only `SecArgumentsLimit` raw
+    spellings are looked for in free text, so that a request cannot make the
+    record arbitrarily expensive to build.
+- **Over-masking.** Free-text fields, paths and bodies that are neither
+  url-encoded nor JSON are masked by value occurrence, so a short value is
+  masked wherever the same text appears. A masked JSON number or boolean is no
+  longer valid JSON.
+- The request body is read once for the record, so the body that is logged is
+  the one that was masked.
 - The engine harness gained `AuditLogContains` and `NoAuditLogContains`
   assertions, which test the record across formatters, and a `PathArgs` input.
 

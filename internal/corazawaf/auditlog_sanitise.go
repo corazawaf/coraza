@@ -184,9 +184,12 @@ type auditLogRedactor struct {
 	// first. Only the integration knows where they sit in the path, so they
 	// are looked for in it.
 	pathValues []string
-	// body is the request body masked by position, set when hasBody is true.
-	body    string
-	hasBody bool
+	// body is the request body as it goes to the record, and bodyErr the error
+	// of reading it. The body is read once, so what is logged is what was
+	// masked.
+	body     string
+	bodyErr  error
+	bodyDone bool
 }
 
 // newAuditLogRedactor returns nil when no sanitise* action ran, so the common
@@ -222,22 +225,35 @@ func (tx *Transaction) newAuditLogRedactor() *auditLogRedactor {
 		}
 		sort.SliceStable(r.pathValues, func(i, j int) bool { return len(r.pathValues[i]) > len(r.pathValues[j]) })
 
+		// Raw spellings are masked by position where they were found. They are
+		// kept only to be looked for in free text, and a request can carry far
+		// more of them than SecArgumentsLimit lets into ARGS, so the same limit
+		// applies to them.
+		rawLeft := tx.WAF.ArgumentLimit
+		addRaw := func(values []string) {
+			for _, v := range values {
+				if rawLeft <= 0 {
+					return
+				}
+				if _, ok := seen[v]; !ok && v != "" {
+					rawLeft--
+				}
+				add(v)
+			}
+		}
+
 		uri := tx.variables.requestURI.Get()
 		_, raw := sanitiseURI(uri, tx.sanitise.args)
-		for _, v := range raw {
-			add(v)
-		}
+		addRaw(raw)
 		_, raw = sanitisePath(uri, r.pathValues)
-		for _, v := range raw {
-			add(v)
-		}
-		if rbp := tx.variables.reqbodyProcessor.Get(); rbp == "URLENCODED" || rbp == "JSON" {
-			if body, err := tx.readRequestBodyForAuditLog(); err == nil {
+		addRaw(raw)
+		if r.hasPositionalBody() {
+			var body string
+			body, r.bodyErr = tx.readRequestBodyForAuditLog()
+			r.bodyDone = true
+			if r.bodyErr == nil {
 				r.body, raw = r.sanitiseBody(body)
-				r.hasBody = true
-				for _, v := range raw {
-					add(v)
-				}
+				addRaw(raw)
 			}
 		}
 	}
@@ -266,17 +282,32 @@ func (tx *Transaction) newAuditLogRedactor() *auditLogRedactor {
 	return r
 }
 
+// hasPositionalBody reports whether the request body is in a format whose
+// arguments sanitiseBody can locate.
+func (r *auditLogRedactor) hasPositionalBody() bool {
+	switch r.tx.variables.reqbodyProcessor.Get() {
+	case "URLENCODED", "JSON":
+		return true
+	}
+	return false
+}
+
 // sanitiseBody masks the sanitised arguments of a url-encoded or JSON body by
 // position and returns the masked body together with the raw values it masked.
-// Other body formats have no positional parser here and are returned as is.
+// A JSON body that cannot be walked to its end is masked whole, since the part
+// that was not seen may hold a sanitised value.
 func (r *auditLogRedactor) sanitiseBody(body string) (string, []string) {
 	switch r.tx.variables.reqbodyProcessor.Get() {
 	case "URLENCODED":
 		return sanitiseURLEncoded(body, r.tx.sanitise.args)
 	case "JSON":
-		return bodyprocessors.MaskJSONValues(body, r.tx.WAF.RequestBodyJsonDepthLimit, func(key string) bool {
+		masked, raw, complete := bodyprocessors.MaskJSONValues(body, r.tx.WAF.RequestBodyJsonDepthLimit, func(key string) bool {
 			return hasName(r.tx.sanitise.args, key)
 		})
+		if !complete {
+			return mask(body), raw
+		}
+		return masked, raw
 	}
 	return body, nil
 }
@@ -297,18 +328,19 @@ func (r *auditLogRedactor) uri(uri string) string {
 	return masked
 }
 
-// requestBody masks the sanitised arguments of the body. A url-encoded body is
-// masked by position only. In any other body the sanitised values are also
-// masked wherever they occur, which over-masks rather than leaks.
-func (r *auditLogRedactor) requestBody(body string) string {
-	if r.hasBody {
-		// Already masked by position when the redactor was built.
-		body = r.body
+// requestBody returns the request body for the record. A url-encoded or JSON
+// body was masked by position when the redactor was built. Any other body has
+// its sanitised values masked wherever they occur, which over-masks rather
+// than leaks.
+func (r *auditLogRedactor) requestBody() (string, error) {
+	if !r.bodyDone {
+		r.bodyDone = true
+		r.body, r.bodyErr = r.tx.readRequestBodyForAuditLog()
+		if r.bodyErr == nil && !r.hasPositionalBody() {
+			r.body = r.maskSecrets(r.body)
+		}
 	}
-	if r.tx.variables.reqbodyProcessor.Get() == "URLENCODED" {
-		return body
-	}
-	return r.maskSecrets(body)
+	return r.body, r.bodyErr
 }
 
 // headers masks the sanitised entries of a header copy in place. Keys of the

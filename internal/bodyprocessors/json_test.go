@@ -739,6 +739,9 @@ func TestMaskJSONValues(t *testing.T) {
 	names := func(keys ...string) func(string) bool {
 		return func(key string) bool { return slices.Contains(keys, key) }
 	}
+	// A long property name above a wide array: every element repeats the name
+	// in its key, which is the work the byte budget bounds.
+	wideUnderLongName := `{"` + strings.Repeat("k", 5000) + `":[` + strings.Repeat("1,", 2000) + `1],"password":"s3cret"}`
 	tests := []struct {
 		name         string
 		json         string
@@ -746,28 +749,34 @@ func TestMaskJSONValues(t *testing.T) {
 		match        func(string) bool
 		want         string
 		wantMasked   []string
+		wantComplete bool
 	}{
-		{"string keeps its quotes", `{"user":"bob","password":"s3cret"}`, 10, names("json.password"), `{"user":"bob","password":"******"}`, []string{"s3cret"}},
-		{"escapes are masked as written", `{"password":"a\"b\\c\/d\u0041"}`, 10, names("json.password"), `{"password":"****************"}`, []string{`a\"b\\c\/d\u0041`}},
-		{"key is matched after unescaping", `{"pass\u0077ord":"s3cret"}`, 10, names("json.password"), `{"pass\u0077ord":"******"}`, []string{"s3cret"}},
-		{"number and boolean are masked whole", `{"pin":1234,"admin":true}`, 10, names("json.pin", "json.admin"), `{"pin":****,"admin":****}`, []string{"1234", "true"}},
-		{"null and empty string have nothing to mask", `{"a":null,"b":""}`, 10, names("json.a", "json.b"), `{"a":null,"b":""}`, nil},
-		{"nested object and array index", `{"a":{"b":"x1"},"l":["y2","z3"]}`, 10, names("json.a.b", "json.l.1"), `{"a":{"b":"**"},"l":["y2","**"]}`, []string{"x1", "z3"}},
-		{"a literal dotted name collides with the nested path", `{"a":{"b":"x1"},"a.b":"y2"}`, 10, names("json.a.b"), `{"a":{"b":"**"},"a.b":"**"}`, []string{"x1", "y2"}},
-		{"top-level array", `["x1","y2"]`, 10, names("json.0"), `["**","y2"]`, []string{"x1"}},
-		{"values below the recursion limit are left alone", `{"a":{"b":"x1"}}`, 1, names("json.a.b"), `{"a":{"b":"x1"}}`, nil},
-		{"no selected key", `{"user":"bob"}`, 10, names("json.password"), `{"user":"bob"}`, nil},
-		{"a body cut short keeps what was read", `{"password":"s3cret","user":"bo`, 10, names("json.password"), `{"password":"******","user":"bo`, []string{"s3cret"}},
-		{"empty input", ``, 10, names("json.password"), ``, nil},
+		{"string keeps its quotes", `{"user":"bob","password":"s3cret"}`, 10, names("json.password"), `{"user":"bob","password":"******"}`, []string{"s3cret"}, true},
+		{"escapes are masked as written", `{"password":"a\"b\\c\/d\u0041"}`, 10, names("json.password"), `{"password":"****************"}`, []string{`a\"b\\c\/d\u0041`}, true},
+		{"key is matched after unescaping", `{"pass\u0077ord":"s3cret"}`, 10, names("json.password"), `{"pass\u0077ord":"******"}`, []string{"s3cret"}, true},
+		{"number and boolean are masked whole", `{"pin":1234,"admin":true}`, 10, names("json.pin", "json.admin"), `{"pin":****,"admin":****}`, []string{"1234", "true"}, true},
+		{"null and empty string have nothing to mask", `{"a":null,"b":""}`, 10, names("json.a", "json.b"), `{"a":null,"b":""}`, nil, true},
+		{"nested object and array index", `{"a":{"b":"x1"},"l":["y2","z3"]}`, 10, names("json.a.b", "json.l.1"), `{"a":{"b":"**"},"l":["y2","**"]}`, []string{"x1", "z3"}, true},
+		{"a repeated name is masked every time", `{"password":"x1","password":"y2"}`, 10, names("json.password"), `{"password":"**","password":"**"}`, []string{"x1", "y2"}, true},
+		{"a literal dotted name collides with the nested path", `{"a":{"b":"x1"},"a.b":"y2"}`, 10, names("json.a.b"), `{"a":{"b":"**"},"a.b":"**"}`, []string{"x1", "y2"}, true},
+		{"top-level array", `["x1","y2"]`, 10, names("json.0"), `["**","y2"]`, []string{"x1"}, true},
+		{"no selected key", `{"user":"bob"}`, 10, names("json.password"), `{"user":"bob"}`, nil, true},
+		{"nesting past the recursion limit is not complete", `{"a":{"b":"x1"}}`, 1, names("json.a.b"), `{"a":{"b":"x1"}}`, nil, false},
+		{"keys past the byte budget are not complete", wideUnderLongName, 10, names("json.password"), wideUnderLongName, nil, false},
+		{"a body cut short is not complete", `{"password":"s3cret","user":"bo`, 10, names("json.password"), `{"password":"******","user":"bo`, []string{"s3cret"}, false},
+		{"empty input is not complete", ``, 10, names("json.password"), ``, nil, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, masked := MaskJSONValues(tt.json, tt.maxRecursion, tt.match)
+			got, masked, complete := MaskJSONValues(tt.json, tt.maxRecursion, tt.match)
 			if got != tt.want {
 				t.Errorf("MaskJSONValues(%s) = %s, want %s", tt.json, got, tt.want)
 			}
 			if !slices.Equal(masked, tt.wantMasked) {
 				t.Errorf("masked values = %q, want %q", masked, tt.wantMasked)
+			}
+			if complete != tt.wantComplete {
+				t.Errorf("complete = %t, want %t", complete, tt.wantComplete)
 			}
 		})
 	}

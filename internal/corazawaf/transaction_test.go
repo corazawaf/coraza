@@ -2909,3 +2909,33 @@ func TestSanitisePath(t *testing.T) {
 		})
 	}
 }
+
+// Not a profile: the limit is on the work done for a request, which a profile
+// cannot observe.
+func TestAuditLogRedactorBoundsRawSpellings(t *testing.T) {
+	tests := []struct {
+		name        string
+		limit       int
+		wantSecrets int
+	}{
+		// Two arguments get into ARGS, and two raw spellings are kept.
+		{"raw spellings stop at the argument limit", 2, 4},
+		// All five arguments and their five raw spellings.
+		{"under the limit every raw spelling is kept", 1000, 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waf := NewWAF()
+			waf.ArgumentLimit = tt.limit
+			tx := waf.NewTransaction()
+			tx.ProcessURI("/?p=a%31&p=b%32&p=c%33&p=d%34&p=e%35", "GET", "HTTP/1.1")
+			tx.SanitiseArg("p")
+			if got := len(tx.newAuditLogRedactor().secrets); got != tt.wantSecrets {
+				t.Errorf("redactor keeps %d values to look for, want %d", got, tt.wantSecrets)
+			}
+			if err := tx.Close(); err != nil {
+				t.Fatalf("Failed to close transaction: %s", err.Error())
+			}
+		})
+	}
+}

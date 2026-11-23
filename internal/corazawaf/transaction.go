@@ -1615,10 +1615,16 @@ func (tx *Transaction) AuditLog() *auditlog.Log {
 				redactor.headers(al.Transaction_.Request_.Headers_, tx.sanitise.requestHeaders)
 			}
 		case types.AuditLogPartRequestBody:
-			if body, err := tx.readRequestBodyForAuditLog(); err == nil {
-				if redactor != nil {
-					body = redactor.requestBody(body)
-				}
+			var (
+				body string
+				err  error
+			)
+			if redactor != nil {
+				body, err = redactor.requestBody()
+			} else {
+				body, err = tx.readRequestBodyForAuditLog()
+			}
+			if err == nil {
 				al.Transaction_.Request_.Body_ = body
 			}
 
