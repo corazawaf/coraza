@@ -533,6 +533,31 @@ func TestParseActions(t *testing.T) {
 			expectError:  true,
 		},
 		{
+			name:         "sanitise actions with their arguments",
+			inputActions: "id:1,phase:2,pass,sanitiseArg:password,sanitiseRequestHeader:Authorization,sanitiseResponseHeader:Set-Cookie,sanitiseMatched",
+			expectError:  false,
+		},
+		{
+			name:         "sanitiseArg without a name",
+			inputActions: "id:1,phase:2,pass,sanitiseArg",
+			expectError:  true,
+		},
+		{
+			name:         "sanitiseRequestHeader without a name",
+			inputActions: "id:1,phase:2,pass,sanitiseRequestHeader",
+			expectError:  true,
+		},
+		{
+			name:         "sanitiseResponseHeader without a name",
+			inputActions: "id:1,phase:2,pass,sanitiseResponseHeader",
+			expectError:  true,
+		},
+		{
+			name:         "sanitiseMatched with an argument",
+			inputActions: "id:1,phase:2,pass,sanitiseMatched:password",
+			expectError:  true,
+		},
+		{
 			name:         "unclosed quotes",
 			inputActions: "id:1,phase:2,log,deny,msg:'message not closed",
 			// TODO(4.x): returning an error in Coraza 3.x would break all the installations with coraza.conf-recommended that comes

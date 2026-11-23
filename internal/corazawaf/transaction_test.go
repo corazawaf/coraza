@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -2834,33 +2835,26 @@ func TestSanitiseURLEncoded(t *testing.T) {
 	tests := []struct {
 		name       string
 		in         string
-		separator  byte
 		want       string
 		wantMasked []string
 	}{
-		{"masks the raw value byte by byte", "user=bob&password=hunter22", '&', "user=bob&password=********", []string{"hunter22"}},
-		{"masks raw bytes and keeps encoding of other pairs", "q=a%20b&password=p%40ss", '&', "q=a%20b&password=******", []string{"p%40ss"}},
-		{"matches the decoded name", "Card+No=4111&x=1", '&', "Card+No=****&x=1", []string{"4111"}},
-		{"masks every repeated name", "password=a&password=bb", '&', "password=*&password=**", []string{"a", "bb"}},
-		{"honours the separator", "password=s3cret;x=1", ';', "password=******;x=1", []string{"s3cret"}},
-		{"empty value is kept empty", "password=&x=1", '&', "password=&x=1", nil},
-		{"pair without a value is untouched", "password&x=1", '&', "password&x=1", nil},
-		{"no sanitised name leaves input as is", "user=bob&id=7", '&', "user=bob&id=7", nil},
-		{"empty input", "", '&', "", nil},
+		{"masks the raw value byte by byte", "user=bob&password=hunter22", "user=bob&password=********", []string{"hunter22"}},
+		{"masks raw bytes and keeps encoding of other pairs", "q=a%20b&password=p%40ss", "q=a%20b&password=******", []string{"p%40ss"}},
+		{"matches the decoded name", "Card+No=4111&x=1", "Card+No=****&x=1", []string{"4111"}},
+		{"splits on the separator the argument parsers use", "x=1;password=s3cret&y=2", "x=1;password=s3cret&y=2", nil},
+		{"empty value is kept empty", "password=&x=1", "password=&x=1", nil},
+		{"pair without a value is untouched", "password&x=1", "password&x=1", nil},
+		{"no sanitised name leaves input as is", "user=bob&id=7", "user=bob&id=7", nil},
+		{"empty input", "", "", nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, masked := sanitiseURLEncoded(tt.in, tt.separator, sanitised)
+			got, masked := sanitiseURLEncoded(tt.in, sanitised)
 			if got != tt.want {
 				t.Errorf("sanitiseURLEncoded(%q) = %q, want %q", tt.in, got, tt.want)
 			}
-			if len(masked) != len(tt.wantMasked) {
-				t.Fatalf("masked values = %q, want %q", masked, tt.wantMasked)
-			}
-			for i := range masked {
-				if masked[i] != tt.wantMasked[i] {
-					t.Errorf("masked[%d] = %q, want %q", i, masked[i], tt.wantMasked[i])
-				}
+			if !slices.Equal(masked, tt.wantMasked) {
+				t.Errorf("masked values = %q, want %q", masked, tt.wantMasked)
 			}
 		})
 	}
@@ -2873,15 +2867,44 @@ func TestSanitiseURI(t *testing.T) {
 		in   string
 		want string
 	}{
-		{"masks the query value", "/login?token=abc123&next=/home", "/login?token=******&next=/home"},
 		{"path without a query is untouched", "/token/abc123", "/token/abc123"},
 		{"query without the name is untouched", "/a?x=token", "/a?x=token"},
 		{"empty query", "/a?", "/a?"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := sanitiseURI(tt.in, '&', sanitised); got != tt.want {
+			if got, _ := sanitiseURI(tt.in, sanitised); got != tt.want {
 				t.Errorf("sanitiseURI(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSanitisePath(t *testing.T) {
+	tests := []struct {
+		name       string
+		in         string
+		values     []string
+		want       string
+		wantMasked []string
+	}{
+		{"a value inside a segment is masked where it appears", "/files/report-abc123.pdf", []string{"abc123"}, "/files/report-******.pdf", nil},
+		{"a value spanning segments is masked where it appears", "/static/a/b/c.js", []string{"a/b"}, "/static/***/c.js", nil},
+		{"a plus sign in a segment is literal", "/k/a+b", []string{"a+b"}, "/k/***", []string{"a+b"}},
+		{"a segment that only decodes to a space is not a plus", "/k/a+b", []string{"a b"}, "/k/a+b", nil},
+		{"the query is left alone", "/k/abc?next=abc", []string{"abc"}, "/k/***?next=abc", []string{"abc"}},
+		{"an encoded value inside a segment is not found", "/files/report-p%40ss.pdf", []string{"p@ss"}, "/files/report-p%40ss.pdf", nil},
+		{"a value that is not in the path leaves it as is", "/k/abc", []string{"zzz"}, "/k/abc", nil},
+		{"no values", "/k/abc", nil, "/k/abc", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, masked := sanitisePath(tt.in, tt.values)
+			if got != tt.want {
+				t.Errorf("sanitisePath(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+			if !slices.Equal(masked, tt.wantMasked) {
+				t.Errorf("masked values = %q, want %q", masked, tt.wantMasked)
 			}
 		})
 	}

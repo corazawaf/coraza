@@ -51,13 +51,24 @@ variable and key of the last match, which `Transaction.matchVariable` now keeps.
 When the record is built, the redactor masks:
 
 - the query string of the request URI and of the `[uri]` field of error messages,
-  by position, keeping every other pair as it was;
+  by position, keeping every other pair as it was. Pairs are split on `&`, the
+  separator the argument parsers use;
+- the path of the same URIs, for sanitised `ARGS_PATH` arguments. Only the
+  integration knows where a path argument sits, so the redactor looks for its
+  value: a segment that decodes to the value is masked whole, however it is
+  encoded, and elsewhere the value is masked where it appears literally;
 - a copy of `ARGS`, which the OCSF formatter serialises;
 - request and response headers, in the copies returned by `Data()`;
-- an `application/x-www-form-urlencoded` request body by position; other body
-  formats by masking each occurrence of a sanitised value;
+- an `application/x-www-form-urlencoded` request body by position;
+- a JSON request body by position on its raw text, so a value is masked however
+  it is escaped. The keys are built as the JSON body processor builds them
+  (`bodyprocessors.MaskJSONValues`). Remaining occurrences of a sanitised value
+  are masked as well;
+- other body formats by masking each occurrence of a sanitised value;
 - matched values, rule messages and log data, through a masked copy of each
-  matched rule, which also produces the masked error message.
+  matched rule, which also produces the masked error message. The values looked
+  for include the form a matched rule saw after its transformations, since that
+  is what `%{MATCHED_VAR}` puts in its log data.
 
 Behaviour that follows ModSecurity v2:
 
@@ -91,12 +102,22 @@ Representative quotes from the issue thread:
 ## Consequences
 
 - **Positive:** rulesets using the four actions load and behave as in ModSecurity
-  v2, and secrets stay out of every built-in audit log format.
-- **Negative / follow-up:** `sanitiseMatchedBytes` is not implemented. Bodies other
-  than url-encoded forms are masked by value occurrence, which can over-mask a short
-  value that also appears elsewhere in the body; free-text fields are masked the same
-  way. The engine harness gained `AuditLogContains` and `NoAuditLogContains`
-  assertions to test the record across formatters.
+  v2. Redaction happens once, on the record, so every built-in audit log format
+  and every formatter plugin gets the same masked data.
+- **Negative / follow-up:** `sanitiseMatchedBytes` is not implemented.
+- **Known limits.** A sanitised value still reaches the audit log when:
+  - it is a path argument that is percent-encoded and is only part of a path
+    segment, such as `/files/report-p%40ss.pdf`;
+  - it sits in a body that is neither url-encoded nor JSON in a spelling other
+    than the parsed value;
+  - a rule wrote it into another variable in a changed form and a later rule
+    logs that variable. Transformed forms are only known for the matches the
+    record carries.
+- **Over-masking.** Free-text fields, paths and bodies other than url-encoded
+  forms are also masked by value occurrence, so a short value is masked wherever
+  the same text appears. A masked JSON number or boolean is no longer valid JSON.
+- The engine harness gained `AuditLogContains` and `NoAuditLogContains`
+  assertions, which test the record across formatters, and a `PathArgs` input.
 
 ## References
 

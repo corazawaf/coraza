@@ -93,6 +93,60 @@ var _ = profile.RegisterProfile(profile.Profile{
 			}}},
 		},
 		{
+			Title: "json value is masked however it is escaped",
+			Stages: []profile.Stage{{Stage: profile.SubStage{
+				Input: profile.StageInput{
+					URI:    "/login",
+					Method: "POST",
+					Headers: map[string]string{
+						"Content-Type": "application/json",
+					},
+					Data: `{"user":"bob","password":"esc\"aped77\u0041"}`,
+				},
+				Output: profile.ExpectedOutput{
+					AuditLogContains:   `"password":"*****************"`,
+					NoAuditLogContains: "aped77",
+				},
+			}}},
+		},
+		{
+			Title: "a value changed by a transformation is masked in log data",
+			Stages: []profile.Stage{{Stage: profile.SubStage{
+				Input: profile.StageInput{URI: "/login?password=encodeme1"},
+				Output: profile.ExpectedOutput{
+					TriggeredRules:     []int{11},
+					AuditLogContains:   `[data "encoded ************"]`,
+					NoAuditLogContains: "ZW5jb2RlbWUx",
+				},
+			}}},
+		},
+		{
+			Title: "path argument is masked in the URI however it is encoded",
+			Stages: []profile.Stage{{Stage: profile.SubStage{
+				Input: profile.StageInput{
+					URI:      "/reset/p%40thsecret9/confirm",
+					PathArgs: map[string]string{"token": "p@thsecret9"},
+				},
+				Output: profile.ExpectedOutput{
+					AuditLogContains:   "/reset/*************/confirm",
+					NoAuditLogContains: "thsecret9",
+				},
+			}}},
+		},
+		{
+			Title: "sanitiseMatched masks a matched path argument",
+			Stages: []profile.Stage{{Stage: profile.SubStage{
+				Input: profile.StageInput{
+					URI:      "/users/key-55501",
+					PathArgs: map[string]string{"id": "key-55501"},
+				},
+				Output: profile.ExpectedOutput{
+					AuditLogContains:   "/users/*********",
+					NoAuditLogContains: "55501",
+				},
+			}}},
+		},
+		{
 			Title: "argument names are compared case-insensitively",
 			Stages: []profile.Stage{{Stage: profile.SubStage{
 				Input: profile.StageInput{URI: "/?PassWord=caseval1"},
@@ -176,12 +230,14 @@ SecRuleEngine On
 SecRequestBodyAccess On
 SecAuditLogParts ABCFHKZ
 SecRule REQUEST_HEADERS:Content-Type "^application/json" "id:1,phase:1,pass,nolog,ctl:requestBodyProcessor=JSON"
-SecAction "id:2,phase:1,pass,nolog,sanitiseArg:password,sanitiseArg:json.password,sanitiseRequestHeader:Authorization"
+SecAction "id:2,phase:1,pass,nolog,sanitiseArg:password,sanitiseArg:json.password,sanitiseArg:token,sanitiseRequestHeader:Authorization"
 SecAction "id:3,phase:3,pass,nolog,sanitiseResponseHeader:Set-Cookie"
 SecRule ARGS:password "@beginsWith hunt" "id:10,phase:2,pass,log,msg:'password seen',logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}'"
+SecRule ARGS:password "@beginsWith ZW5j" "id:11,phase:2,pass,log,t:none,t:base64Encode,msg:'encoded password seen',logdata:'encoded %{MATCHED_VAR}'"
 SecRule ARGS_NAMES "@contains secret" "id:20,phase:2,pass,nolog,sanitiseMatched"
 SecRule REQUEST_HEADERS:X-Api-Key "@rx ." "id:30,phase:1,pass,nolog,sanitiseMatched"
 SecRule REQUEST_FILENAME "@streq /item" "id:40,phase:1,pass,log,sanitiseMatched"
+SecRule ARGS_PATH:id "@beginsWith key-" "id:50,phase:1,pass,nolog,sanitiseMatched"
 `,
 })
 

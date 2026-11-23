@@ -5,6 +5,7 @@ package bodyprocessors
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -731,5 +732,61 @@ func TestReadJSONLeavesOrdinaryPayloadsIntact(t *testing.T) {
 	}
 	if truncated {
 		t.Errorf("a %d byte API-shaped payload must not be truncated, got %d arguments", sb.Len(), len(res))
+	}
+}
+
+func TestMaskJSONValues(t *testing.T) {
+	names := func(keys ...string) func(string) bool {
+		return func(key string) bool { return slices.Contains(keys, key) }
+	}
+	tests := []struct {
+		name         string
+		json         string
+		maxRecursion int
+		match        func(string) bool
+		want         string
+		wantMasked   []string
+	}{
+		{"string keeps its quotes", `{"user":"bob","password":"s3cret"}`, 10, names("json.password"), `{"user":"bob","password":"******"}`, []string{"s3cret"}},
+		{"escapes are masked as written", `{"password":"a\"b\\c\/d\u0041"}`, 10, names("json.password"), `{"password":"****************"}`, []string{`a\"b\\c\/d\u0041`}},
+		{"key is matched after unescaping", `{"pass\u0077ord":"s3cret"}`, 10, names("json.password"), `{"pass\u0077ord":"******"}`, []string{"s3cret"}},
+		{"number and boolean are masked whole", `{"pin":1234,"admin":true}`, 10, names("json.pin", "json.admin"), `{"pin":****,"admin":****}`, []string{"1234", "true"}},
+		{"null and empty string have nothing to mask", `{"a":null,"b":""}`, 10, names("json.a", "json.b"), `{"a":null,"b":""}`, nil},
+		{"nested object and array index", `{"a":{"b":"x1"},"l":["y2","z3"]}`, 10, names("json.a.b", "json.l.1"), `{"a":{"b":"**"},"l":["y2","**"]}`, []string{"x1", "z3"}},
+		{"a literal dotted name collides with the nested path", `{"a":{"b":"x1"},"a.b":"y2"}`, 10, names("json.a.b"), `{"a":{"b":"**"},"a.b":"**"}`, []string{"x1", "y2"}},
+		{"top-level array", `["x1","y2"]`, 10, names("json.0"), `["**","y2"]`, []string{"x1"}},
+		{"values below the recursion limit are left alone", `{"a":{"b":"x1"}}`, 1, names("json.a.b"), `{"a":{"b":"x1"}}`, nil},
+		{"no selected key", `{"user":"bob"}`, 10, names("json.password"), `{"user":"bob"}`, nil},
+		{"a body cut short keeps what was read", `{"password":"s3cret","user":"bo`, 10, names("json.password"), `{"password":"******","user":"bo`, []string{"s3cret"}},
+		{"empty input", ``, 10, names("json.password"), ``, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, masked := MaskJSONValues(tt.json, tt.maxRecursion, tt.match)
+			if got != tt.want {
+				t.Errorf("MaskJSONValues(%s) = %s, want %s", tt.json, got, tt.want)
+			}
+			if !slices.Equal(masked, tt.wantMasked) {
+				t.Errorf("masked values = %q, want %q", masked, tt.wantMasked)
+			}
+		})
+	}
+
+	// The keys offered to match have to be the ones readJSON gives ARGS_POST,
+	// or a value selected by argument name is not found.
+	for _, tt := range jsonTests {
+		if len(tt.json) > 4096 {
+			// The nesting bombs have no scalar to select.
+			continue
+		}
+		t.Run("keys agree with readJSON/"+tt.name, func(t *testing.T) {
+			args, _, _ := readJSON(tt.json, maxRecursion, 0)
+			MaskJSONValues(tt.json, maxRecursion, func(key string) bool {
+				if _, ok := args[key]; !ok {
+					t.Errorf("key %q is not an argument of %s", key, tt.json)
+				}
+				return false
+			})
+		})
 	}
 }

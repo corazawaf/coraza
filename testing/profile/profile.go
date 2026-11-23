@@ -20,6 +20,7 @@ type StageInput struct {
 	Version        string            `yaml:"version,omitempty"`
 	Data           string            `yaml:"data,omitempty"` // Accepts array or string
 	Headers        map[string]string `yaml:"headers,omitempty"`
+	PathArgs       map[string]string `yaml:"path_args,omitempty"` // Path parameters a router would extract from the URI
 	RawRequest     []byte            `yaml:"raw_request,omitempty"`
 	EncodedRequest string            `yaml:"encoded_request,omitempty"`
 	StopMagic      bool              `yaml:"stop_magic,omitempty"`

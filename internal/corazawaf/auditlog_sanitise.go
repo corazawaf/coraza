@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/internal/bodyprocessors"
 	"github.com/corazawaf/coraza/v3/internal/collections"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/internal/url"
@@ -82,6 +83,11 @@ func (tx *Transaction) SanitiseMatched() bool {
 	return true
 }
 
+// argSeparator is the separator ExtractGetArguments and the url-encoded body
+// processor split on. Masking has to split pairs the same way they do, or a
+// pair they parsed is not found here.
+const argSeparator = '&'
+
 // mask replaces every byte of s with an asterisk, keeping its length.
 func mask(s string) string {
 	return strings.Repeat("*", len(s))
@@ -90,7 +96,7 @@ func mask(s string) string {
 // sanitiseURLEncoded masks the raw value of every pair whose decoded name is
 // sanitised and returns the masked string together with the raw values it
 // masked. Pair order, separators and encoding of the other pairs are kept.
-func sanitiseURLEncoded(s string, separator byte, sanitised map[string]struct{}) (string, []string) {
+func sanitiseURLEncoded(s string, sanitised map[string]struct{}) (string, []string) {
 	if s == "" || len(sanitised) == 0 {
 		return s, nil
 	}
@@ -99,9 +105,9 @@ func sanitiseURLEncoded(s string, separator byte, sanitised map[string]struct{})
 		masked []string
 	)
 	b.Grow(len(s))
-	for i, pair := range strings.Split(s, string(separator)) {
+	for i, pair := range strings.Split(s, string(argSeparator)) {
 		if i > 0 {
-			b.WriteByte(separator)
+			b.WriteByte(argSeparator)
 		}
 		eq := strings.IndexByte(pair, '=')
 		if eq < 0 || !hasName(sanitised, url.QueryUnescape(pair[:eq])) {
@@ -119,24 +125,68 @@ func sanitiseURLEncoded(s string, separator byte, sanitised map[string]struct{})
 }
 
 // sanitiseURI masks the sanitised arguments of the query string of uri.
-func sanitiseURI(uri string, separator byte, sanitised map[string]struct{}) (string, []string) {
+func sanitiseURI(uri string, sanitised map[string]struct{}) (string, []string) {
 	q := strings.IndexByte(uri, '?')
 	if q < 0 {
 		return uri, nil
 	}
-	query, rawValues := sanitiseURLEncoded(uri[q+1:], separator, sanitised)
+	query, rawValues := sanitiseURLEncoded(uri[q+1:], sanitised)
 	return uri[:q+1] + query, rawValues
+}
+
+// sanitisePath masks values in the path of uri and returns the masked uri
+// together with the raw text it masked. A segment that decodes to one of the
+// values is masked whole, however it is encoded. A value that is only part of
+// a segment, or spans several, is masked where it appears literally.
+func sanitisePath(uri string, values []string) (string, []string) {
+	if len(values) == 0 {
+		return uri, nil
+	}
+	path, rest := uri, ""
+	if q := strings.IndexByte(uri, '?'); q >= 0 {
+		path, rest = uri[:q], uri[q:]
+	}
+	var masked []string
+	segments := strings.Split(path, "/")
+	for i, segment := range segments {
+		if segment == "" {
+			continue
+		}
+		// A plus sign is literal in a path, unlike in a query string.
+		decoded := url.QueryUnescape(strings.ReplaceAll(segment, "+", "%2B"))
+		for _, v := range values {
+			if decoded == v {
+				masked = append(masked, segment)
+				segments[i] = mask(segment)
+				break
+			}
+		}
+	}
+	path = strings.Join(segments, "/")
+	for _, v := range values {
+		if strings.Contains(path, v) {
+			path = strings.ReplaceAll(path, v, mask(v))
+		}
+	}
+	return path + rest, masked
 }
 
 // auditLogRedactor applies the transaction's sanitise* requests to the data
 // copied into the audit log record.
 type auditLogRedactor struct {
-	tx        *Transaction
-	separator byte
-	// secrets are the values of every sanitised argument and header, decoded and
-	// raw, longest first. They are masked wherever they reach the record in
-	// free text: rule messages, log data, matched values and error messages.
+	tx *Transaction
+	// secrets are the values of every sanitised argument and header, decoded,
+	// raw and as transformed by the rules that matched them, longest first.
+	// They are masked wherever they reach the record in free text: rule
+	// messages, log data, matched values and error messages.
 	secrets []string
+	// pathValues are the values of the sanitised ARGS_PATH arguments, longest
+	// first. Only the integration knows where they sit in the path, so they
+	// are looked for in it.
+	pathValues []string
+	// body is the request body masked by position, set when hasBody is true.
+	body    string
+	hasBody bool
 }
 
 // newAuditLogRedactor returns nil when no sanitise* action ran, so the common
@@ -145,10 +195,7 @@ func (tx *Transaction) newAuditLogRedactor() *auditLogRedactor {
 	if tx.sanitise.isEmpty() {
 		return nil
 	}
-	r := &auditLogRedactor{tx: tx, separator: '&'}
-	if sep := tx.WAF.ArgumentSeparator; sep != "" {
-		r.separator = sep[0]
-	}
+	r := &auditLogRedactor{tx: tx}
 
 	seen := map[string]struct{}{}
 	add := func(v string) {
@@ -168,14 +215,29 @@ func (tx *Transaction) newAuditLogRedactor() *auditLogRedactor {
 				add(md.Value())
 			}
 		}
-		_, raw := sanitiseURI(tx.variables.requestURI.Get(), r.separator, tx.sanitise.args)
+		for _, md := range tx.variables.argsPath.FindAll() {
+			if v := md.Value(); v != "" && hasName(tx.sanitise.args, md.Key()) {
+				r.pathValues = append(r.pathValues, v)
+			}
+		}
+		sort.SliceStable(r.pathValues, func(i, j int) bool { return len(r.pathValues[i]) > len(r.pathValues[j]) })
+
+		uri := tx.variables.requestURI.Get()
+		_, raw := sanitiseURI(uri, tx.sanitise.args)
 		for _, v := range raw {
 			add(v)
 		}
-		if body, ok := r.urlencodedBody(); ok {
-			_, raw = sanitiseURLEncoded(body, r.separator, tx.sanitise.args)
-			for _, v := range raw {
-				add(v)
+		_, raw = sanitisePath(uri, r.pathValues)
+		for _, v := range raw {
+			add(v)
+		}
+		if rbp := tx.variables.reqbodyProcessor.Get(); rbp == "URLENCODED" || rbp == "JSON" {
+			if body, err := tx.readRequestBodyForAuditLog(); err == nil {
+				r.body, raw = r.sanitiseBody(body)
+				r.hasBody = true
+				for _, v := range raw {
+					add(v)
+				}
 			}
 		}
 	}
@@ -190,21 +252,33 @@ func (tx *Transaction) newAuditLogRedactor() *auditLogRedactor {
 		}
 	}
 
+	// A rule sees a sanitised value after its transformations, and that is the
+	// form its log data carries.
+	for _, mr := range tx.matchedRules {
+		for _, md := range mr.MatchedDatas() {
+			if r.isSanitisedValue(md.Variable(), md.Key()) {
+				add(md.Value())
+			}
+		}
+	}
+
 	sort.SliceStable(r.secrets, func(i, j int) bool { return len(r.secrets[i]) > len(r.secrets[j]) })
 	return r
 }
 
-// urlencodedBody returns the buffered request body when it was parsed as
-// application/x-www-form-urlencoded.
-func (r *auditLogRedactor) urlencodedBody() (string, bool) {
-	if r.tx.variables.reqbodyProcessor.Get() != "URLENCODED" {
-		return "", false
+// sanitiseBody masks the sanitised arguments of a url-encoded or JSON body by
+// position and returns the masked body together with the raw values it masked.
+// Other body formats have no positional parser here and are returned as is.
+func (r *auditLogRedactor) sanitiseBody(body string) (string, []string) {
+	switch r.tx.variables.reqbodyProcessor.Get() {
+	case "URLENCODED":
+		return sanitiseURLEncoded(body, r.tx.sanitise.args)
+	case "JSON":
+		return bodyprocessors.MaskJSONValues(body, r.tx.WAF.RequestBodyJsonDepthLimit, func(key string) bool {
+			return hasName(r.tx.sanitise.args, key)
+		})
 	}
-	body, err := r.tx.readRequestBodyForAuditLog()
-	if err != nil {
-		return "", false
-	}
-	return body, true
+	return body, nil
 }
 
 // maskSecrets masks every occurrence of a sanitised value in free text.
@@ -218,17 +292,21 @@ func (r *auditLogRedactor) maskSecrets(s string) string {
 }
 
 func (r *auditLogRedactor) uri(uri string) string {
-	masked, _ := sanitiseURI(uri, r.separator, r.tx.sanitise.args)
+	masked, _ := sanitiseURI(uri, r.tx.sanitise.args)
+	masked, _ = sanitisePath(masked, r.pathValues)
 	return masked
 }
 
-// requestBody masks sanitised arguments of a url-encoded body by position. Other
-// body formats have no positional parser here, so their sanitised values are
+// requestBody masks the sanitised arguments of the body. A url-encoded body is
+// masked by position only. In any other body the sanitised values are also
 // masked wherever they occur, which over-masks rather than leaks.
 func (r *auditLogRedactor) requestBody(body string) string {
+	if r.hasBody {
+		// Already masked by position when the redactor was built.
+		body = r.body
+	}
 	if r.tx.variables.reqbodyProcessor.Get() == "URLENCODED" {
-		masked, _ := sanitiseURLEncoded(body, r.separator, r.tx.sanitise.args)
-		return masked
+		return body
 	}
 	return r.maskSecrets(body)
 }

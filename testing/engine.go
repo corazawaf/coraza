@@ -42,6 +42,8 @@ type Test struct {
 	RequestProtocol string
 	// RequestHeaders contains the headers of the request
 	RequestHeaders map[string]string
+	// RequestPathArgs contains the path parameters of the request
+	RequestPathArgs map[string]string
 	// ResponseHeaders contains the headers of the response
 	ResponseHeaders map[string]string
 	// ResponseCode contains the response code of the response
@@ -168,6 +170,9 @@ func (t *Test) SetResponseBody(body any) error {
 func (t *Test) RunPhases() error {
 	t.transaction.ProcessConnection(t.RequestAddress, t.RequestPort, t.ServerAddress, t.ServerPort)
 	t.transaction.ProcessURI(t.RequestURI, t.RequestMethod, t.RequestProtocol)
+	for k, v := range t.RequestPathArgs {
+		t.transaction.AddPathRequestArgument(k, v)
+	}
 	for k, v := range t.RequestHeaders {
 		t.transaction.AddRequestHeader(k, v)
 	}
