@@ -3,7 +3,7 @@
 - **Status:** proposed
 - **Date:** 2026-11-21 (expected)
 - **Version:** unreleased (post-v3.8.1)
-- **PR:** Not yet opened
+- **PR:** [#1878](https://github.com/corazawaf/coraza/pull/1878)
 - **Issue(s):** [#765](https://github.com/corazawaf/coraza/issues/765)
 - **Deciders:** @ayushsinha322
 - **Category:** Parity (ModSecurity v2 parity)
