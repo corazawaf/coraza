@@ -37,14 +37,7 @@ func TestNamedCollection(t *testing.T) {
     key2: value2
 `
 	if have := fmt.Sprint(c); have != wantStr {
-		// Map order is not guaranteed, not pretty but checking twice is the simplest for now.
-		wantStr = `ARGS_POST:
-    key2: value2
-    key: value
-`
-		if have != wantStr {
-			t.Errorf("String() = %q, want %q", have, wantStr)
-		}
+		t.Errorf("String() = %q, want %q", have, wantStr)
 	}
 
 	// Now test names
@@ -56,25 +49,19 @@ func TestNamedCollection(t *testing.T) {
 
 	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key2")
 	if want, have := "ARGS_POST_NAMES: key,key2", fmt.Sprint(names); want != have {
-		if want := "ARGS_POST_NAMES: key2,key"; want != have {
-			t.Errorf("want %q, have %q", want, have)
-		}
+		t.Errorf("want %q, have %q", want, have)
 	}
 	c.Add("key", "value2")
 	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key", "key2")
 	if want, have := "ARGS_POST_NAMES: key,key,key2", fmt.Sprint(names); want != have {
-		if want := "ARGS_POST_NAMES: key2,key,key"; want != have {
-			t.Errorf("want %q, have %q", want, have)
-		}
+		t.Errorf("want %q, have %q", want, have)
 	}
 	// While selection operators will treat this as case-insensitive, names should have all names
 	// as-is.
 	c.Add("Key", "value3")
 	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key", "Key", "key2")
-	if want, have := "ARGS_POST_NAMES: key2,key,key,Key", fmt.Sprint(names); want != have {
-		if want := "ARGS_POST_NAMES: key,key,Key,key2"; want != have {
-			t.Errorf("want %q, have %q", want, have)
-		}
+	if want, have := "ARGS_POST_NAMES: key,key,Key,key2", fmt.Sprint(names); want != have {
+		t.Errorf("want %q, have %q", want, have)
 	}
 	c.Remove("key2")
 	assertUnorderedValuesMatch(t, names.FindAll(), "key", "key", "Key")
@@ -82,7 +69,7 @@ func TestNamedCollection(t *testing.T) {
 		t.Errorf("want %q, have %q", want, have)
 	}
 
-	if c.Len() != len(c.data) {
+	if c.Len() != len(c.index) {
 		t.Fatal("The lengths are not equal.")
 	}
 

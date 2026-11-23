@@ -256,6 +256,7 @@ type httpTest struct {
 	http2                   bool
 	reqURI                  string
 	reqBody                 string
+	reqHeaders              map[string]string
 	echoReqBody             bool
 	reqBodyLimit            int
 	shouldRejectOnBodyLimit bool
@@ -357,6 +358,29 @@ func TestHttpServer(t *testing.T) {
 			expectedStatus:          403,
 			expectedRespHeadersKeys: expectedBlockingHeaders,
 		},
+		// net/http keeps headers in a map, so the middleware adds them in
+		// sorted name order. Only the last header, in that order, captures
+		// "ttt", so a random order lets the request through (#1815).
+		"chain reads the captures of the last request header": {
+			reqURI: "/hello",
+			reqHeaders: map[string]string{
+				"X-Order-A": "attack", "X-Order-B": "attack", "X-Order-C": "attack", "X-Order-D": "attack",
+				"X-Order-E": "attack", "X-Order-F": "attack", "X-Order-G": "attack", "X-Order-H": "atttack",
+			},
+			expectedProto:           "HTTP/1.1",
+			expectedStatus:          409,
+			expectedRespHeadersKeys: expectedBlockingHeaders,
+		},
+		"chain reads the captures of the last response header": {
+			reqURI: "/hello",
+			respHeaders: map[string]string{
+				"X-Order-A": "attack", "X-Order-B": "attack", "X-Order-C": "attack", "X-Order-D": "attack",
+				"X-Order-E": "attack", "X-Order-F": "attack", "X-Order-G": "attack", "X-Order-H": "atttack",
+			},
+			expectedProto:           "HTTP/1.1",
+			expectedStatus:          409,
+			expectedRespHeadersKeys: expectedBlockingHeaders,
+		},
 		"deny based on number of post arguments matching a name": {
 			reqURI:                  "/hello?foobar=1&foobar=2",
 			expectedProto:           "HTTP/1.1",
@@ -390,6 +414,10 @@ func TestHttpServer(t *testing.T) {
 	SecRule RESPONSE_BODY "@contains password" "id:200, phase:4,deny, status:403,msg:'Invalid response body',log,auditlog"
 	SecRule REQUEST_URI "/allow_me" "id:9,phase:1,allow,msg:'ALLOWED'"
 	SecRule &ARGS_GET_NAMES:foobar "@eq 2" "id:11,phase:1,deny, status:403,msg:'Invalid foobar',log,auditlog"
+	SecRule REQUEST_HEADERS:/^x-order-/ "@rx a(t+)ack" "id:12,phase:1,deny,status:409,capture,log,chain"
+		SecRule TX:1 "@streq ttt" ""
+	SecRule RESPONSE_HEADERS:/^x-order-/ "@rx a(t+)ack" "id:201,phase:3,deny,status:409,capture,log,chain"
+		SecRule TX:1 "@streq ttt" ""
 `).WithErrorCallback(errLogger(t)).WithDebugLogger(logger)
 			if l := tCase.reqBodyLimit; l > 0 {
 				conf = conf.WithRequestBodyAccess().WithRequestBodyLimit(l).WithRequestBodyInMemoryLimit(l)
@@ -501,6 +529,9 @@ func runAgainstWAF(t *testing.T, tCase httpTest, waf coraza.WAF) {
 	// being the only content-type for which by default Coraza enforces the request body processing.
 	// See https://github.com/corazawaf/coraza/issues/438
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+	for k, v := range tCase.reqHeaders {
+		req.Header.Set(k, v)
+	}
 	res, err := ts.Client().Do(req)
 	if err != nil {
 		t.Fatalf("unexpected error when performing the request: %v", err)
