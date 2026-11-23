@@ -34,11 +34,78 @@ type RuleParser struct {
 	options        RuleOptions
 }
 
+// pipeAndRawSlash reports whether a regex body holds a '|' and an unescaped '/'.
+// A '|' counts even when escaped. A '/' counts only when it is not escaped.
+func pipeAndRawSlash(pat []byte) bool {
+	pipe, slash, esc := false, false, false
+	for _, c := range pat {
+		if esc {
+			if c == '|' {
+				pipe = true
+			}
+			esc = false
+			continue
+		}
+		if c == '\\' {
+			esc = true
+			continue
+		}
+		switch c {
+		case '|':
+			pipe = true
+		case '/':
+			slash = true
+		}
+	}
+	return pipe && slash
+}
+
+// escapeRawSlashes escapes each unescaped '/' so the repaired key can load.
+func escapeRawSlashes(pat string) string {
+	var b strings.Builder
+	esc := false
+	for i := 0; i < len(pat); i++ {
+		c := pat[i]
+		if esc {
+			b.WriteByte(c)
+			esc = false
+			continue
+		}
+		if c == '\\' {
+			b.WriteByte(c)
+			esc = true
+			continue
+		}
+		if c == '/' {
+			b.WriteByte('\\')
+		}
+		b.WriteByte(c)
+	}
+	return b.String()
+}
+
 // ParseVariables parses variables from a string and transforms it into
 // variables, variable negations and variable counters.
 // Multiple separated variables: VARIABLE1|VARIABLE2|VARIABLE3
 // Variable count: &VARIABLE1
 // Variable key negation: REQUEST_HEADERS|!REQUEST_HEADERS:user-agent
+// Regex key: ARGS:/^id_/. A / closes a regex key only when the next byte
+// ends that key: '|', the end of the list, or the closing quote of a quoted
+// key. Any other / is part of the pattern, so ARGS:/a/b/ is the regex a/b
+// and ARGS:/ab/x is the literal key "/ab/x". A key that starts with / and
+// never closes is a literal key that runs to the next | or to the end of
+// the list: ARGS:/abc is the argument "/abc", and ARGS:/a|ARGS:/b is the
+// two literals "/a" and "/b".
+// An escaped / at the end of the list is not a closer either, so
+// ARGS:/a|ARGS:b\/ is the literals "/a" and "b\/".
+// An unquoted regex may contain '|', which the SecLang grammar allows:
+// ARGS:/a|b/ stays the regex a|b. An unquoted regex whose body also holds
+// a '|' and an unescaped '/' does not load: ARGS:/abc|ARGS:/def/ is a load
+// error that names the key and says to quote it or escape the slash.
+// Both differ from ModSecurity, which ends an unquoted key at '|' (v2:
+// msre_parse_generic in apache2/re.c; v3: DICT_ELEMENT_NO_PIPE in
+// src/parser/seclang-scanner.ll) and so reads ARGS:/abc|ARGS:/def/ as the
+// key /abc and then the regex def.
 func (rp *RuleParser) ParseVariables(vars string) error {
 
 	// 0 = variable name
@@ -52,27 +119,59 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 	var curKey []byte
 	isEscaped := false
 	isquoted := false
+	// index of the opening / of the current regex key
+	regexStart := 0
 	for i := 0; i < len(vars); i++ {
 		c := vars[i]
 		if (c == '|' && curr != 2) || i+1 >= len(vars) || (curr == 2 && c == '/' && !isEscaped) {
 			// if next variable or end
 			// if regex we ignore |
 			// we wont support pipe for xpath, maybe later
+			// A / closes the regex only when the next byte ends the key.
+			if curr == 2 && c == '/' && !isEscaped && i+1 < len(vars) && vars[i+1] != '|' && (!isquoted || vars[i+1] != '\'') {
+				curKey = append(curKey, '/')
+				continue
+			}
 			if c != '|' {
 				// we don't want to miss the last character
 				if curr == 0 {
 					curVar = append(curVar, c)
-				} else if curr != 2 && c != '/' {
-					// we don't want the last slash if it's a regex
+				} else if curr == 1 || (curr == 3 && c != '/') {
+					// a last slash outside a regex is part of the key (ARGS:/, ARGS:a/).
+					// an XPath key drops a trailing slash (XML:/a/b/ is /a/b).
 					curKey = append(curKey, c)
 				}
 			}
 			v, err := variables.Parse(string(curVar))
 			if err != nil {
-				return err
+				return fmt.Errorf("%w %q", err, string(curVar))
+			}
+			// An escaped / at the end of the list is not a closer either, so the key is a literal here too.
+			if curr == 2 && !isquoted && (c != '/' || isEscaped) {
+				// the input ended before a closing slash, so this is not a
+				// regex but a literal key, which runs to the next | or to the end of the list.
+				curKey = []byte(vars[regexStart:])
+				if p := strings.IndexByte(vars[regexStart:], '|'); p >= 0 {
+					curKey = curKey[:p]
+					i = regexStart + p
+				}
+				curr = 1
 			}
 			if curr == 1 && !v.CanBeSelected() {
 				return fmt.Errorf("attempting to select a value inside a non-selectable collection: %s", string(curVar))
+			}
+			if curr == 2 && !isquoted && pipeAndRawSlash(curKey) {
+				shown := "/" + string(curKey) + "/"
+				prefix := ""
+				if isNegation {
+					prefix = "!"
+				} else if isCount {
+					prefix = "&"
+				}
+				name := prefix + string(curVar)
+				quoted := name + ":'" + shown + "'"
+				escaped := name + ":/" + escapeRawSlashes(string(curKey)) + "/"
+				return fmt.Errorf("unquoted regex key %q contains both '|' and an unescaped '/': quote the key %q or escape the slash %q", shown, quoted, escaped)
 			}
 			// fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
 			if isquoted {
@@ -128,9 +227,11 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 				// We are starting a XPATH
 				curr = 3
 				curKey = append(curKey, c)
-			case c == '/':
-				// We are starting a regex
+			case c == '/' && len(curKey) == 0:
+				// A key that starts with / is a regex. A / later in a key
+				// is part of the key (ARGS:a/b).
 				curr = 2
+				regexStart = i
 			case c == '\'':
 				// we start a quoted regex
 				// we go back to the loop to find /
@@ -399,7 +500,7 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			return nil, fmt.Errorf("%s rule operator is disabled", operator)
 		}
 		if err := rp.ParseVariables(vars); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parsing variables %q: %w", vars, err)
 		}
 		if err := rp.ParseOperator(operator); err != nil {
 			return nil, err

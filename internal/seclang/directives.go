@@ -1521,8 +1521,9 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 						},
 						defaultActions: map[types.RulePhase][]ruleAction{},
 					}
-					if err := rp.ParseVariables(strings.Trim(variables, "\"")); err != nil {
-						return err
+					inputVars := strings.Trim(variables, "\"")
+					if err := rp.ParseVariables(inputVars); err != nil {
+						return fmt.Errorf("parsing variables %q: %w", inputVars, err)
 					}
 				}
 			}
@@ -1544,7 +1545,11 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 		},
 		defaultActions: map[types.RulePhase][]ruleAction{},
 	}
-	return rp.ParseVariables(strings.Trim(variables, "\""))
+	inputVars := strings.Trim(variables, "\"")
+	if err := rp.ParseVariables(inputVars); err != nil {
+		return fmt.Errorf("parsing variables %q: %w", inputVars, err)
+	}
+	return nil
 }
 
 // hasDisruptiveActions checks if any of the parsed actions are disruptive.
@@ -1718,7 +1723,7 @@ func directiveSecRuleUpdateTargetByTag(options *DirectiveOptions) error {
 			}
 			inputVars := strings.Trim(tagAndvars[1], "\"")
 			if err := rp.ParseVariables(inputVars); err != nil {
-				return err
+				return fmt.Errorf("parsing variables %q: %w", inputVars, err)
 			}
 		}
 	}
