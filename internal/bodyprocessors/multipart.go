@@ -259,11 +259,18 @@ func looksLikeXML(contentType string, filenames []string, head []byte) bool {
 type countingWriter struct {
 	w io.Writer
 	n int64
+	// err is the first error writing to w. Through an io.TeeReader it reaches
+	// the reader's consumer as a read error, so it is kept here to tell a
+	// destination failure apart from malformed input.
+	err error
 }
 
 func (c *countingWriter) Write(p []byte) (int, error) {
 	n, err := c.w.Write(p)
 	c.n += int64(n)
+	if err != nil && c.err == nil {
+		c.err = err
+	}
 	return n, err
 }
 
@@ -273,7 +280,7 @@ func (c *countingWriter) Write(p []byte) (int, error) {
 // tokenized on its way to dst and the attribute values and element contents it
 // yields are returned, along with xmlErr when the tokenizer rejects the part. The
 // part is always drained, so dst holds the whole file whether it parsed or not;
-// err reports a failure reading the part, never a parse failure.
+// err reports a failure reading the part or writing dst, never a parse failure.
 func copyFilePart(dst io.Writer, p *multipart.Part, filenames []string, parseXML bool) (size int64, attrs, contents []string, xmlErr, err error) {
 	if !parseXML {
 		size, err := io.Copy(dst, p)
@@ -317,6 +324,14 @@ func copyFilePart(dst io.Writer, p *multipart.Part, filenames []string, parseXML
 		// The part could not be read to its end. That is what made the decoder
 		// stop, so it is a body read failure rather than malformed XML.
 		xmlErr = nil
+	}
+	if counter.err != nil {
+		// The decoder saw dst failing as a read error. That is a copy failure,
+		// reported like the one on the unparsed path, not malformed XML.
+		xmlErr = nil
+		if err == nil {
+			err = counter.err
+		}
 	}
 	// The values tokenized before a parse error are kept: discarding them would
 	// let a malformed tail hide a payload placed ahead of it.
