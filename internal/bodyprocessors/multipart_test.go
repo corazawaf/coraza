@@ -1053,6 +1053,17 @@ func TestMultipartXMLParts(t *testing.T) {
 			wantErr:      true,
 		},
 		{
+			// The part itself is complete, so the decoder's EOF inside the
+			// unterminated attribute is malformed XML, not truncation, and the
+			// payload in it must not go unreported.
+			name:         "a complete part ending mid-construct is reported",
+			enabled:      true,
+			parts:        []string{part("f", "p.xml", "application/xml", `<r>ok</r><x a="&lt;script&gt;alert(1)`)},
+			wantContents: []string{"ok"},
+			wantFiles:    []string{"p.xml"},
+			wantErr:      true,
+		},
+		{
 			name:    "form fields are untouched by the option",
 			enabled: true,
 			parts: []string{

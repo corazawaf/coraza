@@ -267,7 +267,7 @@ func (c *countingWriter) Write(p []byte) (int, error) {
 // copyFilePart copies a file part into dst and returns the number of bytes
 // copied. When parseXML is set and the part looks like XML, the part is
 // tokenized on its way to dst and the attribute values and element contents it
-// yields are returned, along with xmlErr when the part is not well-formed. The
+// yields are returned, along with xmlErr when the tokenizer rejects the part. The
 // part is always drained, so dst holds the whole file whether it parsed or not;
 // err reports a failure reading the part, never a parse failure.
 func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bool) (size int64, attrs, contents []string, xmlErr, err error) {
@@ -298,10 +298,16 @@ func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bo
 		}
 	}
 	tee := io.TeeReader(br, counter)
-	attrs, contents, xmlErr = readXML(tee)
-	// readXML stops at the first token it cannot handle, which may be before the
-	// end of the part. Drain the remainder through the tee so the stored file and
-	// FILES_SIZES stay complete regardless of how far parsing got.
+	// tokenizeXML rather than readXML: an unexpected EOF inside a construct is
+	// reported. The tolerance readXML applies exists because an application/xml
+	// body may be truncated by the body limit; here a truncated part surfaces
+	// as a read error below instead, so a part that ends mid-construct (say an
+	// unterminated attribute value hiding a payload) is malformed XML.
+	attrs, contents, xmlErr = tokenizeXML(tee)
+	// tokenizeXML stops at the first token it cannot handle, which may be
+	// before the end of the part. Drain the remainder through the tee so the
+	// stored file and FILES_SIZES stay complete regardless of how far parsing
+	// got.
 	_, err = io.Copy(io.Discard, tee)
 	if err != nil {
 		// The part could not be read to its end. That is what made the decoder
