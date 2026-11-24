@@ -138,7 +138,7 @@ func (mbp *multipartBodyProcessor) ProcessRequest(reader io.Reader, v plugintype
 				}
 				dst = temp
 			}
-			size, attrs, contents, partXMLErr, err := copyFilePart(dst, p, filename, options.MultipartXMLParts)
+			size, attrs, contents, partXMLErr, err := copyFilePart(dst, p, []string{filename, fields.altFilename}, options.MultipartXMLParts)
 			if partXMLErr != nil && xmlErr == nil {
 				xmlErr = fmt.Errorf("multipart: XML file part %q: %w", p.FormName(), partXMLErr)
 			}
@@ -237,15 +237,18 @@ var (
 
 // looksLikeXML reports whether a file part should be handed to the XML tokenizer.
 // A part qualifies on any of three independent hints: an XML media type, a known
-// XML filename extension, or content starting with an XML declaration. All three
-// are attacker controlled, so they widen coverage rather than establish trust: a
-// part that is not XML simply fails to tokenize into anything.
-func looksLikeXML(contentType, filename string, head []byte) bool {
+// XML extension on any reading of the filename, or content starting with an XML
+// declaration. All three are attacker controlled, so they widen coverage rather
+// than establish trust: a part that is not XML simply fails to tokenize into
+// anything.
+func looksLikeXML(contentType string, filenames []string, head []byte) bool {
 	if mediaType, _, err := mime.ParseMediaType(contentType); err == nil && strings.Contains(mediaType, "xml") {
 		return true
 	}
-	if slices.Contains(xmlFileExtensions, strings.ToLower(path.Ext(filename))) {
-		return true
+	for _, filename := range filenames {
+		if slices.Contains(xmlFileExtensions, strings.ToLower(path.Ext(filename))) {
+			return true
+		}
 	}
 	head = bytes.TrimLeft(bytes.TrimPrefix(head, utf8BOM), " \t\r\n")
 	return bytes.HasPrefix(head, []byte("<?xml"))
@@ -265,12 +268,13 @@ func (c *countingWriter) Write(p []byte) (int, error) {
 }
 
 // copyFilePart copies a file part into dst and returns the number of bytes
-// copied. When parseXML is set and the part looks like XML, the part is
+// copied. filenames are every reading of the part's filename, any of which can
+// hint that it is XML. When parseXML is set and the part looks like XML, the part is
 // tokenized on its way to dst and the attribute values and element contents it
 // yields are returned, along with xmlErr when the tokenizer rejects the part. The
 // part is always drained, so dst holds the whole file whether it parsed or not;
 // err reports a failure reading the part, never a parse failure.
-func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bool) (size int64, attrs, contents []string, xmlErr, err error) {
+func copyFilePart(dst io.Writer, p *multipart.Part, filenames []string, parseXML bool) (size int64, attrs, contents []string, xmlErr, err error) {
 	if !parseXML {
 		size, err := io.Copy(dst, p)
 		return size, nil, nil, nil, err
@@ -283,7 +287,7 @@ func copyFilePart(dst io.Writer, p *multipart.Part, filename string, parseXML bo
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
 		return 0, nil, nil, nil, err
 	}
-	if !looksLikeXML(p.Header.Get("Content-Type"), filename, head) {
+	if !looksLikeXML(p.Header.Get("Content-Type"), filenames, head) {
 		size, err := io.Copy(dst, br)
 		return size, nil, nil, nil, err
 	}

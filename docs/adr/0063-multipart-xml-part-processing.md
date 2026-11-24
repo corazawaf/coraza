@@ -87,7 +87,9 @@ The directive is `SecRequestBodyMultipartXMLParts On|Off`, defaulting to `Off`.
 
 A part is handed to the tokenizer when any of three hints holds: its part
 `Content-Type` media type contains `xml`, its filename carries a known XML
-extension, or its content begins with an XML declaration. All three are attacker
+extension, or its content begins with an XML declaration. When `filename` and
+`filename*` disagree, both readings are kept in `FILES`, so either one carrying
+an XML extension counts. All three are attacker
 controlled; they widen coverage rather than establish trust. A part that matches a
 hint but that the tokenizer rejects is reported as described below. The third hint is the one that matters in practice,
 because a client that cannot type a file sends `application/octet-stream`.

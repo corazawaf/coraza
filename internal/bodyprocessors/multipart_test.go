@@ -1064,6 +1064,17 @@ func TestMultipartXMLParts(t *testing.T) {
 			wantErr:      true,
 		},
 		{
+			// The plain filename is kept in FILES as the reading another
+			// backend may resolve, so it must count as an XML hint too.
+			name:    "either filename reading is an extension hint",
+			enabled: true,
+			parts: []string{"--" + boundary + "\r\n" +
+				"Content-Disposition: form-data; name=\"f\"; filename=\"p.xml\"; filename*=iso-8859-1''p.txt\r\n" +
+				"Content-Type: application/octet-stream\r\n\r\n<r>payload</r>\r\n"},
+			wantContents: []string{"payload"},
+			wantFiles:    []string{"p.txt", "p.xml"},
+		},
+		{
 			name:    "form fields are untouched by the option",
 			enabled: true,
 			parts: []string{
