@@ -89,7 +89,7 @@ A part is handed to the tokenizer when any of three hints holds: its part
 `Content-Type` media type contains `xml`, its filename carries a known XML
 extension, or its content begins with an XML declaration. All three are attacker
 controlled; they widen coverage rather than establish trust. A part that matches a
-hint but is not well-formed XML is reported as described below. The third hint is the one that matters in practice,
+hint but that the tokenizer rejects is reported as described below. The third hint is the one that matters in practice,
 because a client that cannot type a file sends `application/octet-stream`.
 
 Parsing happens on the way to disk, through an `io.TeeReader`, so a part is not
@@ -113,6 +113,14 @@ an earlier revision did, let an attacker hide a payload behind a malformed tail
 (`<r>&lt;script&gt;…</r><x "`) with nothing recording that parsing failed. A
 failure to read the part, such as a body truncated mid-part, is still handled by the
 multipart processor's own unexpected-EOF logic and is not reported as an XML error.
+Conversely, a part that was read to its end but stops inside an XML construct (an
+unterminated attribute value, comment or element) is reported. The XML body
+processor tolerates that case (ADR-0054) because it cannot tell a malformed body from
+one truncated by `SecRequestBodyLimitAction ProcessPartial`. A multipart part can:
+truncation shows up as a read error, so an unexpected EOF from a complete part is
+malformed XML. Without this, a payload placed in an unterminated trailing
+attribute (`<r>ok</r><x a="&lt;script&gt;…`) would be neither tokenized nor
+reported.
 `MULTIPART_STRICT_ERROR` is deliberately not set for a parse failure: it has defined
 ModSecurity semantics for multipart structure errors, and the recommended
 configuration keys rule 200003 off it.
@@ -162,9 +170,11 @@ to the current handling of parse failures:
   holds the extracted values for the lifetime of the transaction, bounded by
   `SecRequestBodyLimit`. Only XML is dispatched: JSON parts, and file content in
   general, remain uninspectable, and `FILES_TMP_CONTENT` remains unimplemented.
-  With the recommended configuration, an upload that matches an XML hint but is not
-  well-formed (a non-XML file named `.svg`, say) is rejected by rule 200002, the same
-  outcome as sending it as an `application/xml` body.
+  With the recommended configuration, an upload that matches an XML hint is rejected
+  by rule 200002 when the tokenizer reports an error, as a malformed
+  `application/xml` body is. The tokenizer is not strict, so this is not a
+  well-formedness check: a non-XML file named `.svg` whose content is plain text is
+  read as character data, with no error, and is not rejected.
 
 ## References
 
