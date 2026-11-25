@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/collection"
@@ -34,6 +35,8 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+var txStopWatchMut sync.Mutex
 
 // Transaction is created from a WAF instance to handle web requests and responses,
 // it contains a copy of most WAF configurations that can be safely changed.
@@ -636,6 +639,9 @@ func (tx *Transaction) MatchRule(r *Rule, mds []types.MatchData) {
 // GetStopWatch is used to debug phase durations
 // Normally it should be named StopWatch() but it would be confusing
 func (tx *Transaction) GetStopWatch() string {
+	txStopWatchMut.Lock()
+	defer txStopWatchMut.Unlock()
+
 	ts := tx.Timestamp
 	sum := int64(0)
 	for _, r := range tx.stopWatches {
@@ -1538,6 +1544,11 @@ func (tx *Transaction) LastPhase() types.RulePhase {
 // It implies the log parts starts with A and ends with Z as in the
 // types.ParseAuditLogParts.
 func (tx *Transaction) AuditLog() *auditlog.Log {
+	// under high load these can be nil, return empty auditlog if so
+	if tx.variables.remotePort == nil || tx.variables.serverPort == nil {
+		return &auditlog.Log{}
+	}
+
 	al := &auditlog.Log{}
 	al.Parts_ = tx.AuditLogParts
 

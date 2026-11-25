@@ -5,6 +5,7 @@ package corazawaf
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/corazawaf/coraza/v3/internal/corazatypes"
@@ -12,6 +13,8 @@ import (
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+var transformationCacheMut sync.Mutex
 
 // RuleGroup is a collection of rules
 // It contains all helpers required to manage the rules
@@ -153,6 +156,9 @@ func (rg *RuleGroup) Count() int {
 // as soon as an interruption has been triggered.
 // Returns true if transaction is disrupted
 func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
+	transformationCacheMut.Lock()
+	defer transformationCacheMut.Unlock()
+
 	tx.DebugLogger().Debug().
 		Int("phase", int(phase)).
 		Msg("Evaluating phase")

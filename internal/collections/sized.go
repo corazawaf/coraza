@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
@@ -21,6 +22,8 @@ type SizeCollection struct {
 }
 
 var _ collection.Collection = &SizeCollection{}
+
+var sizedMut sync.Mutex
 
 // NewSizeCollection returns a collection that
 // only returns the total sum of all the collections values
@@ -68,6 +71,9 @@ func (c *SizeCollection) String() string {
 
 // Size returns the size of all the collections values
 func (c *SizeCollection) size() int {
+	sizedMut.Lock()
+	defer sizedMut.Unlock()
+
 	i := 0
 	for _, d := range c.data {
 		// we iterate over d

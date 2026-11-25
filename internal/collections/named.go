@@ -134,6 +134,9 @@ type NamedCollectionNames struct {
 }
 
 func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	n := 0
 	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
 	var matched [][]keyValue
@@ -164,6 +167,9 @@ func (c *NamedCollectionNames) FindRegex(key *regexp.Regexp) []types.MatchData {
 }
 
 func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	data, ok := c.collection.data[key]
 	if !ok || len(data) == 0 {
 		return nil
@@ -182,10 +188,16 @@ func (c *NamedCollectionNames) FindString(key string) []types.MatchData {
 }
 
 func (c *NamedCollectionNames) Get(key string) []string {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	return c.collection.Get(key)
 }
 
 func (c *NamedCollectionNames) FindAll() []types.MatchData {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	n := 0
 	for _, data := range c.collection.data {
 		n += len(data)
@@ -211,10 +223,16 @@ func (c *NamedCollectionNames) FindAll() []types.MatchData {
 }
 
 func (c *NamedCollectionNames) Name() string {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	return c.variable.Name()
 }
 
 func (c *NamedCollectionNames) String() string {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	res := strings.Builder{}
 	res.WriteString(c.variable.Name())
 	res.WriteString(": ")
