@@ -213,6 +213,10 @@ const (
 	// MultipartInvalidQuoting will be set to 1 when a multipart part's "filename*"
 	// Content-Disposition parameter was quoted, which RFC 5987 does not permit
 	MultipartInvalidQuoting = variables.MultipartInvalidQuoting
+	// MultipartInvalidPart will be set to 1 when a structurally invalid multipart part is
+	// seen while parsing the body: a part with no Content-Disposition header, or one whose
+	// Content-Disposition header could not be parsed
+	MultipartInvalidPart = variables.MultipartInvalidPart
 	// Time holds a formatted string representing the time (hour:minute:second).
 	Time = variables.Time
 	// TimeDay holds the current day of the month (1-31)
