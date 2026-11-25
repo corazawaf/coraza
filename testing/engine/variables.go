@@ -65,6 +65,33 @@ var _ = profile.RegisterProfile(profile.Profile{
 				},
 			},
 		},
+		{
+			Title: "a key without a closing slash is a literal key",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI: "/index.php?abc=regex&%2Fabc=literal&zzz=piped&q=slash&%2F=excluded&ab=trailing&a%2Fb=inner",
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules: []int{
+								1301,
+								1303,
+								1305,
+								1307,
+								1309,
+							},
+							NonTriggeredRules: []int{
+								1302,
+								1304,
+								1306,
+								1308,
+							},
+						},
+					},
+				},
+			},
+		},
 	},
 	Rules: `
 SecRule REQBODY_PROCESSOR "" "id: 10, log"
@@ -106,6 +133,16 @@ SecRule ARGS "bbb" "id:9124,phase:1,log"
 SecRuleUpdateTargetById 9124 "!ARGS:t2"
 
 SecAction "id: 99999, log, msg:'%{env.test}'"
+
+SecRule ARGS:/abc "@streq literal" "id:1301,phase:1,log"
+SecRule ARGS:/abc "@streq regex" "id:1302,phase:1,log"
+SecRule ARGS:/abc|ARGS:zzz "@streq piped" "id:1303,phase:1,log"
+SecRule ARGS|!ARGS:/ "@streq excluded" "id:1304,phase:1,log"
+SecRule ARGS|!ARGS:/ "@streq slash" "id:1305,phase:1,log"
+SecRule ARGS:ab/ "@streq trailing" "id:1306,phase:1,log"
+SecRule ARGS:a/b "@streq inner" "id:1307,phase:1,log"
+SecRule ARGS:a/b "@streq regex" "id:1308,phase:1,log"
+SecRule &ARGS:/abc "@eq 1" "id:1309,phase:1,log"
 `,
 })
 

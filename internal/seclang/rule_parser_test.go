@@ -124,9 +124,9 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:8,phase:2"
 		SecRuleUpdateTargetById 8 "!REQUEST_HEADERS:"
 	`)
-	expectedErr := errors.New("unknown variable")
-	if errors.Unwrap(err).Error() != expectedErr.Error() {
-		t.Fatalf("unexpexted error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
+	// The directive wraps the token, and ParseVariables names the bytes variables.Parse rejected.
+	if !strings.Contains(err.Error(), "unknown variable") || !strings.Contains(err.Error(), "!REQUEST_HEADERS:") {
+		t.Fatalf("unexpected error, want unknown variable and the token, have %q", err.Error())
 	}
 
 	// Try to update undefined rule
@@ -134,7 +134,7 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:9,phase:2"
 		SecRuleUpdateTargetById 99 "!REQUEST_HEADERS:xyz"
 	`)
-	expectedErr = errors.New("SecRuleUpdateTargetById: rule \"99\" not found")
+	expectedErr := errors.New("SecRuleUpdateTargetById: rule \"99\" not found")
 	if errors.Unwrap(err).Error() != expectedErr.Error() {
 		t.Fatalf("unexpected error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
 	}
@@ -476,15 +476,53 @@ SecAction "deny"`)
 	}
 }
 
+// parsedKey is one variable ParseVariables added. regex is the pattern when
+// the key compiled as a regex; otherwise key is the literal KeyStr.
+type parsedKey struct {
+	key   string
+	regex bool
+	count bool
+}
+
+func parsedKeys(rule *corazawaf.Rule) []parsedKey {
+	vs := reflect.ValueOf(rule).Elem().FieldByName("variables")
+	out := make([]parsedKey, 0, vs.Len())
+	for i := 0; i < vs.Len(); i++ {
+		v := vs.Index(i)
+		pk := parsedKey{
+			key:   v.FieldByName("KeyStr").String(),
+			count: v.FieldByName("Count").Bool(),
+		}
+		rx := v.FieldByName("KeyRx")
+		if !rx.IsNil() {
+			pk.regex = true
+			pk.key = rx.Elem().FieldByName("expr").String()
+		}
+		out = append(out, pk)
+	}
+	return out
+}
+
 func TestParseRule(t *testing.T) {
 	tests := []struct {
-		name string
-		vars string
-		want int
+		name    string
+		vars    string
+		want    []parsedKey
+		wantErr string
 	}{
-		{"Does not contain escape characters", `ARGS_GET:/(test)/|REQUEST_XML`, 2},
-		{"The last variable contains escape characters", `ARGS_GET|REQUEST_XML:/(test)\b/`, 2},
-		{"Contains escape characters", `ARGS_GET:/(test\b)/|REQUEST_XML`, 2},
+		{"Does not contain escape characters", `ARGS_GET:/(test)/|REQUEST_XML`, []parsedKey{{key: "(test)", regex: true}, {key: ""}}, ""},
+		{"The last variable contains escape characters", `ARGS_GET|REQUEST_XML:/(test)\b/`, []parsedKey{{key: ""}, {key: "(test)\\b", regex: true}}, ""},
+		{"Contains escape characters", `ARGS_GET:/(test\b)/|REQUEST_XML`, []parsedKey{{key: "(test\\b)", regex: true}, {key: ""}}, ""},
+		{"A regex key may contain a pipe", `ARGS_GET:/a|b/`, []parsedKey{{key: "a|b", regex: true}}, ""},
+		{"A slash closes a regex only at a pipe or the end", `ARGS_GET:/a|ARGS_GET:/b`, []parsedKey{{key: "/a"}, {key: "/b"}}, ""},
+		{"A slash before more key text is not a closer", `ARGS_GET:/ab/x`, []parsedKey{{key: "/ab/x"}}, ""},
+		{"A slash at the end closes a regex that contains a slash", `ARGS_GET:/a/b/`, []parsedKey{{key: "a/b", regex: true}}, ""},
+		{"An unquoted regex that holds a pipe and a slash does not load", `ARGS_GET:/abc|ARGS_GET:/def/`, nil, `unquoted regex key "/abc|ARGS_GET:/def/" contains both '|' and an unescaped '/': quote the key "ARGS_GET:'/abc|ARGS_GET:/def/'" or escape the slash "ARGS_GET:/abc|ARGS_GET:\\/def/"`},
+		{"Quoting a pipe-and-slash key loads that one regex", `ARGS_GET:'/abc|ARGS_GET:/def/'`, []parsedKey{{key: "abc|ARGS_GET:/def", regex: true}}, ""},
+		{"A quoted regex closes at the slash before the quote", `ARGS_GET:'/a/b/'`, []parsedKey{{key: "a/b", regex: true}}, ""},
+		{"An escaped slash at the end does not swallow an earlier pipe", `ARGS_GET:/a|ARGS_GET:b\/`, []parsedKey{{key: "/a"}, {key: `b\/`}}, ""},
+		{"A key without a closing slash runs to the next pipe or to the end of the list", `ARGS_GET:/a|b`, nil, `unknown variable "b"`},
+		{"A key without a closing slash on a non-selectable variable", `REQUEST_URI:/abc`, nil, "non-selectable collection: REQUEST_URI"},
 	}
 
 	for _, tc := range tests {
@@ -493,12 +531,24 @@ func TestParseRule(t *testing.T) {
 			rp := RuleParser{
 				rule: corazawaf.NewRule(),
 			}
-			if err := rp.ParseVariables(tt.vars); err != nil {
-				t.Error(err)
+			err := rp.ParseVariables(tt.vars)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("error for %q = %v, want it to contain %q", tt.vars, err, tt.wantErr)
+				}
+				return
 			}
-			got := reflect.ValueOf(rp.rule).Elem().FieldByName("variables").Len()
-			if got != tt.want {
-				t.Error("variables parse error want", tt.want, "got", got)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := parsedKeys(rp.rule)
+			if len(got) != len(tt.want) {
+				t.Fatalf("variables for %q = %+v, want %+v", tt.vars, got, tt.want)
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Errorf("variable %d for %q = %+v, want %+v", i, tt.vars, got[i], tt.want[i])
+				}
 			}
 		})
 	}
