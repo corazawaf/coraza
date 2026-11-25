@@ -3,7 +3,12 @@
 
 package bodyprocessors
 
-import "testing"
+import (
+	"errors"
+	"mime/multipart"
+	"strings"
+	"testing"
+)
 
 func TestFindFilenameStar(t *testing.T) {
 	tests := []struct {
@@ -249,6 +254,37 @@ func TestUnquoteIfQuoted(t *testing.T) {
 				t.Errorf("unquoteIfQuoted(%q) = %q, want %q", tc.input, value, tc.wantValue)
 			}
 		})
+	}
+}
+
+// failOnceWriter fails its first write and accepts every later one, like a
+// transient disk error.
+type failOnceWriter struct{ failed bool }
+
+var errWriteOnce = errors.New("write failed once")
+
+func (w *failOnceWriter) Write(p []byte) (int, error) {
+	if !w.failed {
+		w.failed = true
+		return 0, errWriteOnce
+	}
+	return len(p), nil
+}
+
+// Not a profile or a ProcessRequest row: the destination is the temp file
+// ProcessRequest creates itself, so a failing one can only be injected here.
+func TestCopyFilePartDestinationErrorIsNotXMLError(t *testing.T) {
+	body := "--b\r\nContent-Disposition: form-data; name=\"f\"; filename=\"p.xml\"\r\n\r\n<r>payload</r>\r\n--b--\r\n"
+	p, err := multipart.NewReader(strings.NewReader(body), "b").NextPart()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, _, xmlErr, err := copyFilePart(&failOnceWriter{}, p, []string{"p.xml"}, true)
+	if xmlErr != nil {
+		t.Errorf("xmlErr = %v, want nil: a destination failure is not malformed XML", xmlErr)
+	}
+	if !errors.Is(err, errWriteOnce) {
+		t.Errorf("err = %v, want %v", err, errWriteOnce)
 	}
 }
 

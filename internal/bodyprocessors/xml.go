@@ -30,7 +30,23 @@ func (*xmlBodyProcessor) ProcessResponse(reader io.Reader, v plugintypes.Transac
 	return nil
 }
 
+// readXML tokenizes reader like tokenizeXML, but treats an XML syntax error
+// for an unexpected EOF as the end of the document. The XML body processor
+// cannot tell a malformed body from one truncated by
+// SecRequestBodyLimitAction ProcessPartial, so it tolerates both (ADR-0054).
 func readXML(reader io.Reader) ([]string, []string, error) {
+	attrs, content, err := tokenizeXML(reader)
+	if isUnexpectedEOFXMLSyntaxError(err) {
+		err = nil
+	}
+	return attrs, content, err
+}
+
+// tokenizeXML returns the attribute values and the non-empty character data of
+// the document in reader. On error it returns what was tokenized before the
+// error alongside it, for callers that report the error without discarding the
+// values. Unlike readXML, an unexpected EOF inside a construct is an error.
+func tokenizeXML(reader io.Reader) ([]string, []string, error) {
 	var attrs []string
 	var content []string
 	dec := xml.NewDecoder(reader)
@@ -39,8 +55,8 @@ func readXML(reader io.Reader) ([]string, []string, error) {
 	dec.Entity = xml.HTMLEntity
 	for {
 		token, err := dec.Token()
-		if err != nil && err != io.EOF && !isUnexpectedEOFXMLSyntaxError(err) {
-			return nil, nil, err
+		if err != nil && err != io.EOF {
+			return attrs, content, err
 		}
 		if token == nil {
 			break
