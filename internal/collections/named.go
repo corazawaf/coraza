@@ -38,11 +38,17 @@ func NewNamedCollection(rv variables.RuleVariable) *NamedCollection {
 
 // Add a value to some key
 func (c *NamedCollection) Add(key string, value string) {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	c.Map.Add(key, value)
 }
 
 // Set will replace the key's value with this slice
 func (c *NamedCollection) Set(key string, values []string) {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	c.Map.Set(key, values)
 }
 
@@ -50,15 +56,24 @@ func (c *NamedCollection) Set(key string, values []string) {
 // If the index is higher than the current size of the CollectionMap
 // it will be appended
 func (c *NamedCollection) SetIndex(key string, index int, value string) {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	c.Map.SetIndex(key, index, value)
 }
 
 // Remove deletes the key from the CollectionMap
 func (c *NamedCollection) Remove(key string) {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	c.Map.Remove(key)
 }
 
 func (c *NamedCollection) Len() int {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	return len(c.data)
 }
 
@@ -79,10 +94,16 @@ func (c *NamedCollection) Data() map[string][]string {
 
 // Name returns the name for the current CollectionMap
 func (c *NamedCollection) Name() string {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	return c.Map.Name()
 }
 
 func (c *NamedCollection) Reset() {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	c.Map.Reset()
 }
 
@@ -94,10 +115,16 @@ func (c *NamedCollection) Names(rv variables.RuleVariable) collection.Keyed {
 }
 
 func (c *NamedCollection) Format(res *strings.Builder) {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	c.Map.Format(res)
 }
 
 func (c *NamedCollection) String() string {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	return fmt.Sprint(c.Map)
 }
 
