@@ -19,7 +19,7 @@ go 1.26.0
 require (
 	github.com/corazawaf/coraza-coreruleset/crs/tests/v4 v4.30.0
 	github.com/corazawaf/coraza-coreruleset/crs/v4 v4.30.0
-	github.com/corazawaf/libinjection-go v0.3.4
+	github.com/corazawaf/libinjection-go v0.3.7
 	github.com/foxcpp/go-mockdns v1.2.0
 	github.com/jcchavezs/mergefs v0.1.1
 	github.com/kaptinlin/jsonschema v0.4.6
