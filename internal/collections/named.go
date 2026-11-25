@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+var namedMut sync.Mutex
 
 // NamedCollection is a Collection that also keeps track of names.
 type NamedCollection struct {
@@ -61,6 +64,9 @@ func (c *NamedCollection) Len() int {
 
 // Data is an internal method used for serializing to JSON
 func (c *NamedCollection) Data() map[string][]string {
+	namedMut.Lock()
+	defer namedMut.Unlock()
+
 	result := make(map[string][]string, len(c.data))
 	for k, v := range c.data {
 		result[k] = make([]string, len(v))

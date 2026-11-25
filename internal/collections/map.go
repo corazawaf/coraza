@@ -6,12 +6,15 @@ package collections
 import (
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/internal/corazarules"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/corazawaf/coraza/v3/types/variables"
 )
+
+var mapMut sync.Mutex
 
 // Map is a default collection.Map.
 type Map struct {
@@ -45,6 +48,9 @@ func NewCaseSensitiveKeyMap(variable variables.RuleVariable) *Map {
 }
 
 func (c *Map) Get(key string) []string {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	if len(c.data) == 0 {
 		return nil
 	}
@@ -64,6 +70,9 @@ func (c *Map) Get(key string) []string {
 
 // FindRegex returns all map elements whose key matches the regular expression.
 func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	n := 0
 	// Collect matching data slices in a single pass to avoid evaluating the regex twice per key.
 	var matched [][]keyValue
@@ -95,6 +104,9 @@ func (c *Map) FindRegex(key *regexp.Regexp) []types.MatchData {
 
 // FindString returns all map elements whose key matches the string.
 func (c *Map) FindString(key string) []types.MatchData {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	if key == "" {
 		return c.FindAll()
 	}
@@ -123,6 +135,9 @@ func (c *Map) FindString(key string) []types.MatchData {
 
 // FindAll returns all map elements.
 func (c *Map) FindAll() []types.MatchData {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	n := 0
 	for _, data := range c.data {
 		n += len(data)
@@ -149,6 +164,9 @@ func (c *Map) FindAll() []types.MatchData {
 
 // Add adds a new key-value pair to the map.
 func (c *Map) Add(key string, value string) {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	aVal := keyValue{key: key, value: value}
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
@@ -159,6 +177,9 @@ func (c *Map) Add(key string, value string) {
 
 // Sets the value of a key with the array of strings passed. If the key already exists, it will be overwritten.
 func (c *Map) Set(key string, values []string) {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	originalKey := key
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
@@ -179,6 +200,9 @@ func (c *Map) Set(key string, values []string) {
 
 // SetIndex sets the value of a key at the specified index. If the key already exists, it will be overwritten.
 func (c *Map) SetIndex(key string, index int, value string) {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	originalKey := key
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
@@ -200,6 +224,9 @@ func (c *Map) SetIndex(key string, index int, value string) {
 
 // Remove removes a key/value from the map.
 func (c *Map) Remove(key string) {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	if !c.isCaseSensitive {
 		key = strings.ToLower(key)
 	}
@@ -217,6 +244,9 @@ func (c *Map) Name() string {
 
 // Reset removes all key/value pairs from the map.
 func (c *Map) Reset() {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	for k := range c.data {
 		delete(c.data, k)
 	}
@@ -225,6 +255,9 @@ func (c *Map) Reset() {
 
 // Format updates the passed strings.Builder with the formatted map key/values.
 func (c *Map) Format(res *strings.Builder) {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	res.WriteString(c.variable.Name())
 	res.WriteString(":\n")
 	for k, v := range c.data {
@@ -252,6 +285,9 @@ func (c *Map) String() string {
 // values (via repeated Add calls) is counted once -- use TotalValues to count
 // every individual value instead.
 func (c *Map) Len() int {
+	mapMut.Lock()
+	defer mapMut.Unlock()
+
 	return len(c.data)
 }
 
