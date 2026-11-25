@@ -11,6 +11,12 @@ import (
 	"testing"
 )
 
+// prefixEvent is an integrator-style Event wrapper that renames the keys of the
+// string fields written through it.
+type prefixEvent struct{ Event }
+
+func (p prefixEvent) Str(key, val string) Event { return p.Event.Str("p."+key, val) }
+
 func TestLoggerLogLevels(t *testing.T) {
 	testCases := map[string]struct {
 		logFunction                func(Logger) func() Event
@@ -162,6 +168,36 @@ func TestWithLogger(t *testing.T) {
 	// [20:] Skips the timestamp.
 	if want, have := expected, buf2.String()[20:]; want != have {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
+	}
+
+	// ContextField is an exported func type, so an integrator's field may return
+	// nil, a wrapper, a new Event or a disabled one. With must keep what the
+	// fields wrote and must not panic; each of these rows panics on the old
+	// type assertion.
+	returnsNil := func(e Event) Event { e.Str("a", "1"); return nil }
+	returnsWrapper := func(e Event) Event { return prefixEvent{e.Str("b", "2")} }
+	returnsNew := func(Event) Event { return Default().Info().Str("d", "4") }
+	returnsNoop := func(Event) Event { return Noop().Info() }
+	customFields := []struct {
+		name     string
+		fields   []ContextField
+		expected string
+	}{
+		{"nil, then a wrapper", []ContextField{returnsNil, returnsWrapper, Str("c", "3")}, `[INFO] m a="1" b="2" p.c="3"` + "\n"},
+		{"a new event, then a wrapper", []ContextField{Str("a", "1"), returnsNew, returnsWrapper}, `[INFO] m d="4" b="2"` + "\n"},
+		{"a no-op event", []ContextField{Str("a", "1"), returnsNoop, Str("z", "9")}, `[INFO] m a="1" z="9"` + "\n"},
+	}
+	for _, tc := range customFields {
+		t.Run("custom fields returning "+tc.name, func(t *testing.T) {
+			buf := bytes.Buffer{}
+			Default().WithOutput(&buf).With(tc.fields...).Info().Msg("m")
+			if buf.Len() < 20 {
+				t.Fatalf("expected a log line, have %q", buf.String())
+			}
+			if want, have := tc.expected, buf.String()[20:]; want != have {
+				t.Fatalf("unexpected message, want %q, have %q", want, have)
+			}
+		})
 	}
 }
 

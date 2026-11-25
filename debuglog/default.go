@@ -113,15 +113,30 @@ func (l defaultLogger) WithLevel(lvl Level) Logger {
 }
 
 func (l defaultLogger) With(fs ...ContextField) Logger {
-	var e Event = &defaultEvent{}
+	// Each field gets the Event the previous one returned, as in a chain of
+	// Event calls, so a wrapper that overrides Str applies to the fields after
+	// it for as long as they return it. A field returning nil or a disabled
+	// Event, such as a no-op one, leaves the current Event in place, so the
+	// fields after it are kept. The fields come from the last *defaultEvent
+	// returned. Asserting the last Event to *defaultEvent panicked when a
+	// field returned anything else.
+	last := &defaultEvent{}
+	var cur Event = last
 	for _, f := range fs {
-		e = f(e)
+		next := f(cur)
+		if next == nil || !next.IsEnabled() {
+			continue
+		}
+		cur = next
+		if d, ok := next.(*defaultEvent); ok {
+			last = d
+		}
 	}
 	return defaultLogger{
 		printer:       l.printer,
 		factory:       l.factory,
 		level:         l.level,
-		defaultFields: append(l.defaultFields, e.(*defaultEvent).fields...),
+		defaultFields: append(l.defaultFields, last.fields...),
 	}
 }
 
