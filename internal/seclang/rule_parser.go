@@ -54,11 +54,16 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 	isquoted := false
 	for i := 0; i < len(vars); i++ {
 		c := vars[i]
-		if (c == '|' && curr != 2) || i+1 >= len(vars) || (curr == 2 && c == '/' && !isEscaped) {
+		// a quoted plain key (ARGS:'foo') ends at its closing quote and may
+		// contain |, like in ModSecurity; a quoted regex key ('/foo/') still
+		// ends at the closing slash
+		inQuotedKey := curr == 1 && isquoted
+		closingQuote := inQuotedKey && c == '\''
+		if (c == '|' && curr != 2 && !inQuotedKey) || i+1 >= len(vars) || (curr == 2 && c == '/' && !isEscaped) || closingQuote {
 			// if next variable or end
 			// if regex we ignore |
 			// we wont support pipe for xpath, maybe later
-			if c != '|' {
+			if c != '|' && !closingQuote {
 				// we don't want to miss the last character
 				if curr == 0 {
 					curVar = append(curVar, c)
@@ -77,14 +82,15 @@ func (rp *RuleParser) ParseVariables(vars string) error {
 			// fmt.Printf("(PREVIOUS %s) %s:%s (%t %t)\n", vars, curvar, curkey, iscount, isnegation)
 			if isquoted {
 				// if it is quoted we remove the last quote
-				if len(vars) <= i+1 || vars[i+1] != '\'' {
-					if vars[i] != '\'' {
-						// TODO fix here
-						return fmt.Errorf("unclosed quote: %q", string(curKey))
-					}
+				if !closingQuote && (len(vars) <= i+1 || vars[i+1] != '\'') {
+					return fmt.Errorf("unclosed quote: %q", string(curKey))
 				}
-				// we skip one additional character
-				i += 2
+				// we skip the closing quote (unless we are already on it)
+				// and the separator after it
+				if !closingQuote {
+					i++
+				}
+				i++
 				isquoted = false
 			} else if curr == 2 {
 				i++
