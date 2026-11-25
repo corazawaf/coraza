@@ -4,11 +4,12 @@
 package seclang
 
 import (
+	"bytes"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/corazawaf/coraza/v3/debuglog"
 	"github.com/corazawaf/coraza/v3/internal/corazawaf"
 	"github.com/corazawaf/coraza/v3/internal/environment"
 	"github.com/corazawaf/coraza/v3/types"
@@ -199,6 +200,32 @@ func TestSecRuleUpdateActionByID(t *testing.T) {
 
 }
 
+func TestSecRuleUpdateByIDSkipsMissingID(t *testing.T) {
+	// A missing id is skipped with a warning, wherever it is in the list, and the other ids are still looked up.
+	for directive, arg := range map[string]string{
+		"SecRuleUpdateActionById": `"pass"`,
+		"SecRuleUpdateTargetById": `"!ARGS:a"`,
+	} {
+		t.Run(directive, func(t *testing.T) {
+			logsBuf := &bytes.Buffer{}
+			waf := corazawaf.NewWAF()
+			waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
+			p := NewParser(waf)
+			if err := p.FromString(`SecRule ARGS "@rx a" "id:1,phase:1,deny"`); err != nil {
+				t.Fatal(err)
+			}
+			if err := p.FromString(directive + " 1 2 3 " + arg); err != nil {
+				t.Fatalf("expected the missing ids to be skipped, got %v", err)
+			}
+			for _, id := range []string{`rule_id=2`, `rule_id=3`} {
+				if !strings.Contains(logsBuf.String(), id) {
+					t.Errorf("expected a warning for %s, got %q", id, logsBuf.String())
+				}
+			}
+		})
+	}
+}
+
 func TestSecRuleUpdateTargetByID(t *testing.T) {
 	waf := corazawaf.NewWAF()
 	rule, err := ParseRule(RuleOptions{
@@ -358,6 +385,14 @@ func TestDirectives(t *testing.T) {
 			{"-1 \"status:403\"", expectErrorOnDirective},
 			{"1 2 3-4 \"status:403\"", expectNoErrorOnDirective},
 			{"1 2 3-4 \"status:403,nolog\"", expectNoErrorOnDirective},
+			// rule 1 does not exist: the id is skipped, but the action list is still checked
+			{"1 \"not_a_real_action\"", expectErrorOnDirective},
+			{"1 \"status:abc\"", expectErrorOnDirective},
+			{"1-1 \"not_a_real_action\"", expectErrorOnDirective},
+			// a malformed token after a skipped id still fails
+			{"1 abc \"status:403\"", expectErrorOnDirective},
+			{"1 5-3 \"status:403\"", expectErrorOnDirective},
+			{"1 -5 \"status:403\"", expectErrorOnDirective},
 		},
 		"SecRuleUpdateTargetById": {
 			{"", expectErrorOnDirective},
@@ -376,6 +411,10 @@ func TestDirectives(t *testing.T) {
 			{"1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"7-7 \"ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"1 2 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			// rule 1 does not exist: the id is skipped, but the target list is still checked
+			{"1 \"NOT_A_VARIABLE\"", expectErrorOnDirective},
+			{"1 \"ARGS:/(/\"", expectErrorOnDirective},
+			{"1-1 \"NOT_A_VARIABLE\"", expectErrorOnDirective},
 			{"1 2 3-4 \"ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"1 \"REQUEST_BODY|ARGS:wp_post\"", expectNoErrorOnDirective},
 			{"1 2 3-4 \"ARGS:wp_post|RESPONSE_HEADERS\"", expectNoErrorOnDirective},
@@ -495,12 +534,7 @@ func TestDirectives(t *testing.T) {
 						}
 					} else {
 						if err != nil {
-							match, _ := regexp.MatchString(`rule "\d+" not found`, err.Error())
-							// Logical errors are not checked by this test, therefore this specific pattern is allowed here
-							if !match {
-								// Syntax errors are checked
-								t.Errorf("unexpected error: %s", err.Error())
-							}
+							t.Errorf("unexpected error: %s", err.Error())
 						}
 
 						if !tCase.check(waf) {

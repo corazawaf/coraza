@@ -1464,6 +1464,7 @@ func directiveSecDebugLogLevel(options *DirectiveOptions) error {
 // ---
 // This directive will append variables to the specified rule with the targets provided in the second parameter.
 // The rule ID can be single IDs or ranges of IDs. The targets are separated by a pipe character.
+// An ID that matches no rule is skipped with a warning, and a range may match no rules.
 //
 // Example:
 // ```seclang
@@ -1487,7 +1488,9 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
-			return updateTargetBySingleID(id, variables, options)
+			if err := updateTargetBySingleID(id, variables, options); err != nil {
+				return err
+			}
 		} else {
 			if idx == 0 {
 				return fmt.Errorf("SecRuleUpdateTargetById: invalid negative id: %s", idOrRange)
@@ -1502,7 +1505,10 @@ func directiveSecRuleUpdateTargetByID(options *DirectiveOptions) error {
 				return err
 			}
 			if start == end {
-				return updateTargetBySingleID(start, variables, options)
+				if err := updateTargetBySingleID(start, variables, options); err != nil {
+					return err
+				}
+				continue
 			}
 			if start > end {
 				return fmt.Errorf("invalid range: %s", idOrRange)
@@ -1535,7 +1541,20 @@ func updateTargetBySingleID(id int, variables string, options *DirectiveOptions)
 
 	rule := options.WAF.Rules.FindByID(id)
 	if rule == nil {
-		return fmt.Errorf("SecRuleUpdateTargetById: rule \"%d\" not found", id)
+		// Parse the targets into a scratch rule, so that an invalid target list
+		// fails even when the id matches no rule.
+		rp := RuleParser{
+			rule: corazawaf.NewRule(),
+			options: RuleOptions{
+				WAF: options.WAF,
+			},
+			defaultActions: map[types.RulePhase][]ruleAction{},
+		}
+		if err := rp.ParseVariables(strings.Trim(variables, "\"")); err != nil {
+			return err
+		}
+		options.WAF.Logger.Warn().Int("rule_id", id).Msg("SecRuleUpdateTargetById: rule not found, skipping")
+		return nil
 	}
 	rp := RuleParser{
 		rule: rule,
@@ -1570,6 +1589,7 @@ func hasDisruptiveActions(actions []ruleAction) bool {
 // SecRuleUpdateActionById 12345 "deny,status:403"
 // ```
 // The rule ID can be single IDs or ranges of IDs.
+// An ID that matches no rule is skipped with a warning, and a range may match no rules.
 func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 	if len(options.Opts) == 0 {
 		return errEmptyOptions
@@ -1588,7 +1608,9 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 			if err != nil {
 				return err
 			}
-			return updateActionBySingleID(id, actions, options)
+			if err := updateActionBySingleID(id, actions, options); err != nil {
+				return err
+			}
 		} else {
 			if idx == 0 {
 				return fmt.Errorf("SecRuleUpdateActionById: invalid negative id: %s", idOrRange)
@@ -1603,7 +1625,10 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 				return err
 			}
 			if start == end {
-				return updateActionBySingleID(start, actions, options)
+				if err := updateActionBySingleID(start, actions, options); err != nil {
+					return err
+				}
+				continue
 			}
 			if start > end {
 				return fmt.Errorf("invalid range: %s", idOrRange)
@@ -1649,17 +1674,30 @@ func directiveSecRuleUpdateActionByID(options *DirectiveOptions) error {
 }
 
 func updateActionBySingleID(id int, actions string, options *DirectiveOptions) error {
-	rule := options.WAF.Rules.FindByID(id)
-	if rule == nil {
-		return fmt.Errorf("SecRuleUpdateActionById: rule \"%d\" not found", id)
-	}
-
 	// Parse actions first to check if any are disruptive.
 	// Trim surrounding quotes from the SecLang action list syntax.
 	trimmedActions := strings.Trim(actions, "\"")
 	parsedActions, err := parseActions(options.WAF.Logger, trimmedActions)
 	if err != nil {
 		return err
+	}
+
+	rule := options.WAF.Rules.FindByID(id)
+	if rule == nil {
+		// Apply the actions to a scratch rule, so that an invalid action or
+		// action argument fails even when the id matches no rule.
+		rp := RuleParser{
+			rule: corazawaf.NewRule(),
+			options: RuleOptions{
+				WAF: options.WAF,
+			},
+			defaultActions: map[types.RulePhase][]ruleAction{},
+		}
+		if err := rp.applyParsedActions(parsedActions); err != nil {
+			return err
+		}
+		options.WAF.Logger.Warn().Int("rule_id", id).Msg("SecRuleUpdateActionById: rule not found, skipping")
+		return nil
 	}
 
 	// Check if any of the new actions are disruptive.

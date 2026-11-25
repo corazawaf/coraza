@@ -129,14 +129,13 @@ func TestSecRuleUpdateTargetVariableNegation(t *testing.T) {
 		t.Fatalf("unexpexted error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
 	}
 
-	// Try to update undefined rule
+	// An undefined rule is skipped, as in ModSecurity
 	err = p.FromString(`
 		SecRule REQUEST_URI|REQUEST_COOKIES "abc" "id:9,phase:2"
 		SecRuleUpdateTargetById 99 "!REQUEST_HEADERS:xyz"
 	`)
-	expectedErr = errors.New("SecRuleUpdateTargetById: rule \"99\" not found")
-	if errors.Unwrap(err).Error() != expectedErr.Error() {
-		t.Fatalf("unexpected error, want %q, have %q", expectedErr, errors.Unwrap(err).Error())
+	if err != nil {
+		t.Fatalf("unexpected error updating an undefined rule: %v", err)
 	}
 }
 
