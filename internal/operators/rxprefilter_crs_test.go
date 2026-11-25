@@ -230,7 +230,7 @@ func parseFTWPayloads() (map[string][]ftWPayload, error) {
 
 // extractPayloadsFromYAML parses URI and body data fields from a single YAML
 // file using line-level scanning. It associates each payload with whether the
-// test stage expects the rule to fire (log_contains) or not.
+// test stage expects the rule to fire (log_contains or expect_ids) or not.
 func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 	type stage struct {
 		uris  []string
@@ -240,14 +240,18 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 
 	var stages []stage
 	var cur *stage
+	inExpectIDs := false
 	lines := strings.Split(src, "\n")
 
 	for _, rawLine := range lines {
 		line := strings.TrimSpace(rawLine)
 
-		if line == "- stage:" || strings.HasPrefix(line, "- stage:") {
+		// go-ftw v1 opens a stage with "- stage:", the v2 format used by the
+		// CRS v4 tests with "- input:".
+		if strings.HasPrefix(line, "- stage:") || strings.HasPrefix(line, "- input:") {
 			stages = append(stages, stage{})
 			cur = &stages[len(stages)-1]
+			inExpectIDs = false
 			continue
 		}
 		if cur == nil {
@@ -264,8 +268,25 @@ func extractPayloadsFromYAML(src, ruleID string) []ftWPayload {
 			if v != "" {
 				cur.datas = append(cur.datas, v)
 			}
-		} else if strings.HasPrefix(line, "log_contains:") && strings.Contains(line, ruleID) {
-			cur.fires = true
+		} else if strings.HasPrefix(line, "log_contains:") {
+			// go-ftw v1 tests use log_contains.
+			inExpectIDs = false
+			if strings.Contains(line, ruleID) {
+				cur.fires = true
+			}
+		} else if strings.HasPrefix(line, "expect_ids:") {
+			// The CRS v4 tests in coraza-coreruleset use log: expect_ids,
+			// either inline ([id]) or as a block list on the next lines.
+			inExpectIDs = true
+			if strings.Contains(line, ruleID) {
+				cur.fires = true
+			}
+		} else if inExpectIDs && strings.HasPrefix(line, "- ") {
+			if strings.Contains(line, ruleID) {
+				cur.fires = true
+			}
+		} else if line != "" {
+			inExpectIDs = false
 		}
 	}
 
