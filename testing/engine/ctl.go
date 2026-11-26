@@ -344,6 +344,32 @@ var _ = profile.RegisterProfile(profile.Profile{
 					Stage: profile.SubStage{
 						Input: profile.StageInput{
 							Method: "GET",
+							URI:    "/engine-test?chain_depth_parent_off=1&mode=on",
+						},
+						Output: profile.ExpectedOutput{
+							// evalDepth must not evaluate a child after its parent turns the engine off.
+							TriggeredRules:    []int{401, 402},
+							NonTriggeredRules: []int{413, 412, 404},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
+							URI:    "/engine-test?chain_depth_link_off=1&mode=on",
+						},
+						Output: profile.ExpectedOutput{
+							// The recursive evalDepth path must stop after an intermediate link turns it off.
+							TriggeredRules:    []int{401, 402},
+							NonTriggeredRules: []int{414, 412, 404},
+						},
+					},
+				},
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							Method: "GET",
 							URI:    "/engine-test?chain_last_off=1",
 						},
 						Output: profile.ExpectedOutput{
@@ -474,6 +500,12 @@ SecRule ARGS_GET:chain_last_off "@streq 1" "id:410,phase:1,pass,log,chain"
     SecRule REQUEST_URI "@beginsWith /engine-test" "ctl:ruleEngine=Off"
 SecRule ARGS_GET:chain_off "@streq 1" "id:411,phase:1,pass,log,ctl:ruleEngine=Off,chain"
     SecRule ARGS_GET:mode "@streq on" "ctl:ruleEngine=On"
+# evalDepth uses a separate chain traversal and must preserve the same finality.
+SecRule ARGS_GET:chain_depth_parent_off "@streq 1" "id:413,phase:1,pass,log,ctl:ruleEngine=Off,chain,evalDepth"
+    SecRule ARGS_GET:mode "@streq on" "ctl:ruleEngine=On"
+SecRule ARGS_GET:chain_depth_link_off "@streq 1" "id:414,phase:1,pass,log,chain,evalDepth"
+    SecRule REQUEST_URI "@beginsWith /engine-test" "ctl:ruleEngine=Off,chain"
+        SecRule ARGS_GET:mode "@streq on" "ctl:ruleEngine=On"
 SecRule REQUEST_URI "@beginsWith /engine-test" "id:412,phase:1,pass,log"
 # Last, so that multiphase evaluation also runs it after the rules above.
 SecRule REQUEST_URI "@beginsWith /engine-test" "id:404,phase:2,deny,status:403,log"

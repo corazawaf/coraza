@@ -1018,3 +1018,72 @@ func TestExpandMacroAfterWholeRuleEvaluation(t *testing.T) {
 		t.Errorf("Expected ArgsGet-data, got %s", matchdata[0].Data())
 	}
 }
+
+type countingOperator struct {
+	calls  int
+	result bool
+}
+
+func (o *countingOperator) Evaluate(plugintypes.TransactionState, string) bool {
+	o.calls++
+	return o.result
+}
+
+// Reaching the limit takes more chained evaluations than a profile can assert
+// on deterministically, so operator calls are counted directly.
+func TestEvalDepthEvaluationLimit(t *testing.T) {
+	tests := []struct {
+		name string
+		args int
+	}{
+		{name: "below the limit", args: 10},
+		{name: "above the limit", args: 40},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			newRule := func(op *countingOperator, parent int) *Rule {
+				r := NewRule()
+				r.ParentID_ = parent
+				if err := r.AddVariable(variables.ArgsGet, "", false); err != nil {
+					t.Fatal(err)
+				}
+				r.SetOperator(op, "@counting", "")
+				return r
+			}
+			first := &countingOperator{result: true}
+			middle := &countingOperator{result: true}
+			last := &countingOperator{}
+			r := newRule(first, noID)
+			r.ID_, r.LogID_, r.HasChain, r.EvalDepth = 1, "1", true, true
+			r.Chain = newRule(middle, 1)
+			r.Chain.HasChain = true
+			r.Chain.Chain = newRule(last, 1)
+
+			tx := NewWAF().NewTransaction()
+			for i := 0; i < tt.args; i++ {
+				tx.AddGetRequestArgument(fmt.Sprintf("a%d", i), "x")
+			}
+			var matchedValues []types.MatchData
+			if md := r.doEvaluate(debuglog.Noop(), types.PhaseRequestHeaders, tx, &matchedValues, 0, tx.transformationCache); len(md) != 0 {
+				t.Fatalf("unexpected match: %v", md)
+			}
+
+			n := tt.args
+			chained := middle.calls + last.calls
+			if full := n*n + n*n*n; full <= depthFirstEvaluationLimit {
+				if chained != full {
+					t.Errorf("want %d chained evaluations, have %d", full, chained)
+				}
+				return
+			}
+			// One rule evaluation can overshoot the budget, then the breadth
+			// first pass evaluates the middle and last rule once more.
+			if max := depthFirstEvaluationLimit + n + 2*n; chained > max {
+				t.Errorf("want at most %d chained evaluations, have %d", max, chained)
+			}
+			if chained < depthFirstEvaluationLimit {
+				t.Errorf("stopped before the limit: %d chained evaluations", chained)
+			}
+		})
+	}
+}
