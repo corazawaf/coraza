@@ -5,8 +5,17 @@
 package operators
 
 import (
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"io"
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 
@@ -81,6 +90,12 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	invalidJSON := `{"name": "John", age: 30}` // Missing quotes around age
 	if !op.Evaluate(nil, invalidJSON) {
 		t.Errorf("Expected invalid JSON to return true, got false")
+	}
+
+	// Trailing tokens after valid JSON should return true (violation detected)
+	trailingJSON := `{"name": "John", "age": 30} trailing`
+	if !op.Evaluate(nil, trailingJSON) {
+		t.Errorf("Expected JSON with trailing tokens to return true, got false")
 	}
 
 	// Missing required field should return true (violation detected)
@@ -620,4 +635,624 @@ func TestMemoizeKey(t *testing.T) {
 	if key := memoizeKey("validateSchema", "x"); !strings.HasPrefix(key, "validateSchema:") {
 		t.Errorf("key must be namespaced by operator, got %q", key)
 	}
+}
+
+func TestValidateSchemaDraft07AndRefs(t *testing.T) {
+	schema := "schema.json"
+	rootFS := setupJSONSchema(schema, `{
+		"$schema": "http://json-schema.org/draft-07/schema#",
+		"type": "object",
+		"definitions": {
+			"item": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "integer", "minimum": 1 },
+					"tag": { "type": "string", "minLength": 2 }
+				},
+				"required": ["id", "tag"]
+			}
+		},
+		"properties": {
+			"items": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/item" },
+				"minItems": 1
+			}
+		},
+		"required": ["items"]
+	}`)
+
+	op, err := NewValidateSchema(plugintypes.OperatorOptions{
+		Arguments: schema,
+		Root:      rootFS,
+	})
+	if err != nil {
+		t.Fatalf("Failed to initialize draft-07 schema operator: %v", err)
+	}
+
+	if op.Evaluate(nil, `{"items":[{"id":1,"tag":"ok"}]}`) {
+		t.Errorf("Expected valid draft-07 payload with local $ref to return false")
+	}
+	if !op.Evaluate(nil, `{"items":[{"id":0,"tag":"ok"}]}`) {
+		t.Errorf("Expected minimum constraint violation to return true")
+	}
+	if !op.Evaluate(nil, `{"items":[{"id":1,"tag":"x"}]}`) {
+		t.Errorf("Expected minLength constraint violation to return true")
+	}
+	if !op.Evaluate(nil, `{"items":[]} `) {
+		t.Errorf("Expected minItems constraint violation to return true")
+	}
+	if !op.Evaluate(nil, `null`) {
+		t.Errorf("Expected non-object JSON null to return true")
+	}
+}
+
+func TestValidateSchemaAdvancedAndConcurrency(t *testing.T) {
+	schema := "schema.json"
+	rootFS := setupJSONSchema(schema, `{
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"$defs": {
+			"role": {
+				"oneOf": [
+					{ "const": "viewer" },
+					{ "type": "object", "properties": { "admin": { "type": "boolean" } }, "required": ["admin"], "additionalProperties": false }
+				]
+			}
+		},
+		"type": "object",
+		"properties": {
+			"count": { "type": "integer", "minimum": 0, "maximum": 9007199254740993 },
+			"code": { "type": "string", "pattern": "^[A-Z]{2}-[0-9]{3}$" },
+			"role": { "$ref": "#/$defs/role" }
+		},
+		"required": ["count", "code", "role"],
+		"additionalProperties": false
+	}`)
+
+	memo := &testMemoizer{entries: make(map[string]any)}
+	opts := plugintypes.OperatorOptions{
+		Arguments: schema,
+		Root:      rootFS,
+		Memoizer:  memo,
+	}
+
+	op1, err := NewValidateSchema(opts)
+	if err != nil {
+		t.Fatalf("Failed to initialize schema operator: %v", err)
+	}
+	op2, err := NewValidateSchema(opts)
+	if err != nil {
+		t.Fatalf("Failed to initialize memoized schema operator: %v", err)
+	}
+	if op1.(*validateSchema).jsonSchema != op2.(*validateSchema).jsonSchema {
+		t.Fatalf("Expected memoizer to reuse compiled schema instance")
+	}
+
+	cases := []struct {
+		name      string
+		payload   string
+		violation bool
+	}{
+		{"valid payload with exact large int64", `{"count":9007199254740993,"code":"US-123","role":{"admin":true}}`, false},
+		{"valid string const oneOf", `{"count":0,"code":"CA-999","role":"viewer"}`, false},
+		{"integer represented with .0 is integer", `{"count":5.0,"code":"US-123","role":"viewer"}`, false},
+		{"fractional float fails integer check", `{"count":5.5,"code":"US-123","role":"viewer"}`, true},
+		{"exceeds int64 maximum", `{"count":9007199254740994,"code":"US-123","role":"viewer"}`, true},
+		{"regex mismatch", `{"count":1,"code":"us-123","role":"viewer"}`, true},
+		{"unexpected property blocked", `{"count":1,"code":"US-123","role":"viewer","extra":1}`, true},
+		{"invalid oneOf extra key", `{"count":1,"code":"US-123","role":{"admin":true,"x":2}}`, true},
+		{"whitespace-only JSON violates", `   `, true},
+		{"NUL byte inside JSON string rejected", "{\"count\":1,\"code\":\"US-123\",\"role\":\"viewer\x00\"}", true},
+		{"trailing valid JSON object rejected", `{"count":1,"code":"US-123","role":"viewer"}{"count":2}`, true},
+	}
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for _, tc := range cases {
+				got := op1.Evaluate(nil, tc.payload)
+				if got != tc.violation {
+					t.Errorf("%s: Evaluate() = %v, want %v (payload=%q)", tc.name, got, tc.violation, tc.payload)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+type testMemoizer struct {
+	mu      sync.Mutex
+	entries map[string]any
+}
+
+func (m *testMemoizer) Do(key string, fn func() (any, error)) (any, error) {
+	m.mu.Lock()
+	if v, ok := m.entries[key]; ok {
+		m.mu.Unlock()
+		return v, nil
+	}
+	m.mu.Unlock()
+	v, err := fn()
+	if err != nil {
+		return nil, err
+	}
+	m.mu.Lock()
+	m.entries[key] = v
+	m.mu.Unlock()
+	return v, nil
+}
+
+func TestValidateSchemaBooleanAndInvalidRegexSchema(t *testing.T) {
+	if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+		Arguments: "bad.json",
+		Root:      setupJSONSchema("bad.json", `{"type":"string","pattern":"["}`),
+	}); err == nil {
+		t.Fatalf("Expected invalid regex pattern in schema to return compile error")
+	}
+
+	if op, err := NewValidateSchema(plugintypes.OperatorOptions{
+		Arguments: "true.json",
+		Root:      setupJSONSchema("true.json", `true`),
+	}); err != nil {
+		t.Fatalf("Expected boolean schema true to compile: %v", err)
+	} else if op.Evaluate(nil, `{"anything":123}`) {
+		t.Errorf("Expected boolean true schema to accept valid JSON object")
+	}
+
+	if op, err := NewValidateSchema(plugintypes.OperatorOptions{
+		Arguments: "false.json",
+		Root:      setupJSONSchema("false.json", `false`),
+	}); err != nil {
+		t.Fatalf("Expected boolean schema false to compile: %v", err)
+	} else if !op.Evaluate(nil, `{"anything":123}`) {
+		t.Errorf("Expected boolean false schema to reject valid JSON object")
+	}
+}
+
+func TestValidateSchemaSecurityAndCompat(t *testing.T) {
+	t.Run("contentEncoding base64 and contentSchema enforced safely", func(t *testing.T) {
+		op, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "schema.json",
+			Root:      setupJSONSchema("schema.json", `{"type":"string","contentEncoding":"base64"}`),
+		})
+		if err != nil {
+			t.Fatalf("compile contentEncoding schema: %v", err)
+		}
+		if op.Evaluate(nil, `"YQ=="`) {
+			t.Errorf("expected valid base64 YQ== to pass")
+		}
+		if !op.Evaluate(nil, `"!!!"`) {
+			t.Errorf("expected invalid base64 !!! to trigger violation")
+		}
+
+		cOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "content-schema.json",
+			Root:      setupJSONSchema("content-schema.json", `{"type":"string","contentEncoding":"base64","contentMediaType":"application/json","contentSchema":{"type":"object","properties":{"n":{"type":"number","minimum":0}},"required":["n"]}}`),
+		})
+		if err != nil {
+			t.Fatalf("compile contentSchema: %v", err)
+		}
+		validInner := base64.StdEncoding.EncodeToString([]byte(`{"n":42}`))
+		if cOp.Evaluate(nil, fmt.Sprintf("%q", validInner)) {
+			t.Errorf("expected valid base64 JSON matching contentSchema to pass")
+		}
+		badPosExpInner := base64.StdEncoding.EncodeToString([]byte(`{"n":1e9999999999}`))
+		if !cOp.Evaluate(nil, fmt.Sprintf("%q", badPosExpInner)) {
+			t.Errorf("expected smuggled base64 oversized positive exponent to trigger violation without panic")
+		}
+		badNegExpInner := base64.StdEncoding.EncodeToString([]byte(`{"n":1e-9999999999}`))
+		if !cOp.Evaluate(nil, fmt.Sprintf("%q", badNegExpInner)) {
+			t.Errorf("expected smuggled base64 oversized negative exponent to trigger violation without panic")
+		}
+
+		plainCOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "plain-content-schema.json",
+			Root:      setupJSONSchema("plain-content-schema.json", `{"type":"string","contentMediaType":"application/json","contentSchema":{"type":"number","minimum":0}}`),
+		})
+		if err != nil {
+			t.Fatalf("compile plain contentSchema: %v", err)
+		}
+		if plainCOp.Evaluate(nil, `"1"`) {
+			t.Errorf("expected valid embedded JSON string to pass contentSchema")
+		}
+		if !plainCOp.Evaluate(nil, `"1e9999999999"`) || !plainCOp.Evaluate(nil, `"1e-9999999999"`) {
+			t.Errorf("expected out-of-range embedded JSON numbers to trigger violation without panic")
+		}
+	})
+
+	t.Run("oversized positive and negative exponents and uniqueItems reject cleanly without panic", func(t *testing.T) {
+		uOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "schema.json",
+			Root:      setupJSONSchema("schema.json", `{"type":"array","uniqueItems":true}`),
+		})
+		if err != nil {
+			t.Fatalf("compile uniqueItems schema: %v", err)
+		}
+		for _, payload := range []string{
+			`[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,1e9999999999]`,
+			`[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,1e-9999999999]`,
+			`[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,1e-100000]`,
+		} {
+			if !uOp.Evaluate(nil, payload) {
+				t.Errorf("expected oversized exponent %s inside uniqueItems array to trigger violation", payload)
+			}
+		}
+
+		mOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "min.json",
+			Root:      setupJSONSchema("min.json", `{"type":"object","properties":{"n":{"type":"number","minimum":0}}}`),
+		})
+		if err != nil {
+			t.Fatalf("compile minimum schema: %v", err)
+		}
+		for _, payload := range []string{`{"n":1e9999999999}`, `{"n":1e-9999999999}`, `{"n":1e-100000}`, `{"n":1e100000}`} {
+			if !mOp.Evaluate(nil, payload) {
+				t.Errorf("expected nested oversized exponent %s to trigger violation", payload)
+			}
+		}
+		for _, badSchema := range []string{
+			`{"type":"number","minimum":1e9999999999}`,
+			`{"type":"number","minimum":1e-9999999999}`,
+		} {
+			if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+				Arguments: "badnum.json",
+				Root:      setupJSONSchema("badnum.json", badSchema),
+			}); err == nil {
+				t.Errorf("expected schema with out-of-range numeric literal %s to fail compilation", badSchema)
+			}
+		}
+	})
+
+	t.Run("file scheme ref denied while bounded HTTP ref works and oversized remote fails", func(t *testing.T) {
+		localPath := filepath.Join(t.TempDir(), "secret.json")
+		if err := os.WriteFile(localPath, []byte(`{"type":"string"}`), 0o600); err != nil {
+			t.Fatalf("write local fixture: %v", err)
+		}
+		fileURI := "file://" + filepath.ToSlash(localPath)
+		if !strings.HasPrefix(fileURI, "file:///") {
+			fileURI = "file:///" + strings.TrimPrefix(filepath.ToSlash(localPath), "/")
+		}
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "file.json",
+			Root:      setupJSONSchema("file.json", fmt.Sprintf(`{"$ref":%q}`, fileURI)),
+		}); err == nil {
+			t.Errorf("expected file:// $ref to fail closed")
+		} else if !strings.Contains(err.Error(), "no URLLoader registered") {
+			t.Errorf("expected unsupported file:// scheme error, got: %v", err)
+		}
+
+		smallSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = io.WriteString(w, `{"type":"integer","minimum":1}`)
+		}))
+		defer smallSrv.Close()
+
+		op, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "http.json",
+			Root:      setupJSONSchema("http.json", fmt.Sprintf(`{"$ref":%q}`, smallSrv.URL+"/item.json")),
+		})
+		if err != nil {
+			t.Fatalf("compile schema with small HTTP $ref: %v", err)
+		}
+		if op.Evaluate(nil, `42`) || !op.Evaluate(nil, `0`) || !op.Evaluate(nil, `"42"`) {
+			t.Errorf("HTTP $ref schema validation mismatch")
+		}
+
+		bigSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"type":"string","description":"` + strings.Repeat("a", maxRemoteSchemaBytes+16) + `"}`))
+		}))
+		defer bigSrv.Close()
+
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "big.json",
+			Root:      setupJSONSchema("big.json", fmt.Sprintf(`{"$ref":%q}`, bigSrv.URL+"/big.json")),
+		}); err == nil {
+			t.Errorf("expected oversized remote HTTP schema response to be rejected")
+		} else if !strings.Contains(err.Error(), "byte limit") {
+			t.Errorf("expected remote size limit error, got: %v", err)
+		}
+	})
+
+	t.Run("application/xml enforced, unsupported application/yaml fails closed, and oversized minLength rejected", func(t *testing.T) {
+		xmlOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "xml.json",
+			Root:      setupJSONSchema("xml.json", `{"type":"string","contentMediaType":"application/xml"}`),
+		})
+		if err != nil {
+			t.Fatalf("compile application/xml schema: %v", err)
+		}
+		if xmlOp.Evaluate(nil, `"<a>1</a>"`) {
+			t.Errorf("expected valid XML payload to pass")
+		}
+		if !xmlOp.Evaluate(nil, `"<a>"`) || !xmlOp.Evaluate(nil, `"<a></b>"`) {
+			t.Errorf("expected malformed XML payload to trigger violation")
+		}
+
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "yaml.json",
+			Root:      setupJSONSchema("yaml.json", `{"type":"string","contentMediaType":"application/yaml"}`),
+		}); err == nil {
+			t.Errorf("expected unsupported contentMediaType application/yaml to fail compilation")
+		}
+
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "huge-minlen.json",
+			Root:      setupJSONSchema("huge-minlen.json", `{"type":"string","minLength":18446744073709551616}`),
+		}); err == nil {
+			t.Errorf("expected out-of-range minLength (2^64) to fail compilation instead of wrapping to 0")
+		}
+
+		// Schema-like keys inside literal const/enum/default/examples must not trigger false compilation failures,
+		// while actual schema locations (including properties named "const") remain guarded.
+		if litOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "literal.json",
+			Root: setupJSONSchema("literal.json", `{
+				"type": "object",
+				"const": {"minLength": -1, "contentMediaType": "application/yaml"},
+				"default": {"minItems": 18446744073709551616},
+				"examples": [{"maxLength": -5}]
+			}`),
+		}); err != nil {
+			t.Fatalf("expected literal const/default/examples with schema-like keys to compile: %v", err)
+		} else if litOp.Evaluate(nil, `{"minLength":-1,"contentMediaType":"application/yaml"}`) {
+			t.Errorf("expected exact literal const match to pass")
+		}
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "prop-const-huge.json",
+			Root:      setupJSONSchema("prop-const-huge.json", `{"type":"object","properties":{"const":{"type":"string","minLength":18446744073709551616}}}`),
+		}); err == nil {
+			t.Errorf("expected out-of-range minLength under property named const to still fail compilation")
+		}
+	})
+
+	t.Run("deep nesting and binary bytes do not panic", func(t *testing.T) {
+		op, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "arr.json",
+			Root:      setupJSONSchema("arr.json", `{"type":"array"}`),
+		})
+		if err != nil {
+			t.Fatalf("compile array schema: %v", err)
+		}
+		deep := strings.Repeat("[", 1000) + "1" + strings.Repeat("]", 1000)
+		if op.Evaluate(nil, deep) {
+			t.Errorf("expected valid deep nested array to pass")
+		}
+		if op.Evaluate(nil, "[]") {
+			t.Errorf("expected schema-valid empty array to pass")
+		}
+		if !op.Evaluate(nil, "\xef\xbb\xbf[]") {
+			t.Errorf("expected BOM-prefixed schema-valid array to fail strict JSON parsing")
+		}
+		if !op.Evaluate(nil, "\xff\xfe\x00") {
+			t.Errorf("expected raw binary bytes to trigger violation")
+		}
+	})
+
+	t.Run("all drafts offline, exact multipleOf, draft-07 formats, cyclic refs, and ReDoS", func(t *testing.T) {
+		for _, metaschema := range []string{
+			"http://json-schema.org/draft-04/schema#",
+			"http://json-schema.org/draft-06/schema#",
+			"http://json-schema.org/draft-07/schema#",
+			"https://json-schema.org/draft/2019-09/schema",
+			"https://json-schema.org/draft/2020-12/schema",
+		} {
+			op, err := NewValidateSchema(plugintypes.OperatorOptions{
+				Arguments: "draft.json",
+				Root:      setupJSONSchema("draft.json", fmt.Sprintf(`{"$schema":%q,"type":"number","multipleOf":0.1}`, metaschema)),
+			})
+			if err != nil {
+				t.Fatalf("compile draft %s offline: %v", metaschema, err)
+			}
+			if op.Evaluate(nil, `0.3`) {
+				t.Errorf("draft %s: expected 0.3 to satisfy multipleOf 0.1", metaschema)
+			}
+			if !op.Evaluate(nil, `0.35`) {
+				t.Errorf("draft %s: expected 0.35 to violate multipleOf 0.1", metaschema)
+			}
+		}
+
+		fmtOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "fmt.json",
+			Root: setupJSONSchema("fmt.json", `{
+				"$schema":"http://json-schema.org/draft-07/schema#",
+				"type":"object",
+				"properties":{
+					"email":{"type":"string","format":"email"},
+					"ip":{"type":"string","format":"ipv4"},
+					"ts":{"type":"string","format":"date-time"}
+				}
+			}`),
+		})
+		if err != nil {
+			t.Fatalf("compile draft-07 formats: %v", err)
+		}
+		if fmtOp.Evaluate(nil, `{"email":"user@example.com","ip":"192.0.2.1","ts":"2026-11-26T12:00:00Z"}`) {
+			t.Errorf("expected valid formatted payload to pass")
+		}
+		if !fmtOp.Evaluate(nil, `{"email":"not-an-email"}`) || !fmtOp.Evaluate(nil, `{"ip":"999.999.999.999"}`) || !fmtOp.Evaluate(nil, `{"ts":"not-a-date"}`) {
+			t.Errorf("expected invalid draft-07 formats to trigger violation")
+		}
+
+		cycOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "cyc.json",
+			Root:      setupJSONSchema("cyc.json", `{"$defs":{"a":{"$ref":"#/$defs/a"}},"$ref":"#/$defs/a"}`),
+		})
+		if err != nil {
+			t.Fatalf("compile cyclic schema: %v", err)
+		}
+		if !cycOp.Evaluate(nil, `{}`) {
+			t.Errorf("expected cyclic schema evaluation to fail closed without stack overflow")
+		}
+
+		redosOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "redos.json",
+			Root:      setupJSONSchema("redos.json", `{"type":"string","pattern":"^(a+)+$"}`),
+		})
+		if err != nil {
+			t.Fatalf("compile pattern schema: %v", err)
+		}
+		if !redosOp.Evaluate(nil, `"`+strings.Repeat("a", 20000)+`!"`) {
+			t.Errorf("expected ReDoS probe string to fail pattern quickly")
+		}
+	})
+}
+
+func BenchmarkValidateSchema(b *testing.B) {
+	op, err := NewValidateSchema(plugintypes.OperatorOptions{
+		Arguments: "schema.json",
+		Root: setupJSONSchema("schema.json", `{
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"name": { "type": "string", "minLength": 1 },
+				"age": { "type": "integer", "minimum": 0 }
+			},
+			"required": ["name", "age"],
+			"additionalProperties": false
+		}`),
+	})
+	if err != nil {
+		b.Fatalf("compile bench schema: %v", err)
+	}
+	valid := `{"name":"John","age":30}`
+	invalid := `{"name":"","age":-1,"extra":true}`
+	b.Run("valid", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			if op.Evaluate(nil, valid) {
+				b.Fatal("unexpected violation")
+			}
+		}
+	})
+	b.Run("invalid", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			if !op.Evaluate(nil, invalid) {
+				b.Fatal("expected violation")
+			}
+		}
+	})
+}
+
+type offlineRoundTripper struct{}
+
+func (offlineRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	return nil, errors.New("outbound network disabled during fuzzing")
+}
+
+func FuzzValidateSchema(f *testing.F) {
+	prevTransport := schemaHTTPTransport
+	schemaHTTPTransport = offlineRoundTripper{}
+	f.Cleanup(func() {
+		schemaHTTPTransport = prevTransport
+	})
+	seeds := []struct {
+		schema string
+		body   string
+	}{
+		{`{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"number"}},"required":["name","age"]}`, `{"name":"John","age":30}`},
+		{`{"type":"object","properties":{"id":{"type":"integer"}},"required":["id"]}`, `{"id":9007199254740993}`},
+		{`{"$schema":"http://json-schema.org/draft-07/schema#","type":"array","items":{"type":"string"}}`, `["a","b"]`},
+		{`{"type":"object"}`, `{"a":1} trailing`},
+		{`{"type":"object"}`, ``},
+		{`{invalid`, `{"a":1}`},
+		{`{"type":"object"}`, `null`},
+		{`{"type":"number","minimum":0,"multipleOf":0.1}`, `1e-9999999999`},
+		{`{"type":"number","minimum":0}`, `1e9999999999`},
+		{`{"type":"array","uniqueItems":true}`, `[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,1e-9999999999]`},
+		{`{"type":"string","contentEncoding":"base64","contentMediaType":"application/json","contentSchema":{"type":"number","minimum":0}}`, `"MWU5OTk5OTk5OTk5"`},
+		{`{"type":"string","contentMediaType":"application/json","contentSchema":{"type":"number","minimum":0}}`, `"1e-9999999999"`},
+	}
+	for _, s := range seeds {
+		f.Add(s.schema, s.body)
+	}
+
+	f.Fuzz(func(t *testing.T, rawSchema, body string) {
+		rootFS := setupJSONSchema("schema.json", rawSchema)
+		op, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "schema.json",
+			Root:      rootFS,
+		})
+		if err != nil {
+			return
+		}
+		if op.Evaluate(nil, "") {
+			t.Fatalf("empty input must not report violation")
+		}
+		_ = op.Evaluate(nil, body)
+	})
+}
+
+func FuzzValidateSchemaBody(f *testing.F) {
+	rootFS := setupJSONSchema("schema.json", `{
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"$defs": {
+			"item": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+					"name": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_-]+$" },
+					"meta": {
+						"oneOf": [
+							{ "type": "null" },
+							{ "type": "array", "items": { "type": "string" }, "maxItems": 8 }
+						]
+					}
+				},
+				"required": ["id", "name"],
+				"additionalProperties": false
+			}
+		},
+		"type": "object",
+		"properties": {
+			"action": { "enum": ["create", "update", "delete"] },
+			"items": { "type": "array", "items": { "$ref": "#/$defs/item" }, "minItems": 1, "maxItems": 16 }
+		},
+		"required": ["action", "items"],
+		"additionalProperties": false
+	}`)
+
+	op, err := NewValidateSchema(plugintypes.OperatorOptions{
+		Arguments: "schema.json",
+		Root:      rootFS,
+	})
+	if err != nil {
+		f.Fatalf("Failed to compile fuzz schema: %v", err)
+	}
+
+	seeds := []string{
+		``,
+		`{}`,
+		`null`,
+		`[]`,
+		`{"action":"create","items":[{"id":1,"name":"ok"}]}`,
+		`{"action":"create","items":[{"id":1,"name":"ok","meta":["x","y"]}]}`,
+		`{"action":"create","items":[{"id":1,"name":"ok","meta":null}]}`,
+		`{"action":"create","items":[{"id":0,"name":"ok"}]}`,
+		`{"action":"invalid","items":[]}`,
+		`{"action":"create","items":[{"id":1,"name":"ok"}]} trailing`,
+		`{"action":"create","items":` + strings.Repeat("[", 256) + `}`,
+	}
+	for _, s := range seeds {
+		f.Add(s)
+	}
+
+	f.Fuzz(func(t *testing.T, body string) {
+		if body == "" && op.Evaluate(nil, body) {
+			t.Fatalf("empty input must not trigger violation")
+		}
+		direct := op.Evaluate(nil, body)
+		if body != "" {
+			txMap := collections.NewMap(variables.TX)
+			txMap.Set("json_request_body", []string{body})
+			tx := &mockTransaction{
+				txVar:     txMap,
+				lastPhase: types.PhaseRequestBody,
+			}
+			if txResult := op.Evaluate(tx, ""); txResult != direct {
+				t.Fatalf("PhaseRequestBody mismatch for body %q: tx=%v direct=%v", body, txResult, direct)
+			}
+		}
+	})
 }
