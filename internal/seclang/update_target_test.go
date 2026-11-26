@@ -28,6 +28,7 @@ func TestUpdateTargetAppliesToStoredRule(t *testing.T) {
 		{"by single id", `SecRuleUpdateTargetById 5 "REQUEST_HEADERS"`},
 		{"by id range", `SecRuleUpdateTargetById 1-10 "REQUEST_HEADERS"`},
 		{"by tag", `SecRuleUpdateTargetByTag "mytag" "REQUEST_HEADERS"`},
+		{"by tag with single quotes", `SecRuleUpdateTargetByTag 'mytag' 'REQUEST_HEADERS'`},
 	}
 
 	for _, tc := range tests {
