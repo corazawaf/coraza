@@ -1380,22 +1380,33 @@ func directiveSecUploadDir(options *DirectiveOptions) error {
 	return nil
 }
 
-// Description: Configures the maximum request body size Coraza will accept for
-// buffering, excluding the size of any files being transported in the request.
+// Description: Configures the maximum non-file request body data a selected or
+// forced body processor will accept for processing.
 // This directive is useful to reduce susceptibility to DoS attacks when someone is
 // sending request bodies of very large sizes. Web applications that require file uploads
-// must configure `SecRequestBodyLimit` to a high value, but because large files are streamed
-// to disk, file uploads will not increase memory consumption. However, it’s still possible
-// for someone to take advantage of a large request body limit and send non-upload requests
-// with large body sizes. This directive eliminates that loophole.
-// Default: 1048576 (1 MB)
+// must configure `SecRequestBodyLimit` to a high value. A separate
+// `SecRequestBodyInMemoryLimit` can spill buffered uploads to disk, but does
+// not bound the data a body processor might materialize. This directive
+// bounds non-file data independently of the overall upload limit.
+// Coraza default: unset (no separate non-file limit until configured).
+// A value of 0 leaves the separate limit unset; negative values are invalid.
 // Syntax: SecRequestBodyNoFilesLimit 131072
 // ---
-// Generally speaking, the default value is not small enough. For most applications, you
-// should be able to reduce it down to 128 KB or lower. Anything over the limit will be
-// rejected with status code 413 (Request Entity Too Large). There is a hard limit of 1 GiB.
-//
-// Note: not implemented yet
+// Set this below SecRequestBodyLimit when accepting large uploads. With the
+// built-in multipart processor, part headers and ordinary form fields count;
+// boundary framing and uploaded file content do not. Custom multipart
+// processors are treated like other request bodies, so every buffered byte
+// counts toward this limit.
+// A body with no selected processor is not subject to this limit unless
+// `ctl:forceRequestBodyVariable=On` forces processing.
+// When SecRequestBodyNoFilesLimit is at or above SecRequestBodyLimit, the
+// separate non-file limit is disabled. When the active non-file limit is
+// exceeded, SecRequestBodyLimitAction applies (Reject returns 413;
+// ProcessPartial evaluates the bounded non-multipart prefix or completed
+// multipart parts before the over-limit part). Both actions set
+// INBOUND_DATA_ERROR and REQBODY_ERROR, so under ProcessPartial a phase-2 rule
+// on REQBODY_ERROR (rule 200002 in coraza.conf-recommended) still denies the
+// request.
 //
 // Example:
 // ```seclang
@@ -1406,9 +1417,15 @@ func directiveSecRequestBodyNoFilesLimit(options *DirectiveOptions) error {
 		return errEmptyOptions
 	}
 
-	var err error
-	options.WAF.RequestBodyNoFilesLimit, err = strconv.ParseInt(options.Opts, 10, 64)
-	return err
+	limit, err := strconv.ParseInt(options.Opts, 10, 64)
+	if err != nil {
+		return err
+	}
+	if limit < 0 {
+		return errors.New("request body no-files limit must not be negative")
+	}
+	options.WAF.RequestBodyNoFilesLimit = limit
+	return nil
 }
 
 // Description: Path to the Coraza debug log file.

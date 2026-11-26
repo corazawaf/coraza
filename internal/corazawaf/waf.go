@@ -116,8 +116,8 @@ type WAF struct {
 	// UploadDir is the directory where the uploaded files will be stored
 	UploadDir string
 
-	// Request body in memory limit excluding the size of any files being transported in the request.
-	// TODO: SecRequestBodyNoFilesLimit directive is retrieving the value, but no logic based on it is implemented. See https://github.com/corazawaf/coraza/issues/896
+	// Maximum request-body bytes excluding multipart file content. Zero means
+	// the directive is not configured.
 	RequestBodyNoFilesLimit int64
 
 	RequestBodyLimitAction types.BodyLimitAction
@@ -223,6 +223,10 @@ func (w *WAF) newTransaction(opts Options) *Transaction {
 	tx.HashEngine = false
 	tx.HashEnforcement = false
 	tx.lastPhase = 0
+	tx.requestBodyInspectLength = 0
+	tx.requestBodyNoFilesLimit = 0
+	tx.requestBodyNoFilesMultipart = false
+	tx.requestBodyNoFilesLimitExceeded = false
 	tx.ruleRemoveByID = nil
 	tx.ruleRemoveByIDRanges = nil
 	tx.ruleRemoveTargetByID = map[int][]ruleVariableParams{}
