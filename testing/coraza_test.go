@@ -90,6 +90,7 @@ func testList(t *testing.T, p *profile.Profile) ([]*Test, error) {
 			if stage.Stage.Input.Headers != nil {
 				test.RequestHeaders = stage.Stage.Input.Headers
 			}
+			test.RequestPathArgs = stage.Stage.Input.PathArgs
 			if stage.Stage.Output.Headers != nil {
 				test.ResponseHeaders = stage.Stage.Output.Headers
 			}

@@ -131,5 +131,6 @@ Superseding does not delete the old record. Set its status and let the history s
 | [0060](0060-json-bounded-recursion-prescan.md) | GHSA-6gcq-wc29-5xf2 | 2026-09-30 | unreleased | P | Iterative depth pre-scan before `gjson.Valid` in the JSON body processor |
 | [0061](0061-transformation-cache-value-identity.md) | [#1682](https://github.com/corazawaf/coraza/pull/1682) | 2026-10-15 | unreleased | ⚡ | Transformation cache keyed by value identity |
 | [0062](0062-ctl-ruleengine-off-is-final.md) | [#1863](https://github.com/corazawaf/coraza/pull/1863) | 2026-11-21 (expected) | unreleased | P | `ctl:ruleEngine=Off` is final for the transaction |
+| [0063](0063-sanitise-actions.md) | [#1878](https://github.com/corazawaf/coraza/pull/1878) | 2026-11-21 (expected) | unreleased | P | `sanitise*` actions for audit log redaction |
 
 Categories: **F**eature · **P**arity · **⚡** Perf · **R**efactor
