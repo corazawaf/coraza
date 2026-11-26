@@ -7,11 +7,14 @@ package operators
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
@@ -75,12 +78,16 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 			return nil, fmt.Errorf("validating schema as JSON: %w", err)
 		}
 
-		const schemaURL = "https://coraza.invalid/validate-schema.json"
+		const schemaURL = "coraza:///validate-schema.json"
 		compiler := jsonschema.NewCompiler()
 		compiler.DefaultDraft(jsonschema.Draft2020)
-		// The operator reads its schema from the configured filesystem root.
-		// Compilation may resolve in-document references and embedded dialects.
-		compiler.UseLoader(jsonschema.SchemeURLLoader{})
+		// Preserve HTTP references in operator-provided schemas and keep
+		// filesystem access scoped to the configured root.
+		httpLoader := &schemaHTTPClient{client: http.Client{Timeout: 10 * time.Second}}
+		compiler.UseLoader(jsonschema.SchemeURLLoader{
+			"http":  httpLoader,
+			"https": httpLoader,
+		})
 		if err := compiler.AddResource(schemaURL, doc); err != nil {
 			return nil, fmt.Errorf("adding JSON schema: %w", err)
 		}
@@ -97,6 +104,26 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 	return &validateSchema{
 		jsonSchema: schema.(*jsonschema.Schema),
 	}, nil
+}
+
+type schemaHTTPClient struct {
+	client http.Client
+}
+
+func (l *schemaHTTPClient) Load(url string) (any, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := l.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetching JSON schema: HTTP %d", resp.StatusCode)
+	}
+	return jsonschema.UnmarshalJSON(resp.Body)
 }
 
 func (o *validateSchema) Evaluate(tx plugintypes.TransactionState, data string) bool {

@@ -5,7 +5,11 @@
 package operators
 
 import (
+	"fmt"
+	"io"
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -98,6 +102,23 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	if !opResult {
 		t.Errorf("Expected JSON with missing required field to return true, got false")
 	}
+
+	t.Run("HTTP reference", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = io.WriteString(w, `{"type":"number"}`)
+		}))
+		defer server.Close()
+		op, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: schema,
+			Root:      setupJSONSchema(schema, fmt.Sprintf(`{"$ref":%q}`, server.URL+"/number.json")),
+		})
+		if err != nil {
+			t.Fatalf("compile schema with HTTP reference: %v", err)
+		}
+		if op.Evaluate(nil, "42") || !op.Evaluate(nil, `"42"`) {
+			t.Error("expected only the JSON number to meet the referenced schema")
+		}
+	})
 }
 
 func TestValidateSchemaInvalidFile(t *testing.T) {
@@ -108,7 +129,7 @@ func TestValidateSchemaInvalidFile(t *testing.T) {
 	}{
 		{"missing", fstest.MapFS{}},
 		{"invalid JSON", setupJSONSchema(name, `{`)},
-		{"unsupported external resource", setupJSONSchema(name, `{"$ref":"https://example.invalid/external.json"}`)},
+		{"unsupported resource scheme", setupJSONSchema(name, `{"$ref":"coraza:///external.json"}`)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewValidateSchema(plugintypes.OperatorOptions{Arguments: name, Root: tt.root})
