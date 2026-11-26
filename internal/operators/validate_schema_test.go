@@ -30,10 +30,11 @@ func setupJSONSchema(name, data string) fs.FS {
 func TestValidateSchemaJSONBasic(t *testing.T) {
 	schema := "schema.json"
 	rootFS := setupJSONSchema(schema, `{
+		"$defs": { "age": { "type": "number" } },
 		"type": "object",
 		"properties": {
 			"name": { "type": "string" },
-			"age": { "type": "number" }
+			"age": { "$ref": "#/$defs/age" }
 		},
 		"required": ["name", "age"]
 	}`)
@@ -82,6 +83,9 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 	if !op.Evaluate(nil, invalidJSON) {
 		t.Errorf("Expected invalid JSON to return true, got false")
 	}
+	if !op.Evaluate(nil, validJSON+" "+validJSON) {
+		t.Error("expected trailing JSON to be rejected")
+	}
 
 	// Missing required field should return true (violation detected)
 	missingFieldJSON := `{"name": "John"}` // Missing age field
@@ -97,13 +101,21 @@ func TestValidateSchemaJSONBasic(t *testing.T) {
 }
 
 func TestValidateSchemaInvalidFile(t *testing.T) {
-	opts := plugintypes.OperatorOptions{
-		Arguments: "nonexistent.json",
-		Root:      fstest.MapFS{},
-	}
-	_, err := NewValidateSchema(opts)
-	if err == nil {
-		t.Errorf("Expected error for nonexistent file, got nil")
+	const name = "schema.json"
+	for _, tt := range []struct {
+		name string
+		root fs.FS
+	}{
+		{"missing", fstest.MapFS{}},
+		{"invalid JSON", setupJSONSchema(name, `{`)},
+		{"unsupported external resource", setupJSONSchema(name, `{"$ref":"https://example.invalid/external.json"}`)},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewValidateSchema(plugintypes.OperatorOptions{Arguments: name, Root: tt.root})
+			if err == nil {
+				t.Error("expected schema initialization to fail")
+			}
+		})
 	}
 }
 

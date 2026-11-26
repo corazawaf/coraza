@@ -6,14 +6,14 @@
 package operators
 
 import (
-	"encoding/json"
+	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
 
-	"github.com/kaptinlin/jsonschema"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
 	"github.com/corazawaf/coraza/v3/types"
@@ -70,17 +70,23 @@ func NewValidateSchema(options plugintypes.OperatorOptions) (plugintypes.Operato
 	}
 
 	schema, err := memoizeDo(options.Memoizer, memoizeKey("validateSchema", string(schemaData)), func() (any, error) {
-		// Preliminarily validate that the schema is valid JSON
-		var jsonSchema any
-		if err := json.Unmarshal(schemaData, &jsonSchema); err != nil {
-			return nil, fmt.Errorf("validating schema as JSON: %v", err)
+		doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaData))
+		if err != nil {
+			return nil, fmt.Errorf("validating schema as JSON: %w", err)
 		}
 
-		// Compile JSON Schema at creation time
+		const schemaURL = "https://coraza.invalid/validate-schema.json"
 		compiler := jsonschema.NewCompiler()
-		schema, err := compiler.Compile(schemaData)
+		compiler.DefaultDraft(jsonschema.Draft2020)
+		// The operator reads its schema from the configured filesystem root.
+		// Compilation may resolve in-document references and embedded dialects.
+		compiler.UseLoader(jsonschema.SchemeURLLoader{})
+		if err := compiler.AddResource(schemaURL, doc); err != nil {
+			return nil, fmt.Errorf("adding JSON schema: %w", err)
+		}
+		schema, err := compiler.Compile(schemaURL)
 		if err != nil {
-			return nil, fmt.Errorf("compiling JSON schema: %v", err)
+			return nil, fmt.Errorf("compiling JSON schema: %w", err)
 		}
 		return schema, nil
 	})
@@ -144,14 +150,13 @@ func (o *validateSchema) isValidJSON(data string) bool {
 	}
 
 	// Check basic JSON syntax
-	var js any
-	if err := json.Unmarshal([]byte(data), &js); err != nil {
+	js, err := jsonschema.UnmarshalJSON(strings.NewReader(data))
+	if err != nil {
 		return false
 	}
 
 	// Use the compiled schema validator
-	result := o.jsonSchema.Validate(js)
-	return result == nil || result.IsValid()
+	return o.jsonSchema.Validate(js) == nil
 }
 
 func init() {
