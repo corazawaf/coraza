@@ -80,7 +80,8 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 			}
 
 			if (input[i+1] == 'x' || input[i+1] == 'X') && i+2 < inputLen && utils.ValidHex(input[i+2]) {
-				/* One digit. */
+				/* One digit. This differs from ModSecurity, which keeps the "x":
+				 * for example "\xag" is now the byte 0x0a followed by "g". */
 				bc, _ := strconv.ParseUint(input[i+2:i+3], 16, 8)
 				data[d] = byte(bc)
 				d += 1
