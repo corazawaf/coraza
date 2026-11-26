@@ -95,7 +95,7 @@ phase:
 heap 389 MB on main, 184 MB with this change, 32 connections) and saw about
 three times as many GC cycles, which led to the profile summarised above:
 
-> Thanks for profiling it, and for trying the sized map too. The extra collections come from rebuilding the table past 8192 entries, and emptying it in place would keep the table through the upstream wait, which is the memory this pull request is about. Keeping the replacement as it is makes sense to me.
+> Thanks for profiling it, and for trying the sized map too. The extra collections come from rebuilding the table past 8192 entries, and emptying it in place would keep the table through the upstream wait, which is the memory this pull request is about. Keeping the replacement as it is makes sense to me. […]
 > — @segflaunt ([comment](https://github.com/corazawaf/coraza/pull/1865#issuecomment-7168217931))
 
 ## Participants
@@ -111,11 +111,11 @@ three times as many GC cycles, which led to the profile summarised above:
 - **Negative / follow-up:** Bodies past 8192 cache entries allocate a new table
   on every transaction, with more GC cycles. #1751 may lower the threshold to
   4096 (an emptied map keeps about 576 KiB there), with the reasoning in
-  ADR-0064.
+  ADR-0064, which is still under review in #1751.
 
 ## References
 
 - PR: https://github.com/corazawaf/coraza/pull/1865
 - Report: https://github.com/corazawaf/coraza-nginx/issues/173
 - Related PR: https://github.com/corazawaf/coraza/pull/1751
-- Related ADRs: ADR-0044, ADR-0061, ADR-0064
+- Related ADRs: ADR-0044, ADR-0061, ADR-0064 (pending, see #1751)
