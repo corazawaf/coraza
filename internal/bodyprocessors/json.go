@@ -48,7 +48,7 @@ func (js *jsonBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.Tran
 		}
 	}
 	if truncated {
-		v.ArgumentsLimitReached().(*collections.Single).Set("1")
+		setRequestArgumentsLimitReached(v)
 	}
 	if err != nil {
 		return err

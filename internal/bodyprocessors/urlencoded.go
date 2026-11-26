@@ -32,7 +32,7 @@ func (*urlencodedBodyProcessor) ProcessRequest(reader io.Reader, v plugintypes.T
 		argsCol.Set(k, vs)
 	}
 	if truncated {
-		v.ArgumentsLimitReached().(*collections.Single).Set("1")
+		setRequestArgumentsLimitReached(v)
 	}
 	v.RequestBody().(*collections.Single).Set(b)
 	v.RequestBodyLength().(*collections.Single).Set(strconv.Itoa(len(b)))
