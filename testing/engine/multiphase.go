@@ -275,3 +275,72 @@ SecRule REQUEST_URI "@beginsWith /off-early" "id:50,phase:2,pass,log,ctl:ruleEng
 SecRule REQUEST_URI "@rx ^/" "id:60,phase:1,pass,log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "r0c0y",
+		Description: "A plain allow does not skip a logging phase rule evaluated in an inferred earlier phase",
+		Enabled:     true,
+		Name:        "multiphase_allow.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			// Rule 2 is a phase 5 rule, but REQUEST_HEADERS is available in phase 1, so
+			// multiphase evaluation runs it there, after the allow of rule 1, and does not
+			// evaluate REQUEST_HEADERS again in phase 5. A plain allow skips phases 1 to 4 but
+			// not the logging phase (allow.go covers the default build), so rule 2 must run
+			// and the phase 3 rule 3 must not.
+			Title: "plain allow and a logging phase rule on request variables",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:     "/allow_me",
+							Headers: map[string]string{"User-Agent": "sqlmap/1.8"},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 2},
+							NonTriggeredRules: []int{3, 6},
+						},
+					},
+				},
+				{
+					// The early logging phase rule 4 must not replace the plain allow with
+					// allow:phase, which would let the phase 3 deny of rule 6 run.
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:     "/allow_me",
+							Headers: map[string]string{"X-Logging": "allow-phase"},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 4},
+							NonTriggeredRules: []int{6},
+						},
+					},
+				},
+				{
+					// The early logging phase rule 5 must not interrupt the allowed request.
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:     "/allow_me",
+							Headers: map[string]string{"X-Logging": "deny"},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 5},
+							NonTriggeredRules: []int{6},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRuleEngine On
+SecRule REQUEST_URI "@beginsWith /allow_me" "id:1,phase:1,allow"
+SecRule REQUEST_HEADERS:User-Agent "@contains sqlmap" "id:2,phase:5,pass,log"
+SecRule REQUEST_HEADERS:User-Agent "@contains sqlmap" "id:3,phase:3,pass,log"
+SecRule REQUEST_HEADERS:X-Logging "@streq allow-phase" "id:4,phase:5,allow:phase,log"
+SecRule REQUEST_HEADERS:X-Logging "@streq deny" "id:5,phase:5,deny,status:403,log"
+SecAction "id:6,phase:3,deny,status:403,log"
+`,
+})
