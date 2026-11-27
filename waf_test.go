@@ -126,8 +126,9 @@ func TestPopulateAuditLog(t *testing.T) {
 	writer := &testAuditLogWriter{}
 
 	testCases := map[string]struct {
-		config *wafConfig
-		check  func(*testing.T, *corazawaf.WAF)
+		config  *wafConfig
+		check   func(*testing.T, *corazawaf.WAF)
+		wantErr bool
 	}{
 		"empty config": {
 			config: &wafConfig{},
@@ -148,20 +149,23 @@ func TestPopulateAuditLog(t *testing.T) {
 		"with parts": {
 			config: &wafConfig{
 				auditLog: &auditLogConfig{
-					parts: []types.AuditLogPart{
-						types.AuditLogPartRequestHeaders,
-						types.AuditLogPartResponseBody,
-					},
+					parts: types.AuditLogParts("ABEZ"),
 				},
 			},
 			check: func(t *testing.T, waf *corazawaf.WAF) {
-				if want, have := []types.AuditLogPart{
-					types.AuditLogPartRequestHeaders,
-					types.AuditLogPartResponseBody,
-				}, waf.AuditLogParts; len(want) != len(have) {
-					t.Fatalf("unexpected AuditLogParts: want %v, have %v", want, have)
+				if want, have := "ABEZ", string(waf.AuditLogParts); want != have {
+					t.Fatalf("unexpected AuditLogParts: want %s, have %s", want, have)
 				}
 			},
+		},
+		"with parts missing A and Z": {
+			config: &wafConfig{
+				auditLog: &auditLogConfig{
+					parts: types.AuditLogParts("BE"),
+				},
+			},
+			check:   func(*testing.T, *corazawaf.WAF) {},
+			wantErr: true,
 		},
 		"with audit log writer": {
 			config: &wafConfig{
@@ -178,7 +182,9 @@ func TestPopulateAuditLog(t *testing.T) {
 	for name, tCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			waf := &corazawaf.WAF{}
-			populateAuditLog(waf, tCase.config)
+			if err := populateAuditLog(waf, tCase.config); (err != nil) != tCase.wantErr {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			tCase.check(t, waf)
 		})
 	}
