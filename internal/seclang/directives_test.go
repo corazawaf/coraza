@@ -328,10 +328,14 @@ func TestDirectives(t *testing.T) {
 		},
 		"SecRuleRemoveByTag": {
 			{"", expectErrorOnDirective},
+			{"''", expectErrorOnDirective},
+			{`""`, expectErrorOnDirective},
 			{"attack-sqli", expectNoErrorOnDirective},
 		},
 		"SecRuleRemoveByMsg": {
 			{"", expectErrorOnDirective},
+			{"''", expectErrorOnDirective},
+			{`""`, expectErrorOnDirective},
 		},
 		"SecRuleRemoveById": {
 			{"", expectErrorOnDirective},
@@ -384,6 +388,8 @@ func TestDirectives(t *testing.T) {
 			{"", expectErrorOnDirective},
 			{"a", expectErrorOnDirective},
 			{"tag-1 \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"'tag-1' \"ARGS:wp_post\"", expectNoErrorOnDirective},
+			{"'tag-1' 'ARGS:wp_post'", expectNoErrorOnDirective},
 			{"tag-1 tag-2 \"ARGS:wp_post\"", expectErrorOnDirective}, // Multiple tags in line is not supported
 			{"tag-2 \"ARGS:wp_post|RESPONSE_HEADERS|!REQUEST_BODY\"", expectNoErrorOnDirective},
 		},
