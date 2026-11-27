@@ -282,7 +282,17 @@ RulesLoop:
 			tx.variables.matchedVars.Reset()
 		}
 
+		// Past the switch above, a plain allow in phases 1 to 4 means r is a logging phase rule
+		// that multiphase evaluation runs early. As in phase 5, it must not change how the
+		// allowed request is handled: it keeps the plain allow and cannot interrupt.
+		earlyLoggingAfterAllow := multiphaseEvaluation &&
+			tx.AllowType == corazatypes.AllowTypeAll && phase != types.PhaseLogging
+
 		r.Evaluate(phase, tx, transformationCache)
+		if earlyLoggingAfterAllow {
+			tx.AllowType = corazatypes.AllowTypeAll
+			tx.interruption = nil
+		}
 		tx.Capture = false // we reset captures
 		usedRules++
 

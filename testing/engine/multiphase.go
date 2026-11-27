@@ -300,7 +300,34 @@ var _ = profile.RegisterProfile(profile.Profile{
 						},
 						Output: profile.ExpectedOutput{
 							TriggeredRules:    []int{1, 2},
-							NonTriggeredRules: []int{3},
+							NonTriggeredRules: []int{3, 6},
+						},
+					},
+				},
+				{
+					// The early logging phase rule 4 must not replace the plain allow with
+					// allow:phase, which would let the phase 3 deny of rule 6 run.
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:     "/allow_me",
+							Headers: map[string]string{"X-Logging": "allow-phase"},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 4},
+							NonTriggeredRules: []int{6},
+						},
+					},
+				},
+				{
+					// The early logging phase rule 5 must not interrupt the allowed request.
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:     "/allow_me",
+							Headers: map[string]string{"X-Logging": "deny"},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 5},
+							NonTriggeredRules: []int{6},
 						},
 					},
 				},
@@ -312,5 +339,8 @@ SecRuleEngine On
 SecRule REQUEST_URI "@beginsWith /allow_me" "id:1,phase:1,allow"
 SecRule REQUEST_HEADERS:User-Agent "@contains sqlmap" "id:2,phase:5,pass,log"
 SecRule REQUEST_HEADERS:User-Agent "@contains sqlmap" "id:3,phase:3,pass,log"
+SecRule REQUEST_HEADERS:X-Logging "@streq allow-phase" "id:4,phase:5,allow:phase,log"
+SecRule REQUEST_HEADERS:X-Logging "@streq deny" "id:5,phase:5,deny,status:403,log"
+SecAction "id:6,phase:3,deny,status:403,log"
 `,
 })
