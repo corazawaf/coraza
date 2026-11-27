@@ -242,7 +242,7 @@ func TestRulesCount(t *testing.T) {
 func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
 	seedWAF := corazawaf.NewWAF()
 	if err := seclang.NewParser(seedWAF).FromString(`
-		SecRule ARGS "@streq attack" "id:100,phase:2,deny,status:403,tag:'base'"
+		SecRule ARGS "@streq attack" "id:100,phase:2,deny,status:403,tag:'base',t:trim,t:trimLeft,t:trimRight"
 		SecRule ARGS:act "@streq hit" "id:101,phase:2,deny,status:403"
 		SecRule REQUEST_URI "@beginsWith /chain" "id:200,phase:2,deny,status:403,chain"
 		SecRule ARGS:part "@streq evil" ""
@@ -287,7 +287,7 @@ func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
 	}
 
 	waf2, err := NewWAF(baseCfg.WithDirectives(`
-		SecRuleUpdateActionById 100 "tag:'other-tag'"
+		SecRuleUpdateActionById 100 "tag:'other-tag',t:removeWhitespace"
 		SecRuleUpdateTargetById 100 "!ARGS:waf2_safe"
 		SecRuleUpdateActionById 101 "pass"
 	`))
@@ -356,10 +356,16 @@ func TestWithRulesIsolatesGroupsAndCtlSelection(t *testing.T) {
 			wantWAF2Blocked: false,
 		},
 		{
-			name:            "transformation added in waf1 applies only in waf1",
+			name:            "transformation added in waf1 applies only in waf1 and is not overwritten by waf2",
 			uri:             "/?payload=ATTACK",
 			wantWAF1Blocked: true,
 			wantWAF2Blocked: false,
+		},
+		{
+			name:            "transformation added in waf2 applies only in waf2",
+			uri:             "/?payload=att%20ack",
+			wantWAF1Blocked: false,
+			wantWAF2Blocked: true,
 		},
 		{
 			name:            "disruptive action update in waf2 does not leak to waf1",
