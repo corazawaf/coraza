@@ -79,6 +79,17 @@ func doEscapeSeqDecode(input string, pos int) (string, bool) {
 				continue
 			}
 
+			if (input[i+1] == 'x' || input[i+1] == 'X') && i+2 < inputLen && utils.ValidHex(input[i+2]) {
+				/* One digit. This differs from ModSecurity, which keeps the "x":
+				 * for example "\xag" is now the byte 0x0a followed by "g". */
+				bc, _ := strconv.ParseUint(input[i+2:i+3], 16, 8)
+				data[d] = byte(bc)
+				d += 1
+				i += 3
+				changed = true
+				continue
+			}
+
 			if isODigit(input[i+1]) { /* Octal. */
 				j := 2
 				for j < 4 && i+j < inputLen && isODigit(input[i+j]) {

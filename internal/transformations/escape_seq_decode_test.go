@@ -34,6 +34,34 @@ func TestEscapeSeqDecode(t *testing.T) {
 			input: "\\z",
 			want:  "z",
 		},
+		{
+			input: "a\\xdb",
+			want:  "a\xdb",
+		},
+		{
+			input: "a\\xd",
+			want:  "a\r",
+		},
+		{
+			input: "a\\x9 b",
+			want:  "a\t b",
+		},
+		{
+			input: "\\XAz",
+			want:  "\nz",
+		},
+		{
+			input: "\\x41",
+			want:  "A",
+		},
+		{
+			input: "\\xg",
+			want:  "xg",
+		},
+		{
+			input: "end\\x",
+			want:  "endx",
+		},
 	}
 
 	for _, tc := range tests {
