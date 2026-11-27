@@ -955,6 +955,33 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 		} else if !strings.Contains(err.Error(), "byte limit") {
 			t.Errorf("expected remote size limit error, got: %v", err)
 		}
+
+		// http -> https -> http downgrade must be blocked on the latest hop.
+		downgradeRT := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			var location string
+			switch req.URL.String() {
+			case "http://schema.example/start.json":
+				location = "https://schema.example/upgraded.json"
+			case "https://schema.example/upgraded.json":
+				location = "http://schema.example/downgraded.json"
+			default:
+				return nil, fmt.Errorf("unexpected request URL: %s", req.URL.String())
+			}
+			return &http.Response{
+				StatusCode: http.StatusFound,
+				Header:     http.Header{"Location": []string{location}},
+				Body:       io.NopCloser(strings.NewReader("")),
+				Request:    req,
+			}, nil
+		})
+		if _, err := newValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "downgrade.json",
+			Root:      setupJSONSchema("downgrade.json", `{"$ref":"http://schema.example/start.json"}`),
+		}, downgradeRT); err == nil {
+			t.Errorf("expected http -> https -> http redirect downgrade to fail")
+		} else if !strings.Contains(err.Error(), "refusing HTTPS-to-HTTP redirect") {
+			t.Errorf("expected HTTPS-to-HTTP redirect refusal error, got: %v", err)
+		}
 	})
 
 	t.Run("application/xml enforced, unsupported yaml or contentEncoding and draft-07 contentSchema fail closed, minContains without contains allowed", func(t *testing.T) {
@@ -995,6 +1022,22 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 			t.Errorf("expected draft-07 schema with contentSchema to fail initialization instead of silently ignoring contentSchema")
 		} else if !strings.Contains(err.Error(), "contentSchema is not supported under JSON Schema draft-07") {
 			t.Errorf("expected clear draft-07 contentSchema migration message, got: %v", err)
+		}
+
+		// Under default draft 2020-12, a nested subschema with empty "$id" keeps the inherited draft
+		// in jsonschema/v6, so it compiles and retains contentSchema enforcement.
+		if emptyIDOp, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "nested-empty-id-draft7.json",
+			Root:      setupJSONSchema("nested-empty-id-draft7.json", `{"type":"object","properties":{"payload":{"$id":"","$schema":"http://json-schema.org/draft-07/schema#","type":"string","contentMediaType":"application/json","contentSchema":{"type":"object","required":["a"]}}}}`),
+		}); err != nil {
+			t.Fatalf("expected nested empty $id with draft-07 $schema and contentSchema to compile under default draft: %v", err)
+		} else {
+			if emptyIDOp.Evaluate(nil, `{"payload":"{\"a\":1}"}`) {
+				t.Errorf("expected valid nested contentSchema payload to pass")
+			}
+			if !emptyIDOp.Evaluate(nil, `{"payload":"{}"}`) {
+				t.Errorf("expected invalid nested contentSchema payload to trigger violation")
+			}
 		}
 
 		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
@@ -1181,6 +1224,12 @@ func BenchmarkValidateSchema(b *testing.B) {
 			}
 		}
 	})
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 type countingOfflineRoundTripper struct {

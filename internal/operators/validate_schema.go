@@ -131,7 +131,7 @@ func newValidateSchema(options plugintypes.OperatorOptions, transport http.Round
 				if len(via) >= 5 {
 					return errors.New("stopped after 5 redirects")
 				}
-				if len(via) > 0 && via[0].URL.Scheme == "https" && req.URL.Scheme != "https" {
+				if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" {
 					return errors.New("refusing HTTPS-to-HTTP redirect for remote schema")
 				}
 				return nil
@@ -378,6 +378,24 @@ func nonBuiltinDialectURI(doc any) string {
 	return schemaURI
 }
 
+func hasEffectiveResourceID(node map[string]any, draft int) bool {
+	if draft < 2019 {
+		if _, hasRef := node["$ref"]; hasRef {
+			return false
+		}
+	}
+	idKey := "$id"
+	if draft == 4 {
+		idKey = "id"
+	}
+	rawID, ok := node[idKey].(string)
+	if !ok {
+		return false
+	}
+	base, _, _ := strings.Cut(rawID, "#")
+	return base != ""
+}
+
 // validSchemaDoc validates only schema-valued nodes (never literal values under
 // const/enum/default/examples), rejecting:
 //   - length/count keywords outside Go int range (Int64() wraps 2^64 to 0 in v6.0.3)
@@ -390,14 +408,8 @@ func validSchemaDoc(v any, draft int, isRoot bool) error {
 		return nil
 	}
 	if schemaURI, ok := node["$schema"].(string); ok {
-		hasID := false
-		if _, hasDollarID := node["$id"].(string); hasDollarID {
-			hasID = true
-		} else if _, hasLegacyID := node["id"].(string); hasLegacyID {
-			hasID = true
-		}
-		if isRoot || hasID {
-			if parsedDraft, builtin := draftVersionFromURL(schemaURI); builtin {
+		if parsedDraft, builtin := draftVersionFromURL(schemaURI); builtin {
+			if isRoot || hasEffectiveResourceID(node, parsedDraft) {
 				draft = parsedDraft
 			}
 		}
