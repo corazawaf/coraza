@@ -527,11 +527,12 @@ func TestNonSelectableCollection(t *testing.T) {
 
 func TestParseActions(t *testing.T) {
 	tests := []struct {
-		name            string
-		inputActions    string
-		inputRule       string
-		expectedLogLine string
-		expectError     bool
+		name             string
+		inputActions     string
+		inputRule        string
+		expectedLogLine  string
+		expectedLogCount int
+		expectError      bool
 	}{
 		{
 			name:         "Valid actions with ID and phase",
@@ -579,8 +580,9 @@ func TestParseActions(t *testing.T) {
 			name: "missing phase on chain starter",
 			inputRule: `SecRule REQUEST_URI "abc" "id:105,deny,chain"
 SecRule REQUEST_URI "def" "t:lowercase"`,
-			expectError:     false,
-			expectedLogLine: `[WARN] rule phase is not specified, defaulting to phase 2`,
+			expectError:      false,
+			expectedLogLine:  `[WARN] rule phase is not specified, defaulting to phase 2 file="_inline_" line=1`,
+			expectedLogCount: 1,
 		},
 		{
 			name: "phase-less SecRuleUpdateActionById must not warn",
@@ -619,6 +621,11 @@ SecRuleUpdateActionById 109 "log"`,
 			}
 			if tt.expectedLogLine != "" && !strings.Contains(logsBuf.String(), tt.expectedLogLine) {
 				t.Errorf("expected debug log containing %q, got %q", tt.expectedLogLine, logsBuf.String())
+			}
+			if tt.expectedLogCount > 0 {
+				if got := strings.Count(logsBuf.String(), "[WARN] rule phase is not specified, defaulting to phase 2"); got != tt.expectedLogCount {
+					t.Errorf("expected %d missing-phase warning(s), got %d in %q", tt.expectedLogCount, got, logsBuf.String())
+				}
 			}
 		})
 	}
