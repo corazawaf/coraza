@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/fstest"
 
@@ -924,7 +925,9 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 		}
 
 		smallSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			_, _ = io.WriteString(w, `{"type":"integer","minimum":1}`)
+			if _, err := io.WriteString(w, `{"type":"integer","minimum":1}`); err != nil {
+				t.Errorf("write HTTP schema fixture: %v", err)
+			}
 		}))
 		defer smallSrv.Close()
 
@@ -954,7 +957,7 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 		}
 	})
 
-	t.Run("application/xml enforced, unsupported application/yaml fails closed, and oversized minLength rejected", func(t *testing.T) {
+	t.Run("application/xml enforced, unsupported yaml or contentEncoding and draft-07 contentSchema fail closed, minContains without contains allowed", func(t *testing.T) {
 		xmlOp, err := NewValidateSchema(plugintypes.OperatorOptions{
 			Arguments: "xml.json",
 			Root:      setupJSONSchema("xml.json", `{"type":"string","contentMediaType":"application/xml"}`),
@@ -977,10 +980,42 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 		}
 
 		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "enc.json",
+			Root:      setupJSONSchema("enc.json", `{"type":"string","contentEncoding":"hex"}`),
+		}); err == nil {
+			t.Errorf("expected unsupported contentEncoding hex to fail compilation")
+		} else if !strings.Contains(err.Error(), "unsupported contentEncoding") {
+			t.Errorf("expected unsupported contentEncoding error, got: %v", err)
+		}
+
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "draft7-cs.json",
+			Root:      setupJSONSchema("draft7-cs.json", `{"$schema":"http://json-schema.org/draft-07/schema#","type":"string","contentMediaType":"application/json","contentSchema":{"type":"object","required":["a"]}}`),
+		}); err == nil {
+			t.Errorf("expected draft-07 schema with contentSchema to fail initialization instead of silently ignoring contentSchema")
+		} else if !strings.Contains(err.Error(), "contentSchema is not supported under JSON Schema draft-07") {
+			t.Errorf("expected clear draft-07 contentSchema migration message, got: %v", err)
+		}
+
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
 			Arguments: "huge-minlen.json",
 			Root:      setupJSONSchema("huge-minlen.json", `{"type":"string","minLength":18446744073709551616}`),
 		}); err == nil {
 			t.Errorf("expected out-of-range minLength (2^64) to fail compilation instead of wrapping to 0")
+		}
+
+		// Without contains, v6.0.3 ignores minContains/maxContains, so out-of-range counts must not fail initialization.
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "mincontains-no-contains.json",
+			Root:      setupJSONSchema("mincontains-no-contains.json", `{"type":"array","minContains":18446744073709551616}`),
+		}); err != nil {
+			t.Errorf("expected minContains without contains to compile cleanly, got: %v", err)
+		}
+		if _, err := NewValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "mincontains-with-contains.json",
+			Root:      setupJSONSchema("mincontains-with-contains.json", `{"type":"array","contains":{"type":"integer"},"minContains":18446744073709551616}`),
+		}); err == nil {
+			t.Errorf("expected out-of-range minContains alongside contains to fail compilation")
 		}
 
 		// Schema-like keys inside literal const/enum/default/examples must not trigger false compilation failures,
@@ -1029,7 +1064,8 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 		}
 	})
 
-	t.Run("all drafts offline, exact multipleOf, draft-07 formats, cyclic refs, and ReDoS", func(t *testing.T) {
+	t.Run("all drafts offline, custom dialect error, exact multipleOf, draft-07 formats, cyclic refs, and ReDoS", func(t *testing.T) {
+		countingRT := &countingOfflineRoundTripper{}
 		for _, metaschema := range []string{
 			"http://json-schema.org/draft-04/schema#",
 			"http://json-schema.org/draft-06/schema#",
@@ -1037,10 +1073,10 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 			"https://json-schema.org/draft/2019-09/schema",
 			"https://json-schema.org/draft/2020-12/schema",
 		} {
-			op, err := NewValidateSchema(plugintypes.OperatorOptions{
+			op, err := newValidateSchema(plugintypes.OperatorOptions{
 				Arguments: "draft.json",
 				Root:      setupJSONSchema("draft.json", fmt.Sprintf(`{"$schema":%q,"type":"number","multipleOf":0.1}`, metaschema)),
-			})
+			}, countingRT)
 			if err != nil {
 				t.Fatalf("compile draft %s offline: %v", metaschema, err)
 			}
@@ -1050,6 +1086,18 @@ func TestValidateSchemaSecurityAndCompat(t *testing.T) {
 			if !op.Evaluate(nil, `0.35`) {
 				t.Errorf("draft %s: expected 0.35 to violate multipleOf 0.1", metaschema)
 			}
+		}
+		if got := countingRT.calls.Load(); got != 0 {
+			t.Errorf("expected built-in drafts to compile offline with 0 network requests, got %d", got)
+		}
+
+		if _, err := newValidateSchema(plugintypes.OperatorOptions{
+			Arguments: "custom-dialect.json",
+			Root:      setupJSONSchema("custom-dialect.json", `{"$schema":"https://dialect.invalid/custom/schema","type":"string"}`),
+		}, countingRT); err == nil {
+			t.Errorf("expected unreachable custom $schema dialect to fail initialization")
+		} else if !strings.Contains(err.Error(), "resolving custom $schema dialect") {
+			t.Errorf("expected actionable custom $schema dialect error, got: %v", err)
 		}
 
 		fmtOp, err := NewValidateSchema(plugintypes.OperatorOptions{
@@ -1135,18 +1183,17 @@ func BenchmarkValidateSchema(b *testing.B) {
 	})
 }
 
-type offlineRoundTripper struct{}
+type countingOfflineRoundTripper struct {
+	calls atomic.Int64
+}
 
-func (offlineRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
-	return nil, errors.New("outbound network disabled during fuzzing")
+func (rt *countingOfflineRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	rt.calls.Add(1)
+	return nil, errors.New("outbound network disabled during offline test or fuzzing")
 }
 
 func FuzzValidateSchema(f *testing.F) {
-	prevTransport := schemaHTTPTransport
-	schemaHTTPTransport = offlineRoundTripper{}
-	f.Cleanup(func() {
-		schemaHTTPTransport = prevTransport
-	})
+	offlineRT := &countingOfflineRoundTripper{}
 	seeds := []struct {
 		schema string
 		body   string
@@ -1170,10 +1217,10 @@ func FuzzValidateSchema(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, rawSchema, body string) {
 		rootFS := setupJSONSchema("schema.json", rawSchema)
-		op, err := NewValidateSchema(plugintypes.OperatorOptions{
+		op, err := newValidateSchema(plugintypes.OperatorOptions{
 			Arguments: "schema.json",
 			Root:      rootFS,
-		})
+		}, offlineRT)
 		if err != nil {
 			return
 		}
