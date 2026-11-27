@@ -275,3 +275,42 @@ SecRule REQUEST_URI "@beginsWith /off-early" "id:50,phase:2,pass,log,ctl:ruleEng
 SecRule REQUEST_URI "@rx ^/" "id:60,phase:1,pass,log"
 `,
 })
+
+var _ = profile.RegisterProfile(profile.Profile{
+	Meta: profile.Meta{
+		Author:      "r0c0y",
+		Description: "A plain allow does not skip a logging phase rule evaluated in an inferred earlier phase",
+		Enabled:     true,
+		Name:        "multiphase_allow.yaml",
+	},
+	Tests: []profile.Test{
+		{
+			// Rule 2 is a phase 5 rule, but REQUEST_HEADERS is available in phase 1, so
+			// multiphase evaluation runs it there, after the allow of rule 1, and does not
+			// evaluate REQUEST_HEADERS again in phase 5. A plain allow skips phases 1 to 4 but
+			// not the logging phase (allow.go covers the default build), so rule 2 must run
+			// and the phase 3 rule 3 must not.
+			Title: "plain allow and a logging phase rule on request variables",
+			Stages: []profile.Stage{
+				{
+					Stage: profile.SubStage{
+						Input: profile.StageInput{
+							URI:     "/allow_me",
+							Headers: map[string]string{"User-Agent": "sqlmap/1.8"},
+						},
+						Output: profile.ExpectedOutput{
+							TriggeredRules:    []int{1, 2},
+							NonTriggeredRules: []int{3},
+						},
+					},
+				},
+			},
+		},
+	},
+	Rules: `
+SecRuleEngine On
+SecRule REQUEST_URI "@beginsWith /allow_me" "id:1,phase:1,allow"
+SecRule REQUEST_HEADERS:User-Agent "@contains sqlmap" "id:2,phase:5,pass,log"
+SecRule REQUEST_HEADERS:User-Agent "@contains sqlmap" "id:3,phase:3,pass,log"
+`,
+})

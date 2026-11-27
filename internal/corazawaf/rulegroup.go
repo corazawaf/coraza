@@ -264,7 +264,16 @@ RulesLoop:
 				break RulesLoop
 			}
 		case corazatypes.AllowTypeAll:
-			break RulesLoop
+			// A plain allow skips phases 1 to 4 but not the logging phase (see above).
+			// Multiphase evaluation can run a logging phase rule here, in an earlier phase
+			// where its variables are ready, and does not evaluate those variables again
+			// in phase 5. So keep looking for such rules and skip only the others.
+			if !multiphaseEvaluation || phase == types.PhaseLogging {
+				break RulesLoop
+			}
+			if r.Phase_ != types.PhaseLogging {
+				continue RulesLoop
+			}
 		}
 		// Reset matched_vars only when the previous rule actually populated it.
 		// In typical CRS evaluation most rules don't match, so this avoids
