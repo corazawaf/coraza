@@ -1,7 +1,7 @@
 # ADR-0071: Empty the transformation cache when a phase ends
 
-- **Status:** proposed
-- **Date:** 2026-11-26 (expected; update before merge)
+- **Status:** accepted
+- **Date:** 2026-11-27
 - **Version:** unreleased (post-v3.8.1)
 - **PR:** [#1865](https://github.com/corazawaf/coraza/pull/1865)
 - **Issue(s):** No linked issue in this repository; reported in [corazawaf/coraza-nginx#173](https://github.com/corazawaf/coraza-nginx/issues/173)
