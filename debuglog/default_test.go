@@ -163,6 +163,32 @@ func TestWithLogger(t *testing.T) {
 	if want, have := expected, buf2.String()[20:]; want != have {
 		t.Fatalf("unexpected message, want %q, have %q", want, have)
 	}
+
+	// Siblings derived from one parent must not share its backing array, or they
+	// overwrite each other's fields: the second logger's tx_id and the second
+	// event's field land in the first one's line. Without the fix, these two
+	// With calls leave the parent at len 34, cap 64, and l1 inherits that spare
+	// capacity, so one case covers sibling loggers and sibling events.
+	t.Run("siblings do not share fields", func(t *testing.T) {
+		buf := bytes.Buffer{}
+		parent := Default().WithOutput(&buf).WithLevel(LevelDebug).
+			With(Str("service", "my-gateway-prod")).
+			With(Str("env", "p"))
+
+		l1 := parent.With(Str("tx_id", "AAA"))
+		_ = parent.With(Str("tx_id", "BBB"))
+		e1 := l1.Debug().Str("k", "1")
+		_ = l1.Debug().Str("k", "2")
+		e1.Msg("m")
+
+		if buf.Len() < 20 {
+			t.Fatalf("expected a log line, have %q", buf.String())
+		}
+		expected := `[DEBUG] m service="my-gateway-prod" env="p" tx_id="AAA" k="1"` + "\n"
+		if want, have := expected, buf.String()[20:]; want != have {
+			t.Fatalf("unexpected message, want %q, have %q", want, have)
+		}
+	})
 }
 
 func TestWithLoggerAccumulative(t *testing.T) {
