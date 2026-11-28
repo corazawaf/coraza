@@ -373,13 +373,23 @@ SecRule REQUEST_URI "def" ""`,
 SecRule REQUEST_URI "abc" "id:103,phase:2,chain"
 SecRule REQUEST_URI "def" ""`,
 		},
+		{
+			name: "non-disruptive action on member without phase must not warn",
+			rules: `SecRule REQUEST_URI "abc" "id:104,phase:2,chain"
+SecRule REQUEST_URI "def" "t:lowercase"`,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			waf := corazawaf.NewWAF()
+			logsBuf := &bytes.Buffer{}
+			waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 			p := NewParser(waf)
 			if err := p.FromString(tc.rules); err != nil {
 				t.Errorf("unexpected error for %q: %s", tc.name, err)
+			}
+			if logsBuf.Len() > 0 {
+				t.Errorf("expected empty warn debug log for %q, got %q", tc.name, logsBuf.String())
 			}
 		})
 	}
@@ -517,10 +527,12 @@ func TestNonSelectableCollection(t *testing.T) {
 
 func TestParseActions(t *testing.T) {
 	tests := []struct {
-		name            string
-		inputActions    string
-		expectedLogLine string
-		expectError     bool
+		name             string
+		inputActions     string
+		inputRule        string
+		expectedLogLine  string
+		expectedLogCount int
+		expectError      bool
 	}{
 		{
 			name:         "Valid actions with ID and phase",
@@ -546,21 +558,59 @@ func TestParseActions(t *testing.T) {
 			expectError:     false,
 			expectedLogLine: "[WARN] unclosed quotes",
 		},
+		{
+			name:            "missing phase",
+			inputActions:    "id:1,log,deny",
+			expectError:     false,
+			expectedLogLine: "[WARN] rule phase is not specified, defaulting to phase 2",
+		},
+		{
+			name:            "missing phase with empty actions",
+			inputRule:       `SecRule REQUEST_URI "abc" ""`,
+			expectError:     false,
+			expectedLogLine: `[WARN] rule phase is not specified, defaulting to phase 2 file="_inline_" line=1`,
+		},
+		{
+			name:            "missing phase on top-level SecAction",
+			inputRule:       `SecAction "id:107,log,pass"`,
+			expectError:     false,
+			expectedLogLine: `[WARN] rule phase is not specified, defaulting to phase 2`,
+		},
+		{
+			name: "missing phase on chain starter",
+			inputRule: `SecRule REQUEST_URI "abc" "id:105,deny,chain"
+SecRule REQUEST_URI "def" "t:lowercase"`,
+			expectError:      false,
+			expectedLogLine:  `[WARN] rule phase is not specified, defaulting to phase 2 file="_inline_" line=1`,
+			expectedLogCount: 1,
+		},
+		{
+			name: "phase-less SecRuleUpdateActionById must not warn",
+			inputRule: `SecRule REQUEST_URI "abc" "id:109,phase:2,deny"
+SecRuleUpdateActionById 109 "log"`,
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			waf := corazawaf.NewWAF()
+			logsBuf := &bytes.Buffer{}
+			waf.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 			rp := &RuleParser{
 				rule:           corazawaf.NewRule(),
 				defaultActions: map[types.RulePhase][]ruleAction{},
 				options: RuleOptions{
-					WAF: corazawaf.NewWAF(),
+					WAF: waf,
 				},
 			}
-			logsBuf := &bytes.Buffer{}
-			rp.options.WAF.Logger = debuglog.Default().WithLevel(debuglog.LevelWarn).WithOutput(logsBuf)
 
-			err := rp.ParseActions(tt.inputActions)
+			var err error
+			if tt.inputRule != "" {
+				err = NewParser(waf).FromString(tt.inputRule)
+			} else {
+				err = rp.ParseActions(tt.inputActions)
+			}
 			if tt.expectError && err == nil {
 				t.Errorf("expected error")
 			} else if !tt.expectError && err != nil {
@@ -571,6 +621,11 @@ func TestParseActions(t *testing.T) {
 			}
 			if tt.expectedLogLine != "" && !strings.Contains(logsBuf.String(), tt.expectedLogLine) {
 				t.Errorf("expected debug log containing %q, got %q", tt.expectedLogLine, logsBuf.String())
+			}
+			if tt.expectedLogCount > 0 {
+				if got := strings.Count(logsBuf.String(), "[WARN] rule phase is not specified, defaulting to phase 2"); got != tt.expectedLogCount {
+					t.Errorf("expected %d missing-phase warning(s), got %d in %q", tt.expectedLogCount, got, logsBuf.String())
+				}
 			}
 		})
 	}

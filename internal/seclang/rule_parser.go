@@ -273,7 +273,22 @@ func (rp *RuleParser) ParseActions(actions string) error {
 	if err != nil {
 		return err
 	}
-	return rp.applyParsedActions(act)
+	if err := rp.applyParsedActions(act); err != nil {
+		return err
+	}
+	if !hasPhaseAction(act) {
+		rp.warnMissingPhase()
+	}
+	return nil
+}
+
+func (rp *RuleParser) warnMissingPhase() {
+	if getLastRuleExpectingChain(rp.options.WAF) == nil && rp.options.WAF.Logger != nil {
+		rp.options.WAF.Logger.Warn().
+			Str("file", rp.options.ParserConfig.ConfigFile).
+			Int("line", rp.options.ParserConfig.LastLine).
+			Msg("rule phase is not specified, defaulting to phase 2")
+	}
 }
 
 // applyParsedActions applies a list of already-parsed actions to the rule.
@@ -409,6 +424,8 @@ func ParseRule(options RuleOptions) (*corazawaf.Rule, error) {
 			if err := rp.ParseActions(acts); err != nil {
 				return nil, err
 			}
+		} else {
+			rp.warnMissingPhase()
 		}
 	} else {
 		// quoted actions separated by comma (,)
@@ -564,6 +581,15 @@ func parseActions(logger debuglog.Logger, actions string) ([]ruleAction, error) 
 		return nil, err
 	}
 	return res, nil
+}
+
+func hasPhaseAction(actions []ruleAction) bool {
+	for _, action := range actions {
+		if action.Key == "phase" {
+			return true
+		}
+	}
+	return false
 }
 
 // splitActions splits an action list on commas, honouring quotes and escapes,
