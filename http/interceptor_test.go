@@ -481,6 +481,90 @@ func TestWriteHeaderSetsHeadersBeforeInterruptionCheck(t *testing.T) {
 			t.Error("expected transaction not to be interrupted")
 		}
 	})
+
+	t.Run("implicit WriteHeader via Write does not write body on interruption", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		res := httptest.NewRecorder()
+		rw, responseProcessor := wrap(res, req, tx)
+
+		rw.Header().Set("X-Block", "true")
+		payload := []byte("secret")
+		n, err := rw.Write(payload)
+		if err != nil {
+			t.Fatalf("unexpected write error: %v", err)
+		}
+		if n != len(payload) {
+			t.Errorf("expected write count %d, got %d", len(payload), n)
+		}
+		if err := responseProcessor(tx, req); err != nil {
+			t.Fatalf("unexpected responseProcessor error: %v", err)
+		}
+
+		if !tx.IsInterrupted() {
+			t.Error("expected transaction to be interrupted by phase 3 rule")
+		}
+		if want, have := http.StatusForbidden, res.Code; want != have {
+			t.Errorf("expected status %d, got %d", want, have)
+		}
+		if got := res.Header().Get("X-Block"); got != "" {
+			t.Errorf("expected blocked header to be stripped, got %q", got)
+		}
+		if res.Body.Len() != 0 {
+			t.Errorf("expected empty response body after interruption, got %q", res.Body.String())
+		}
+	})
+
+	t.Run("implicit 200 without WriteHeader or Write evaluates response headers", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		res := httptest.NewRecorder()
+		rw, responseProcessor := wrap(res, req, tx)
+
+		rw.Header().Set("X-Block", "true")
+		if err := responseProcessor(tx, req); err != nil {
+			t.Fatalf("unexpected responseProcessor error: %v", err)
+		}
+
+		if !tx.IsInterrupted() {
+			t.Error("expected transaction to be interrupted by phase 3 rule")
+		}
+		if want, have := http.StatusForbidden, res.Code; want != have {
+			t.Errorf("expected status %d, got %d", want, have)
+		}
+		if got := res.Header().Get("X-Block"); got != "" {
+			t.Errorf("expected blocked header to be stripped, got %q", got)
+		}
+	})
+
+	t.Run("implicit 200 without WriteHeader or Write preserves non-matching response", func(t *testing.T) {
+		tx := waf.NewTransaction()
+		defer tx.Close()
+		req, _ := http.NewRequest("GET", "/test", nil)
+		res := httptest.NewRecorder()
+		res.Code = 0
+		rw, responseProcessor := wrap(res, req, tx)
+
+		rw.Header().Set("X-Block", "false")
+		if err := responseProcessor(tx, req); err != nil {
+			t.Fatalf("unexpected responseProcessor error: %v", err)
+		}
+
+		if tx.IsInterrupted() {
+			t.Error("expected transaction not to be interrupted")
+		}
+		if want, have := http.StatusOK, res.Code; want != have {
+			t.Errorf("expected status %d, got %d", want, have)
+		}
+		if want, have := "false", res.Header().Get("X-Block"); want != have {
+			t.Errorf("expected header X-Block %q, got %q", want, have)
+		}
+		if res.Body.Len() != 0 {
+			t.Errorf("expected empty response body, got %q", res.Body.String())
+		}
+	})
 }
 
 func TestHijackTrackerSetsIsHijacked(t *testing.T) {
