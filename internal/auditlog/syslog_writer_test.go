@@ -33,6 +33,7 @@ func Test_syslogWriter_Init(t *testing.T) {
 		args    args
 		want    want
 		wantErr bool
+		noDial  bool
 	}{
 		{
 			name: "Default",
@@ -59,6 +60,18 @@ func Test_syslogWriter_Init(t *testing.T) {
 			},
 		},
 		{
+			name: "HostnameOnly",
+			args: args{
+				c: plugintypes.AuditLogConfig{
+					Target: "localhost:514",
+				},
+			},
+			want: want{
+				network: "tcp",
+				raddr:   "localhost:514",
+			},
+		},
+		{
 			name: "UDP",
 			args: args{
 				c: plugintypes.AuditLogConfig{
@@ -81,6 +94,30 @@ func Test_syslogWriter_Init(t *testing.T) {
 				network: "unixgram",
 				raddr:   "/var/run/syslog",
 			},
+		},
+		{
+			name: "SocketSingleSlash",
+			args: args{
+				c: plugintypes.AuditLogConfig{
+					Target: "unixgram:/var/run/syslog",
+				},
+			},
+			want: want{
+				network: "unixgram",
+				raddr:   "/var/run/syslog",
+			},
+		},
+		{
+			// The zone is not escaped as %25, so the URL does not parse. The
+			// target asks for udp and must not be dialed over tcp instead.
+			name: "UnparsableURL",
+			args: args{
+				c: plugintypes.AuditLogConfig{
+					Target: "udp://[fe80::1%eth0]:514",
+				},
+			},
+			wantErr: true,
+			noDial:  true,
 		},
 		{
 			name: "Formatter",
@@ -110,6 +147,13 @@ func Test_syslogWriter_Init(t *testing.T) {
 
 			if err := w.Init(tt.args.c); (err != nil) != tt.wantErr {
 				t.Errorf("syslogWriter.Init() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.noDial {
+				if SyslogDialer.dialed {
+					t.Errorf("syslogWriter.dialer called with network %q, raddr %q, want no dial", SyslogDialer.network, SyslogDialer.raddr)
+				}
 				return
 			}
 
