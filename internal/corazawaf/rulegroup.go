@@ -170,10 +170,8 @@ func (rg *RuleGroup) Eval(phase types.RulePhase, tx *Transaction) bool {
 	tx.lastPhase = phase
 	usedRules := 0
 	ts := time.Now().UnixNano()
+	// The previous phase emptied the cache when it ended, see below.
 	transformationCache := tx.transformationCache
-	for k := range transformationCache {
-		delete(transformationCache, k)
-	}
 	// The logging phase always runs, as in ModSecurity: a plain allow issued in an
 	// earlier phase skips the remaining request and response phases, not this one.
 	// An allow issued by a logging phase rule still stops the rest of the phase.
@@ -306,6 +304,21 @@ RulesLoop:
 	// Reset Skip counter at the end of each phase. Skip actions work only within the current processing phase
 	tx.Skip = 0
 
+	// The cache is only valid within a phase, and its entries keep every transformed
+	// value alive. Empty it now rather than when the next phase starts: a connector
+	// waits for the upstream between the request and the response phases, and with
+	// many arguments (a large JSON body under CRS) the entries can weigh far more
+	// than the request itself. Deleting the entries keeps the map's table, which is
+	// what makes reusing it cheap; past a size that only such requests reach, drop
+	// the map instead so the table goes too.
+	if len(transformationCache) > maxRetainedTransformationCacheEntries {
+		tx.transformationCache = map[transformationKey]transformationValue{}
+	} else {
+		for k := range transformationCache {
+			delete(transformationCache, k)
+		}
+	}
+
 	tx.stopWatches[phase] = time.Now().UnixNano() - ts
 	return tx.IsInterrupted()
 }
@@ -317,6 +330,10 @@ RulesLoop:
 func NewRuleGroup() RuleGroup {
 	return RuleGroup{}
 }
+
+// maxRetainedTransformationCacheEntries is the size past which a phase's
+// transformation cache is dropped rather than emptied in place.
+const maxRetainedTransformationCacheEntries = 8192
 
 type transformationKey struct {
 	// TODO(anuraaga): This is a big hack to support performance on TinyGo. TinyGo
