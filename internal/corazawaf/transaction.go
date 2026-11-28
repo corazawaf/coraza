@@ -1742,8 +1742,10 @@ func (tx *Transaction) Close() error {
 	}
 
 	tx.variables.reset()
-	// The entries of the last evaluated phase point to values the collections have
-	// just released, and would keep them alive while the transaction sits in the pool.
+	// Each phase empties the cache when it ends, so entries are only left here when a
+	// phase did not finish, for instance after a panic in a rule that the caller
+	// recovered (net/http does). They point to values the collections have just
+	// released, and would keep them alive while the transaction sits in the pool.
 	for k := range tx.transformationCache {
 		delete(tx.transformationCache, k)
 	}

@@ -309,6 +309,17 @@ func TestRuleDetailsTransferredToTransaction(t *testing.T) {
 
 type dummyEqOperator struct{}
 
+// cacheSizeProbe records the size of the transaction's transformation cache when
+// its rule is evaluated, and never matches.
+type cacheSizeProbe struct {
+	entries int
+}
+
+func (p *cacheSizeProbe) Evaluate(tx plugintypes.TransactionState, _ string) bool {
+	p.entries = len(tx.(*Transaction).transformationCache)
+	return false
+}
+
 func (*dummyEqOperator) Evaluate(_ plugintypes.TransactionState, value string) bool {
 	return value == "0"
 }
@@ -826,7 +837,7 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 		count    bool
 		// wantRuns is how many times the transformation runs in the phase
 		wantRuns int
-		// wantEntries is the cache size at the end of the phase
+		// wantEntries is the cache size by the last rule of the phase
 		wantEntries int
 	}{
 		{
@@ -886,6 +897,20 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 				}
 			}
 
+			// The cache is emptied when the phase ends, so a last rule reads its size.
+			probe := &cacheSizeProbe{entries: -1}
+			pr := NewRule()
+			pr.ID_ = 2000
+			pr.LogID_ = "2000"
+			pr.Phase_ = types.PhaseRequestHeaders
+			if err := pr.AddVariable(variables.ArgsGet, "arg0", false); err != nil {
+				t.Fatal(err)
+			}
+			pr.SetOperator(probe, "@probe", "")
+			if err := waf.Rules.Add(pr); err != nil {
+				t.Fatal(err)
+			}
+
 			tx := waf.NewTransaction()
 			for i := range nArgs {
 				tx.AddGetRequestArgument(fmt.Sprintf("arg%d", i), fmt.Sprintf("value-%d", i))
@@ -896,8 +921,11 @@ func TestTransformationCacheAcrossRules(t *testing.T) {
 			if runs != tt.wantRuns {
 				t.Errorf("transformation ran %d times, want %d", runs, tt.wantRuns)
 			}
-			if got := len(tx.transformationCache); got != tt.wantEntries {
-				t.Errorf("cache holds %d entries after the phase, want %d", got, tt.wantEntries)
+			if probe.entries != tt.wantEntries {
+				t.Errorf("cache holds %d entries by the last rule of the phase, want %d", probe.entries, tt.wantEntries)
+			}
+			if got := len(tx.transformationCache); got != 0 {
+				t.Errorf("cache holds %d entries after the phase, want 0", got)
 			}
 			if err := tx.Close(); err != nil {
 				t.Fatal(err)
